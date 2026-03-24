@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import Header from "@/components/layout/Header";
 import DealsToolbar, { type ViewMode } from "./DealsToolbar";
 import KanbanBoard from "./KanbanBoard";
 import DealsListView from "./DealsListView";
@@ -66,8 +65,6 @@ export default function DealsClient() {
 
   return (
     <>
-      <Header title="CRM — Сделки" />
-
       <DealsToolbar
         pipelines={pipelines}
         activePipelineId={activePipelineId}

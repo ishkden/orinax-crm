@@ -1,0 +1,216 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  role          UserRole  @default(AGENT)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts   Account[]
+  sessions   Session[]
+  contacts   Contact[]   @relation("AssignedContacts")
+  deals      Deal[]      @relation("AssignedDeals")
+  tasks      Task[]      @relation("AssignedTasks")
+  activities Activity[]
+  comments   Comment[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Contact {
+  id         String        @id @default(cuid())
+  firstName  String
+  lastName   String
+  email      String?
+  phone      String?
+  company    String?
+  position   String?
+  source     ContactSource @default(MANUAL)
+  status     ContactStatus @default(LEAD)
+  notes      String?       @db.Text
+  tags       String[]
+  assignedId String?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  assignedTo Activity[] @relation("ContactActivities")
+  assigned   User?      @relation("AssignedContacts", fields: [assignedId], references: [id])
+  deals      Deal[]
+  tasks      Task[]
+  comments   Comment[]
+}
+
+model Deal {
+  id          String     @id @default(cuid())
+  title       String
+  value       Float      @default(0)
+  currency    String     @default("RUB")
+  stage       DealStage  @default(LEAD)
+  priority    Priority   @default(MEDIUM)
+  contactId   String?
+  assignedId  String?
+  closeDate   DateTime?
+  description String?    @db.Text
+  tags        String[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  contact    Contact?   @relation(fields: [contactId], references: [id])
+  assigned   User?      @relation("AssignedDeals", fields: [assignedId], references: [id])
+  tasks      Task[]
+  activities Activity[] @relation("DealActivities")
+  comments   Comment[]
+}
+
+model Task {
+  id          String     @id @default(cuid())
+  title       String
+  description String?    @db.Text
+  status      TaskStatus @default(TODO)
+  priority    Priority   @default(MEDIUM)
+  dueDate     DateTime?
+  contactId   String?
+  dealId      String?
+  assignedId  String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  contact  Contact?   @relation(fields: [contactId], references: [id])
+  deal     Deal?      @relation(fields: [dealId], references: [id])
+  assigned User?      @relation("AssignedTasks", fields: [assignedId], references: [id])
+  comments Comment[]
+}
+
+model Activity {
+  id        String       @id @default(cuid())
+  type      ActivityType
+  title     String
+  body      String?      @db.Text
+  userId    String
+  contactId String?
+  dealId    String?
+  createdAt DateTime     @default(now())
+
+  user    User     @relation(fields: [userId], references: [id])
+  contact Contact? @relation("ContactActivities", fields: [contactId], references: [id])
+  deal    Deal?    @relation("DealActivities", fields: [dealId], references: [id])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  body      String   @db.Text
+  userId    String
+  contactId String?
+  dealId    String?
+  taskId    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user    User     @relation(fields: [userId], references: [id])
+  contact Contact? @relation(fields: [contactId], references: [id])
+  deal    Deal?    @relation(fields: [dealId], references: [id])
+  task    Task?    @relation(fields: [taskId], references: [id])
+}
+
+enum UserRole {
+  ADMIN
+  MANAGER
+  AGENT
+}
+
+enum ContactSource {
+  MANUAL
+  IMPORT
+  API
+  ORINAX_ANALYTICS
+  ORINAX_CONNECTORS
+  WEBSITE
+  REFERRAL
+}
+
+enum ContactStatus {
+  LEAD
+  PROSPECT
+  CUSTOMER
+  CHURNED
+}
+
+enum DealStage {
+  LEAD
+  QUALIFIED
+  PROPOSAL
+  NEGOTIATION
+  CLOSED_WON
+  CLOSED_LOST
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+  CANCELLED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum ActivityType {
+  NOTE
+  CALL
+  EMAIL
+  MEETING
+  DEAL_CREATED
+  DEAL_STAGE_CHANGED
+  CONTACT_CREATED
+  TASK_CREATED
+  TASK_COMPLETED
+}

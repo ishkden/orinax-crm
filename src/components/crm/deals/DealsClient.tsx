@@ -5,6 +5,8 @@ import DealsToolbar, { type ViewMode } from "./DealsToolbar";
 import KanbanBoard from "./KanbanBoard";
 import DealsListView from "./DealsListView";
 import CreateDealModal from "./CreateDealModal";
+import ContactDrawer from "./ContactDrawer";
+import { useCrmHeaderAction } from "@/components/crm/CrmHeaderActionContext";
 import { pipelines, mockDeals, type Deal } from "./mockData";
 
 const STAGE_OVERRIDES_KEY = "crm-kanban-stage-overrides";
@@ -12,6 +14,7 @@ const STAGE_OVERRIDES_KEY = "crm-kanban-stage-overrides";
 type StageOverrides = Record<string, Record<string, { label?: string; color?: string }>>;
 
 export default function DealsClient() {
+  const { setHeaderAction } = useCrmHeaderAction();
   const [deals, setDeals] = useState<Deal[]>(mockDeals);
   const [activePipelineId, setActivePipelineId] = useState("main");
   const [viewMode, setViewMode] = useState<ViewMode>("kanban");
@@ -21,6 +24,20 @@ export default function DealsClient() {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalStage, setModalStage] = useState<string | null>(null);
   const [stageOverrides, setStageOverrides] = useState<StageOverrides>({});
+  const [contactDeal, setContactDeal] = useState<Deal | null>(null);
+
+  const openCreateDeal = useCallback(() => {
+    setModalStage(null);
+    setModalOpen(true);
+  }, []);
+
+  useEffect(() => {
+    setHeaderAction({
+      label: "Создать сделку",
+      onClick: openCreateDeal,
+    });
+    return () => setHeaderAction(null);
+  }, [setHeaderAction, openCreateDeal]);
 
   useEffect(() => {
     try {
@@ -120,10 +137,6 @@ export default function DealsClient() {
         onSearchChange={setSearchQuery}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
-        onCreateDeal={() => {
-          setModalStage(null);
-          setModalOpen(true);
-        }}
         filterAssignee={filterAssignee}
         onFilterAssignee={setFilterAssignee}
         filterPriority={filterPriority}
@@ -138,6 +151,7 @@ export default function DealsClient() {
           onMoveDeal={handleMoveDeal}
           onAddDeal={handleAddDeal}
           onStageUpdate={handleStageUpdate}
+          onContactClick={setContactDeal}
         />
       ) : (
         <DealsListView
@@ -155,6 +169,8 @@ export default function DealsClient() {
         pipeline={activePipelineWithOverrides}
         onSave={handleCreateDeal}
       />
+
+      <ContactDrawer deal={contactDeal} onClose={() => setContactDeal(null)} />
     </>
   );
 }

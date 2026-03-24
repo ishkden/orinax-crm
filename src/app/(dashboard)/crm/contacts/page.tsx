@@ -1,8 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { formatDate } from "@/lib/utils";
 import Badge from "@/components/ui/Badge";
-import { UserPlus } from "lucide-react";
-import Link from "next/link";
+import CrmRegisterPrimaryAction from "@/components/crm/CrmRegisterPrimaryAction";
 
 async function getContacts() {
   return prisma.contact.findMany({
@@ -23,17 +22,11 @@ export default async function ContactsPage() {
 
   return (
     <>
+      <CrmRegisterPrimaryAction label="Добавить контакт" href="/crm/contacts/new" />
       <div className="flex-1 overflow-auto p-6">
         <div className="bg-white rounded-xl border border-gray-200">
-          <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+          <div className="px-6 py-4 border-b border-gray-100">
             <p className="text-sm text-gray-500">{contacts.length} контактов</p>
-            <Link
-              href="/crm/contacts/new"
-              className="inline-flex items-center gap-2 bg-indigo-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
-            >
-              <UserPlus size={16} />
-              Добавить
-            </Link>
           </div>
 
           {contacts.length === 0 ? (

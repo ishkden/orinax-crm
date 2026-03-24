@@ -6,7 +6,6 @@ import {
   ChevronDown,
   LayoutGrid,
   List,
-  Plus,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -23,7 +22,6 @@ interface DealsToolbarProps {
   onSearchChange: (q: string) => void;
   viewMode: ViewMode;
   onViewModeChange: (mode: ViewMode) => void;
-  onCreateDeal: () => void;
   filterAssignee: string | null;
   onFilterAssignee: (a: string | null) => void;
   filterPriority: Deal["priority"] | null;
@@ -39,7 +37,6 @@ export default function DealsToolbar({
   onSearchChange,
   viewMode,
   onViewModeChange,
-  onCreateDeal,
   filterAssignee,
   onFilterAssignee,
   filterPriority,
@@ -119,7 +116,6 @@ export default function DealsToolbar({
 
         <div className="flex-1" />
 
-        {/* Search + filters (filters only when search panel open) */}
         <div ref={searchRef} className="relative z-40">
           <button
             type="button"
@@ -285,15 +281,6 @@ export default function DealsToolbar({
             <List size={15} />
           </button>
         </div>
-
-        <button
-          type="button"
-          onClick={onCreateDeal}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-brand-500 text-white text-sm font-medium hover:bg-brand-600 transition-colors shadow-sm"
-        >
-          <Plus size={16} />
-          Создать сделку
-        </button>
       </div>
     </div>
   );

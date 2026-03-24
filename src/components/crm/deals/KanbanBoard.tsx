@@ -124,7 +124,7 @@ export default function KanbanBoard({
   }
 
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+    <div className="flex h-[min(720px,calc(100dvh-12rem))] min-h-[320px] w-full min-w-0 flex-col overflow-hidden">
       <DndContext
         sensors={sensors}
         collisionDetection={closestCorners}
@@ -132,7 +132,7 @@ export default function KanbanBoard({
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
       >
-        <div className="flex min-h-0 flex-1 items-stretch gap-3 overflow-x-auto overflow-y-hidden px-6 pb-4 pt-2">
+        <div className="flex min-h-0 min-w-0 flex-1 items-stretch gap-3 overflow-x-auto overflow-y-hidden px-6 pb-4 pt-2">
           {stages.map((stage) => {
             const meta = stageTotals.get(stage.id) ?? { total: 0, currency: "RUB" };
             return (

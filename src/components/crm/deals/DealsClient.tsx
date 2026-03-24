@@ -142,7 +142,7 @@ export default function DealsClient() {
 
   return (
     <>
-      <div className="flex min-h-0 min-w-0 w-full flex-1 flex-col">
+      <div className="flex w-full min-w-0 flex-col">
         <DealsToolbar
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
@@ -156,19 +156,17 @@ export default function DealsClient() {
         />
 
         {viewMode === "kanban" ? (
-          <div className="flex min-h-[calc(100svh-11rem)] flex-1 flex-col">
-            <KanbanBoard
-              stages={activePipelineWithOverrides.stages}
-              deals={filteredDeals}
-              onMoveDeal={handleMoveDeal}
-              onAddDeal={handleAddDeal}
-              onStageUpdate={handleStageUpdate}
-              onContactClick={setContactDeal}
-              onDealClick={setSelectedDeal}
-            />
-          </div>
+          <KanbanBoard
+            stages={activePipelineWithOverrides.stages}
+            deals={filteredDeals}
+            onMoveDeal={handleMoveDeal}
+            onAddDeal={handleAddDeal}
+            onStageUpdate={handleStageUpdate}
+            onContactClick={setContactDeal}
+            onDealClick={setSelectedDeal}
+          />
         ) : (
-          <div className="min-h-0 flex-1 flex flex-col">
+          <div className="flex min-w-0 flex-col">
             <DealsListView
               deals={filteredDeals}
               stages={activePipelineWithOverrides.stages}

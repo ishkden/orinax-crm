@@ -8,12 +8,12 @@ export default function CrmLayout({ children }: { children: React.ReactNode }) {
   return (
     <CrmHeaderActionProvider>
       <CrmDealPipelineProvider>
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <div className="flex w-full min-w-0 flex-col">
           <CrmHeader />
-          <div className="flex min-h-0 min-w-0 flex-1">
-            <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+          <div className="flex w-full min-w-0">
+            <div className="flex min-w-0 flex-1 flex-col">
               <CrmSubNav />
-              <div className="flex min-h-0 min-w-0 flex-1 flex-col">{children}</div>
+              <div className="flex min-w-0 flex-col pb-8">{children}</div>
             </div>
             <CrmRightBar />
           </div>

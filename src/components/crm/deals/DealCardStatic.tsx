@@ -25,7 +25,7 @@ export default function DealCardStatic({
       )}
     >
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <h4 className="break-words text-2xl font-semibold leading-snug tracking-tight text-gray-900">
+        <h4 className="break-words text-[11px] font-medium leading-snug text-gray-800">
           {deal.title}
         </h4>
 

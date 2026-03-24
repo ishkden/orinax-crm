@@ -179,7 +179,7 @@ export default function KanbanColumn({
           <AnimatedCounter
             value={committedStageTotal}
             duration={0.38}
-            className="inline-block text-2xl font-semibold tabular-nums tracking-tight text-gray-900"
+            className="inline-block text-base font-normal tabular-nums tracking-tight text-gray-800"
             formatValue={formatStageTotal}
           />
         </div>

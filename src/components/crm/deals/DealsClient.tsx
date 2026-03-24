@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useMemo, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import DealsToolbar, { type ViewMode } from "./DealsToolbar";
 import KanbanBoard from "./KanbanBoard";
 import DealsListView from "./DealsListView";
@@ -17,7 +16,6 @@ const STAGE_OVERRIDES_KEY = "crm-kanban-stage-overrides";
 type StageOverrides = Record<string, Record<string, { label?: string; color?: string }>>;
 
 export default function DealsClient() {
-  const router = useRouter();
   const { setHeaderAction } = useCrmHeaderAction();
   const { setPipeline } = useCrmDealPipeline();
   const [deals, setDeals] = useState<Deal[]>(mockDeals);
@@ -37,18 +35,13 @@ export default function DealsClient() {
     setModalOpen(true);
   }, []);
 
-  const goToLeads = useCallback(() => {
-    router.push("/crm/leads");
-  }, [router]);
-
   useEffect(() => {
     setHeaderAction({
       label: "Добавить сделку",
       onClick: openCreateDeal,
-      secondary: { label: "Добавить лид", onClick: goToLeads },
     });
     return () => setHeaderAction(null);
-  }, [setHeaderAction, openCreateDeal, goToLeads]);
+  }, [setHeaderAction, openCreateDeal]);
 
   useEffect(() => {
     setPipeline({

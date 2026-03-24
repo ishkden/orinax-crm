@@ -8,7 +8,7 @@ import { DealStage, Priority } from "@prisma/client";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-async function getOrgId(): Promise<string> {
+async function getSessionContext(): Promise<{ userId: string; orgId: string }> {
   const session = await getServerSession(authOptions);
   const userId = (session?.user as { id?: string } | undefined)?.id;
   if (!userId) throw new Error("Unauthorized");
@@ -18,8 +18,33 @@ async function getOrgId(): Promise<string> {
     select: { orgId: true },
   });
   if (!member) throw new Error("No org found for this user");
-  return member.orgId;
+  return { userId, orgId: member.orgId };
 }
+
+async function getOrgId(): Promise<string> {
+  const { orgId } = await getSessionContext();
+  return orgId;
+}
+
+// ─── Public serializable types ────────────────────────────────────────────────
+
+export type ActivityItem = {
+  id: string;
+  type: string;
+  title: string;
+  body: string | null;
+  createdAt: string;
+  author: string | null;
+};
+
+export type TaskItem = {
+  id: string;
+  title: string;
+  status: string;
+  priority: string;
+  dueDate: string | null;
+  assignee: string | null;
+};
 
 type PrismaDeaWithRelations = {
   id: string;
@@ -119,4 +144,95 @@ export async function createDeal(input: CreateDealInput): Promise<Deal> {
     include: DEAL_INCLUDE,
   });
   return mapDeal(deal);
+}
+
+// ─── Activity Actions ─────────────────────────────────────────────────────────
+
+export async function getDealActivities(dealId: string): Promise<ActivityItem[]> {
+  const { orgId } = await getSessionContext();
+  const rows = await prisma.activity.findMany({
+    where: { dealId, orgId },
+    orderBy: { createdAt: "desc" },
+    include: { user: { select: { name: true } } },
+  });
+  return rows.map((a) => ({
+    id: a.id,
+    type: a.type as string,
+    title: a.title,
+    body: a.body,
+    createdAt: a.createdAt.toISOString(),
+    author: a.user.name,
+  }));
+}
+
+export async function createDealNote(dealId: string, text: string): Promise<void> {
+  const { userId, orgId } = await getSessionContext();
+  await prisma.activity.create({
+    data: {
+      orgId,
+      dealId,
+      userId,
+      type: "NOTE",
+      title: "Заметка",
+      body: text.trim(),
+    },
+  });
+}
+
+// ─── Task Actions ─────────────────────────────────────────────────────────────
+
+const TASK_STATUS_ORDER: Record<string, number> = {
+  TODO: 0,
+  IN_PROGRESS: 1,
+  DONE: 2,
+  CANCELLED: 3,
+};
+
+export async function getDealTasks(dealId: string): Promise<TaskItem[]> {
+  const { orgId } = await getSessionContext();
+  const rows = await prisma.task.findMany({
+    where: { dealId, orgId },
+    orderBy: { dueDate: "asc" },
+    include: { assigned: { select: { name: true } } },
+  });
+  rows.sort(
+    (a, b) =>
+      (TASK_STATUS_ORDER[a.status] ?? 99) - (TASK_STATUS_ORDER[b.status] ?? 99)
+  );
+  return rows.map((t) => ({
+    id: t.id,
+    title: t.title,
+    status: t.status as string,
+    priority: t.priority as string,
+    dueDate: t.dueDate ? t.dueDate.toISOString() : null,
+    assignee: t.assigned?.name ?? null,
+  }));
+}
+
+export async function toggleTaskStatus(
+  taskId: string,
+  isDone: boolean
+): Promise<void> {
+  const { orgId } = await getSessionContext();
+  await prisma.task.update({
+    where: { id: taskId, orgId },
+    data: { status: isDone ? "DONE" : "TODO" },
+  });
+}
+
+export async function createDealTask(
+  dealId: string,
+  title: string
+): Promise<void> {
+  const { userId, orgId } = await getSessionContext();
+  await prisma.task.create({
+    data: {
+      orgId,
+      dealId,
+      assignedId: userId,
+      title: title.trim(),
+      status: "TODO",
+      priority: "MEDIUM",
+    },
+  });
 }

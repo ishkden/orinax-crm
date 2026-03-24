@@ -14,6 +14,8 @@ import {
 import { formatCurrency, formatDate } from "@/lib/utils";
 import type { Deal, Stage } from "./types";
 import ContactInfoBlock from "./ContactInfoBlock";
+import ActivityFeed from "./ActivityFeed";
+import TaskList from "./TaskList";
 import { CRM_RIGHT_BAR_W } from "@/components/crm/crmChrome";
 import { useSidebar } from "@/components/layout/SidebarContext";
 
@@ -230,8 +232,8 @@ export default function DealRightDrawer({ deal, stages, onClose }: DealRightDraw
             {/* ── Tab content ── */}
             <div className="flex-1 overflow-y-auto pt-4">
               {activeTab === "details" && <DetailsTab deal={deal} stages={stages} />}
-              {activeTab === "tasks" && <PlaceholderTab label="Раздел задач" />}
-              {activeTab === "activity" && <PlaceholderTab label="Раздел активности" />}
+              {activeTab === "tasks" && <TaskList dealId={deal.id} />}
+              {activeTab === "activity" && <ActivityFeed dealId={deal.id} />}
               {activeTab === "chat" && <PlaceholderTab label="Раздел чата" />}
             </div>
           </motion.div>

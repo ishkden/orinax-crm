@@ -28,6 +28,20 @@ async function getOrgId(): Promise<string> {
 
 // ─── Public serializable types ────────────────────────────────────────────────
 
+export type DbStage = {
+  id: string;
+  name: string;
+  color: string | null;
+  sortOrder: number;
+};
+
+export type DbPipeline = {
+  id: string;
+  name: string;
+  sortOrder: number;
+  stages: DbStage[];
+};
+
 export type ActivityItem = {
   id: string;
   type: string;
@@ -107,6 +121,28 @@ const DEAL_INCLUDE = {
 } as const;
 
 // ─── Server Actions ───────────────────────────────────────────────────────────
+
+export async function getPipelines(): Promise<DbPipeline[]> {
+  const orgId = await getOrgId();
+  const rows = await prisma.pipeline.findMany({
+    where: { orgId },
+    orderBy: { sortOrder: "asc" },
+    include: {
+      stages: { orderBy: { sortOrder: "asc" } },
+    },
+  });
+  return rows.map((p) => ({
+    id: p.id,
+    name: p.name,
+    sortOrder: p.sortOrder,
+    stages: p.stages.map((s) => ({
+      id: s.id,
+      name: s.name,
+      color: s.color,
+      sortOrder: s.sortOrder,
+    })),
+  }));
+}
 
 export async function getDeals(): Promise<Deal[]> {
   const orgId = await getOrgId();

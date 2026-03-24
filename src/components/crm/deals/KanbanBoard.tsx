@@ -129,6 +129,38 @@ export default function KanbanBoard({
     snapshotRef.current = null;
   }
 
+  if (stages.length === 0) {
+    return (
+      <div className="flex flex-1 items-center justify-center py-24 px-6">
+        <div className="max-w-sm text-center">
+          <div className="mb-4 flex items-center justify-center">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gray-100">
+              <svg
+                className="h-8 w-8 text-gray-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={1.5}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25m18 0A2.25 2.25 0 0018.75 3H5.25A2.25 2.25 0 003 5.25m18 0H3"
+                />
+              </svg>
+            </div>
+          </div>
+          <h3 className="mb-2 text-base font-semibold text-gray-800">
+            Воронки не найдены
+          </h3>
+          <p className="text-sm leading-relaxed text-gray-500">
+            Запустите синхронизацию данных в меню слева, чтобы построить доску
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-[min(720px,calc(100dvh-12rem))] min-h-[320px] w-full min-w-0 flex-col overflow-hidden">
       <DndContext

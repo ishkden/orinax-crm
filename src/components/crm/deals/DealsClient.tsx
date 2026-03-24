@@ -9,22 +9,40 @@ import ContactDrawer from "./ContactDrawer";
 import DealRightDrawer from "./DealRightDrawer";
 import { useCrmHeaderAction } from "@/components/crm/CrmHeaderActionContext";
 import { useCrmDealPipeline } from "@/components/crm/CrmDealPipelineContext";
-import { pipelines, type Deal, type CreateDealInput } from "./types";
+import type { DbPipeline } from "@/app/actions/deals";
+import type { Deal, CreateDealInput, Stage, Pipeline } from "./types";
 import { updateDealStage, createDeal } from "@/app/actions/deals";
 
 const STAGE_OVERRIDES_KEY = "crm-kanban-stage-overrides";
+const DEFAULT_STAGE_COLOR = "#6B7280";
 
 type StageOverrides = Record<string, Record<string, { label?: string; color?: string }>>;
 
 interface DealsClientProps {
   initialDeals: Deal[];
+  initialPipelines: DbPipeline[];
 }
 
-export default function DealsClient({ initialDeals }: DealsClientProps) {
+function mapDbToUiPipelines(dbPipelines: DbPipeline[]): Pipeline[] {
+  return dbPipelines.map((p) => ({
+    id: p.id,
+    label: p.name,
+    stages: p.stages.map((s) => ({
+      id: s.id,
+      label: s.name,
+      color: s.color ?? DEFAULT_STAGE_COLOR,
+    })),
+  }));
+}
+
+export default function DealsClient({ initialDeals, initialPipelines }: DealsClientProps) {
   const { setHeaderAction } = useCrmHeaderAction();
   const { setPipeline } = useCrmDealPipeline();
+
+  const pipelines = useMemo(() => mapDbToUiPipelines(initialPipelines), [initialPipelines]);
+
   const [deals, setDeals] = useState<Deal[]>(initialDeals);
-  const [activePipelineId, setActivePipelineId] = useState("main");
+  const [activePipelineId, setActivePipelineId] = useState(pipelines[0]?.id ?? "");
   const [viewMode, setViewMode] = useState<ViewMode>("kanban");
   const [searchQuery, setSearchQuery] = useState("");
   const [filterAssignee, setFilterAssignee] = useState<string | null>(null);
@@ -47,9 +65,11 @@ export default function DealsClient({ initialDeals }: DealsClientProps) {
   }, [setHeaderAction, openCreateDeal]);
 
   useEffect(() => {
-    setPipeline({ pipelines, activePipelineId, onPipelineChange: setActivePipelineId });
+    if (pipelines.length > 0) {
+      setPipeline({ pipelines, activePipelineId, onPipelineChange: setActivePipelineId });
+    }
     return () => setPipeline(null);
-  }, [setPipeline, activePipelineId]);
+  }, [setPipeline, pipelines, activePipelineId]);
 
   useEffect(() => {
     try {
@@ -60,8 +80,9 @@ export default function DealsClient({ initialDeals }: DealsClientProps) {
     }
   }, []);
 
-  const activePipelineWithOverrides = useMemo(() => {
+  const activePipelineWithOverrides = useMemo((): Pipeline => {
     const p = pipelines.find((x) => x.id === activePipelineId) ?? pipelines[0];
+    if (!p) return { id: "", label: "", stages: [] };
     const ov = stageOverrides[p.id] ?? {};
     return {
       ...p,
@@ -71,9 +92,8 @@ export default function DealsClient({ initialDeals }: DealsClientProps) {
         color: ov[s.id]?.color ?? s.color,
       })),
     };
-  }, [activePipelineId, stageOverrides]);
+  }, [pipelines, activePipelineId, stageOverrides]);
 
-  // Derive unique assignee names from loaded deals for toolbar filter
   const assignees = useMemo(() => {
     const seen = new Set<string>();
     const result: string[] = [];
@@ -125,17 +145,12 @@ export default function DealsClient({ initialDeals }: DealsClientProps) {
     [activePipelineId]
   );
 
-  /** Optimistic local-state move — called during drag-over for live preview. */
   function handleMoveDeal(dealId: string, newStage: string) {
     setDeals((prev) =>
       prev.map((d) => (d.id === dealId ? { ...d, stage: newStage } : d))
     );
   }
 
-  /**
-   * Called once on drag-end when the stage actually changed.
-   * Persists to the DB and reverts the optimistic update on failure.
-   */
   function handleStageCommit(dealId: string, newStage: string, previousStage: string) {
     if (newStage === previousStage) return;
     startTransition(() => {
@@ -164,6 +179,8 @@ export default function DealsClient({ initialDeals }: DealsClientProps) {
     setModalStage(null);
   }
 
+  const activeStages: Stage[] = activePipelineWithOverrides.stages;
+
   return (
     <>
       <div className="flex w-full min-w-0 flex-col">
@@ -182,7 +199,7 @@ export default function DealsClient({ initialDeals }: DealsClientProps) {
 
         {viewMode === "kanban" ? (
           <KanbanBoard
-            stages={activePipelineWithOverrides.stages}
+            stages={activeStages}
             deals={filteredDeals}
             onMoveDeal={handleMoveDeal}
             onStageCommit={handleStageCommit}
@@ -195,7 +212,7 @@ export default function DealsClient({ initialDeals }: DealsClientProps) {
           <div className="flex min-w-0 flex-col">
             <DealsListView
               deals={filteredDeals}
-              stages={activePipelineWithOverrides.stages}
+              stages={activeStages}
               onDealClick={setSelectedDeal}
             />
           </div>
@@ -209,7 +226,7 @@ export default function DealsClient({ initialDeals }: DealsClientProps) {
           setModalStage(null);
         }}
         pipeline={activePipelineWithOverrides}
-        initialStage={modalStage ?? activePipelineWithOverrides.stages[0]?.id ?? "LEAD"}
+        initialStage={modalStage ?? activeStages[0]?.id ?? ""}
         onSave={handleCreateDeal}
       />
 
@@ -217,7 +234,7 @@ export default function DealsClient({ initialDeals }: DealsClientProps) {
 
       <DealRightDrawer
         deal={selectedDeal}
-        stages={activePipelineWithOverrides.stages}
+        stages={activeStages}
         onClose={() => setSelectedDeal(null)}
       />
     </>

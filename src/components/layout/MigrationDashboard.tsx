@@ -1,230 +1,182 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { X, Database, PlayCircle, CheckCircle2, Loader2, AlertCircle } from "lucide-react";
+import {
+  X,
+  Database,
+  PlayCircle,
+  CheckCircle2,
+  Loader2,
+  AlertCircle,
+  Clock,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
-  triggerMigration,
-  fetchMigrationStatus,
-  getSessionOrgId,
-  type MigrationStats,
+  startMigration,
+  getMigrationStatus,
+  type MigrationTaskStatus,
+  type MigrationStage,
+  type MigrationStatusResponse,
 } from "@/app/actions/migration";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─── Constants ────────────────────────────────────────────────────────────────
 
-type Stage =
-  | "IDLE"
-  | "COMPANIES"
-  | "CONTACTS"
-  | "DEALS"
-  | "MESSAGES"
-  | "DONE"
-  | "ERROR";
+const PIPELINE_STAGES: MigrationStage[] = [
+  "COMPANIES",
+  "CONTACTS",
+  "CHANNELS",
+  "DEALS",
+  "LEADS",
+  "MESSAGES",
+];
 
-type UIStatus = "idle" | "running" | "done" | "error";
-
-interface LogLine {
-  ts: string;
-  text: string;
-}
-
-interface Props {
-  open: boolean;
-  onClose: () => void;
-}
+const STAGE_LABELS: Record<MigrationStage, string> = {
+  COMPANIES: "Компании",
+  CONTACTS: "Контакты",
+  CHANNELS: "Каналы",
+  DEALS: "Сделки",
+  LEADS: "Лиды",
+  MESSAGES: "Сообщения",
+  DONE: "Завершено",
+};
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const RUNNING_STAGES: Stage[] = ["COMPANIES", "CONTACTS", "DEALS", "MESSAGES"];
-
-function stageToStatus(stage: Stage | null): UIStatus {
-  if (!stage || stage === "IDLE") return "idle";
-  if (stage === "DONE") return "done";
-  if (stage === "ERROR") return "error";
-  return "running";
-}
-
-function stageLabel(stage: Stage | null): string {
-  switch (stage) {
-    case "COMPANIES":
-      return "Компании";
-    case "CONTACTS":
-      return "Контакты";
-    case "DEALS":
-      return "Сделки";
-    case "MESSAGES":
-      return "Сообщения";
-    case "DONE":
-      return "Завершено";
-    case "ERROR":
-      return "Ошибка";
-    default:
-      return "Ожидание";
-  }
+function formatMs(ms: number): string {
+  if (ms < 1_000) return `${ms}мс`;
+  if (ms < 60_000) return `${(ms / 1000).toFixed(1)}с`;
+  return `${Math.floor(ms / 60_000)}м ${Math.floor((ms % 60_000) / 1000)}с`;
 }
 
 function now(): string {
   return new Date().toLocaleTimeString("ru-RU", { hour12: false });
 }
 
-function formatMs(ms: number): string {
-  if (ms < 1000) return `${ms}мс`;
-  if (ms < 60000) return `${(ms / 1000).toFixed(1)}с`;
-  return `${Math.floor(ms / 60000)}м ${Math.floor((ms % 60000) / 1000)}с`;
+function isActiveStatus(status: MigrationTaskStatus | null): boolean {
+  return status === "PENDING" || status === "RUNNING";
 }
 
-const STAT_LABELS: Record<keyof MigrationStats, string> = {
-  companies: "Компании",
-  contacts: "Контакты",
-  deals: "Сделки",
-  messages: "Сообщения",
-};
+function stageIndex(stage: MigrationStage | null): number {
+  if (!stage) return -1;
+  return PIPELINE_STAGES.indexOf(stage);
+}
 
-const STAT_COLORS: Record<keyof MigrationStats, string> = {
-  companies: "bg-blue-500",
-  contacts: "bg-violet-500",
-  deals: "bg-amber-500",
-  messages: "bg-emerald-500",
-};
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface Props {
+  open: boolean;
+  onClose: () => void;
+}
+
+interface LogLine {
+  ts: string;
+  text: string;
+}
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function MigrationDashboard({ open, onClose }: Props) {
-  const [orgId, setOrgId] = useState<string | null>(null);
-  const [uiStatus, setUiStatus] = useState<UIStatus>("idle");
-  const [currentStage, setCurrentStage] = useState<Stage | null>(null);
-  const [stats, setStats] = useState<MigrationStats>({
-    companies: 0,
-    contacts: 0,
-    deals: 0,
-    messages: 0,
-  });
-  const [elapsedMs, setElapsedMs] = useState(0);
-  const [logs, setLogs] = useState<LogLine[]>([]);
+  const [response, setResponse] = useState<MigrationStatusResponse | null>(
+    null
+  );
   const [launching, setLaunching] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [logs, setLogs] = useState<LogLine[]>([]);
 
   const logsEndRef = useRef<HTMLDivElement>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const prevStageRef = useRef<Stage | null>(null);
-  const prevStatsRef = useRef<MigrationStats>({ companies: 0, contacts: 0, deals: 0, messages: 0 });
-
-  // Resolve orgId once
-  useEffect(() => {
-    getSessionOrgId().then(setOrgId).catch(() => null);
-  }, []);
+  const prevStageRef = useRef<MigrationStage | null>(null);
 
   // Auto-scroll logs
   useEffect(() => {
     logsEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [logs]);
 
-  // Polling
+  // Clean up interval on unmount
   useEffect(() => {
-    if (!orgId) return;
-
-    const poll = async () => {
-      const status = await fetchMigrationStatus(orgId);
-      if (!status) return;
-
-      const stage = (status.stage || "IDLE") as Stage;
-      const newStatus = stageToStatus(stage);
-
-      setCurrentStage(stage);
-      setUiStatus(newStatus);
-      setStats(status.stats ?? { companies: 0, contacts: 0, deals: 0, messages: 0 });
-      setElapsedMs(status.elapsedMs ?? 0);
-
-      // Append log lines when stage changes or counts grow
-      const prev = prevStageRef.current;
-      const prevStats = prevStatsRef.current;
-
-      if (stage !== prev && RUNNING_STAGES.includes(stage)) {
-        addLog(`Этап: ${stageLabel(stage)} — начат`);
-      }
-
-      const s = status.stats ?? { companies: 0, contacts: 0, deals: 0, messages: 0 };
-      (Object.keys(STAT_LABELS) as (keyof MigrationStats)[]).forEach((key) => {
-        if (s[key] !== prevStats[key] && s[key] > 0) {
-          addLog(`${STAT_LABELS[key]}: обработано ${s[key].toLocaleString("ru-RU")}`);
-        }
-      });
-
-      if (stage === "DONE" && prev !== "DONE") {
-        addLog(`Синхронизация завершена за ${formatMs(status.elapsedMs ?? 0)}`);
-      }
-
-      prevStageRef.current = stage;
-      prevStatsRef.current = s;
-
-      if (newStatus !== "running") {
-        stopPolling();
-      }
-    };
-
-    const startPolling = () => {
-      if (intervalRef.current) return;
-      intervalRef.current = setInterval(poll, 3000);
-    };
-
-    const stopPolling = () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-    };
-
-    if (uiStatus === "running") {
-      startPolling();
-      poll();
-    } else {
-      stopPolling();
-    }
-
     return () => stopPolling();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [uiStatus, orgId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Resume polling if dashboard is opened mid-migration
+  useEffect(() => {
+    if (!open) return;
+    getMigrationStatus().then((data) => {
+      if (!data) return;
+      setResponse(data);
+      prevStageRef.current = data.stage;
+      if (isActiveStatus(data.status)) {
+        startPolling();
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   function addLog(text: string) {
     setLogs((prev) => [...prev, { ts: now(), text }]);
   }
 
-  async function handleStart() {
-    if (!orgId || launching) return;
-    setLaunching(true);
-    setErrorMsg(null);
-    setLogs([]);
-    prevStageRef.current = null;
-    prevStatsRef.current = { companies: 0, contacts: 0, deals: 0, messages: 0 };
+  function stopPolling() {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+  }
 
+  async function doPoll() {
+    const data = await getMigrationStatus();
+    if (!data) return;
+
+    setResponse(data);
+
+    const prev = prevStageRef.current;
+    if (data.stage !== prev && data.stage !== "DONE") {
+      addLog(`Этап: ${STAGE_LABELS[data.stage]} — начат`);
+    }
+    if (data.stage === "DONE" && prev !== "DONE") {
+      addLog(`Синхронизация завершена за ${formatMs(data.elapsedMs)}`);
+    }
+    if (data.status === "FAILED" && data.error && prev !== data.stage) {
+      addLog(`Ошибка: ${data.error}`);
+    }
+    prevStageRef.current = data.stage;
+
+    if (data.status === "DONE" || data.status === "FAILED") {
+      stopPolling();
+    }
+  }
+
+  function startPolling() {
+    stopPolling();
+    intervalRef.current = setInterval(doPoll, 3000);
+  }
+
+  async function handleStart() {
+    if (launching) return;
+    setLaunching(true);
+    setLogs([]);
+    setResponse(null);
+    prevStageRef.current = null;
     addLog("Запуск синхронизации...");
 
-    const result = await triggerMigration(orgId);
+    const result = await startMigration();
 
     if (!result.ok) {
-      setErrorMsg(result.message ?? "Неизвестная ошибка");
-      setUiStatus("error");
       addLog(`Ошибка: ${result.message ?? "Неизвестная ошибка"}`);
       setLaunching(false);
       return;
     }
 
     addLog("Запрос принят. Ожидаем статус...");
-    setUiStatus("running");
+    startPolling();
+    await doPoll();
     setLaunching(false);
   }
 
-  // Compute bar widths relative to max stat
-  const maxStat = Math.max(
-    stats.companies,
-    stats.contacts,
-    stats.deals,
-    stats.messages,
-    1
-  );
-
-  const isActive = uiStatus === "running";
-  const canStart = uiStatus === "idle" || uiStatus === "done" || uiStatus === "error";
+  const status = response?.status ?? null;
+  const currentStage = response?.stage ?? null;
+  const currentStageIdx = stageIndex(currentStage);
+  const active = isActiveStatus(status);
+  const canStart = !active && !launching;
 
   return (
     <>
@@ -232,7 +184,9 @@ export default function MigrationDashboard({ open, onClose }: Props) {
       <div
         className={cn(
           "fixed inset-0 z-40 bg-black/40 backdrop-blur-sm transition-opacity duration-300",
-          open ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+          open
+            ? "opacity-100 pointer-events-auto"
+            : "opacity-0 pointer-events-none"
         )}
         onClick={onClose}
       />
@@ -254,7 +208,9 @@ export default function MigrationDashboard({ open, onClose }: Props) {
               <h2 className="text-sm font-semibold text-gray-900">
                 Синхронизация данных
               </h2>
-              <p className="text-xs text-gray-400">Миграция из сервиса Аналитики</p>
+              <p className="text-xs text-gray-400">
+                Миграция из сервиса Аналитики
+              </p>
             </div>
           </div>
           <button
@@ -267,99 +223,169 @@ export default function MigrationDashboard({ open, onClose }: Props) {
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
-
-          {/* Status + Launch */}
+          {/* Status bar */}
           <div className="flex items-center justify-between rounded-xl border border-gray-100 bg-gray-50 px-5 py-4">
-            <StatusBadge status={uiStatus} stage={currentStage} />
+            <StatusBadge status={status} stage={currentStage} />
 
-            {elapsedMs > 0 && uiStatus === "running" && (
-              <span className="text-xs text-gray-400">{formatMs(elapsedMs)}</span>
+            {response && response.elapsedMs > 0 && active && (
+              <span className="flex items-center gap-1 text-xs text-gray-400">
+                <Clock size={12} />
+                {formatMs(response.elapsedMs)}
+              </span>
             )}
 
-            {canStart && (
+            {canStart ? (
               <button
                 onClick={handleStart}
-                disabled={launching || !orgId}
-                className={cn(
-                  "flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors",
-                  launching || !orgId
-                    ? "bg-green-400 cursor-not-allowed"
-                    : "bg-green-600 hover:bg-green-700"
-                )}
+                className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 transition-colors"
               >
-                {launching ? (
-                  <Loader2 size={15} className="animate-spin" />
-                ) : (
-                  <PlayCircle size={15} />
-                )}
-                {launching ? "Запуск..." : "Запустить синхронизацию"}
+                <PlayCircle size={15} />
+                Запустить синхронизацию
               </button>
-            )}
-
-            {isActive && (
+            ) : (
               <button
                 disabled
                 className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white bg-green-400 cursor-not-allowed"
               >
                 <Loader2 size={15} className="animate-spin" />
-                Выполняется...
+                {launching ? "Запуск..." : "Выполняется..."}
               </button>
             )}
           </div>
 
-          {/* Error */}
-          {errorMsg && (
-            <div className="flex items-start gap-2.5 rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
-              <AlertCircle size={15} className="mt-0.5 shrink-0" />
-              <span>{errorMsg}</span>
+          {/* Error alert */}
+          {status === "FAILED" && (
+            <div className="flex items-start gap-2.5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              <AlertCircle
+                size={15}
+                className="mt-0.5 shrink-0 text-red-500"
+              />
+              <span>{response?.error ?? "Произошла ошибка синхронизации"}</span>
             </div>
           )}
 
-          {/* Stats */}
+          {/* Success alert */}
+          {status === "DONE" && (
+            <div className="flex items-center gap-2.5 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+              <CheckCircle2 size={15} className="shrink-0 text-green-500" />
+              <span>
+                Синхронизация завершена успешно за{" "}
+                <span className="font-semibold">
+                  {formatMs(response?.elapsedMs ?? 0)}
+                </span>
+              </span>
+            </div>
+          )}
+
+          {/* Stage stepper */}
           <div>
             <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">
-              Статистика
+              Этапы
             </p>
-            <div className="space-y-3">
-              {(Object.keys(STAT_LABELS) as (keyof MigrationStats)[]).map((key) => {
-                const value = stats[key];
-                const pct = Math.round((value / maxStat) * 100);
+            <div className="space-y-0.5">
+              {PIPELINE_STAGES.map((stage, idx) => {
+                const isDone =
+                  status === "DONE" ||
+                  (currentStageIdx > idx && currentStageIdx !== -1);
+                const isCurrent =
+                  stage === currentStage && active;
+                const processed =
+                  response?.stats?.[stage]?.processed ?? 0;
+                const failed = response?.stats?.[stage]?.failed ?? 0;
+
                 return (
-                  <div key={key}>
-                    <div className="mb-1.5 flex items-center justify-between">
-                      <span className="text-sm text-gray-600">{STAT_LABELS[key]}</span>
-                      <span className="text-sm font-semibold tabular-nums text-gray-900">
-                        {value.toLocaleString("ru-RU")}
-                      </span>
+                  <div
+                    key={stage}
+                    className={cn(
+                      "flex items-center gap-3 rounded-lg px-4 py-2.5 transition-colors duration-300",
+                      isCurrent
+                        ? "bg-green-50"
+                        : isDone
+                        ? "bg-gray-50/60"
+                        : "bg-transparent"
+                    )}
+                  >
+                    {/* Stage indicator */}
+                    <div className="w-5 flex justify-center shrink-0">
+                      {isDone ? (
+                        <CheckCircle2 size={16} className="text-green-500" />
+                      ) : isCurrent ? (
+                        <span className="relative flex h-3 w-3">
+                          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
+                          <span className="relative inline-flex h-3 w-3 rounded-full bg-green-500" />
+                        </span>
+                      ) : (
+                        <span className="h-2.5 w-2.5 rounded-full border-2 border-gray-200 bg-white" />
+                      )}
                     </div>
-                    <div className="h-1.5 w-full rounded-full bg-gray-100">
-                      <div
-                        className={cn(
-                          "h-1.5 rounded-full transition-all duration-700",
-                          STAT_COLORS[key]
+
+                    {/* Stage name */}
+                    <span
+                      className={cn(
+                        "flex-1 text-sm",
+                        isCurrent
+                          ? "font-semibold text-green-700"
+                          : isDone
+                          ? "text-gray-500"
+                          : "text-gray-400"
+                      )}
+                    >
+                      {STAGE_LABELS[stage]}
+                    </span>
+
+                    {/* Per-stage stats */}
+                    {(processed > 0 || failed > 0) && (
+                      <div className="flex items-center gap-2 text-xs tabular-nums">
+                        <span className="text-gray-500">
+                          {processed.toLocaleString("ru-RU")}
+                        </span>
+                        {failed > 0 && (
+                          <span className="text-red-400">
+                            −{failed.toLocaleString("ru-RU")}
+                          </span>
                         )}
-                        style={{ width: `${pct}%` }}
-                      />
-                    </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}
             </div>
           </div>
 
-          {/* Elapsed (done state) */}
-          {uiStatus === "done" && elapsedMs > 0 && (
-            <div className="rounded-lg border border-green-100 bg-green-50 px-4 py-3 text-sm text-green-700">
-              Синхронизация завершена за{" "}
-              <span className="font-semibold">{formatMs(elapsedMs)}</span>
+          {/* Totals */}
+          {(response?.totalProcessed ?? 0) > 0 && (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 text-center">
+                <p className="text-2xl font-bold tabular-nums text-gray-900">
+                  {(response?.totalProcessed ?? 0).toLocaleString("ru-RU")}
+                </p>
+                <p className="mt-0.5 text-xs text-gray-400">Обработано</p>
+              </div>
+              {(response?.totalFailed ?? 0) > 0 ? (
+                <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-center">
+                  <p className="text-2xl font-bold tabular-nums text-red-600">
+                    {(response?.totalFailed ?? 0).toLocaleString("ru-RU")}
+                  </p>
+                  <p className="mt-0.5 text-xs text-red-400">Ошибок</p>
+                </div>
+              ) : (
+                <div className="rounded-xl border border-green-100 bg-green-50 px-4 py-3 text-center">
+                  <p className="text-2xl font-bold tabular-nums text-green-600">
+                    0
+                  </p>
+                  <p className="mt-0.5 text-xs text-green-400">Ошибок</p>
+                </div>
+              )}
             </div>
           )}
         </div>
 
-        {/* Terminal logs */}
+        {/* Terminal log */}
         <div className="shrink-0 border-t border-gray-100">
           <div className="flex items-center justify-between px-4 py-2 bg-gray-900">
-            <span className="text-xs font-mono text-gray-400">лог синхронизации</span>
+            <span className="text-xs font-mono text-gray-400">
+              лог синхронизации
+            </span>
             {logs.length > 0 && (
               <button
                 onClick={() => setLogs([])}
@@ -371,7 +397,9 @@ export default function MigrationDashboard({ open, onClose }: Props) {
           </div>
           <div className="h-44 overflow-y-auto bg-gray-950 px-4 py-3 font-mono text-xs leading-relaxed">
             {logs.length === 0 ? (
-              <span className="text-gray-600">Логи появятся после запуска синхронизации...</span>
+              <span className="text-gray-600">
+                Логи появятся после запуска синхронизации...
+              </span>
             ) : (
               logs.map((l, i) => (
                 <div key={i} className="flex gap-2">
@@ -390,8 +418,14 @@ export default function MigrationDashboard({ open, onClose }: Props) {
 
 // ─── Status Badge ─────────────────────────────────────────────────────────────
 
-function StatusBadge({ status, stage }: { status: UIStatus; stage: Stage | null }) {
-  if (status === "idle") {
+function StatusBadge({
+  status,
+  stage,
+}: {
+  status: MigrationTaskStatus | null;
+  stage: MigrationStage | null;
+}) {
+  if (!status) {
     return (
       <div className="flex items-center gap-2">
         <span className="h-2 w-2 rounded-full bg-gray-300" />
@@ -400,7 +434,16 @@ function StatusBadge({ status, stage }: { status: UIStatus; stage: Stage | null 
     );
   }
 
-  if (status === "running") {
+  if (status === "PENDING") {
+    return (
+      <div className="flex items-center gap-2">
+        <Loader2 size={14} className="animate-spin text-amber-500" />
+        <span className="text-sm text-amber-600">В очереди</span>
+      </div>
+    );
+  }
+
+  if (status === "RUNNING") {
     return (
       <div className="flex items-center gap-2">
         <span className="relative flex h-2 w-2">
@@ -409,9 +452,9 @@ function StatusBadge({ status, stage }: { status: UIStatus; stage: Stage | null 
         </span>
         <span className="text-sm font-medium text-gray-700">
           В процессе
-          {stage && stage !== "IDLE" && (
+          {stage && stage !== "DONE" && (
             <span className="ml-1.5 font-normal text-gray-400">
-              — {stageLabel(stage)}
+              — {STAGE_LABELS[stage]}
             </span>
           )}
         </span>
@@ -419,7 +462,7 @@ function StatusBadge({ status, stage }: { status: UIStatus; stage: Stage | null 
     );
   }
 
-  if (status === "done") {
+  if (status === "DONE") {
     return (
       <div className="flex items-center gap-2 text-green-600">
         <CheckCircle2 size={16} />

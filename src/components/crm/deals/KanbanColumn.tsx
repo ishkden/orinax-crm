@@ -118,7 +118,7 @@ export default function KanbanColumn({
     <div className="flex h-full min-h-0 w-[228px] min-w-[228px] shrink-0 flex-col self-stretch">
       <div
         className={cn(
-          "flex min-h-0 flex-1 flex-col overflow-visible rounded-xl border border-transparent bg-gray-50/80 transition-colors duration-150",
+          "flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-transparent bg-gray-50/80 transition-colors duration-150",
           isOver && "border-brand-300 bg-brand-50/30"
         )}
       >
@@ -184,7 +184,7 @@ export default function KanbanColumn({
 
         <div
           ref={setNodeRef}
-          className="min-h-[60px] flex-1 space-y-2.5 overflow-y-auto overscroll-contain px-2 pb-2"
+          className="min-h-0 flex-1 touch-pan-y space-y-2.5 overflow-y-auto overscroll-y-contain px-2 pb-2 [-webkit-overflow-scrolling:touch]"
         >
           <SortableContext
             items={deals.map((d) => d.id)}

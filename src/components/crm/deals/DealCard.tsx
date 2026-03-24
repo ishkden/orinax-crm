@@ -60,7 +60,7 @@ export default function DealCard({ deal, onContactClick, onDealClick }: DealCard
         onDealClick?.(deal);
       }}
       className={cn(
-        "group flex min-h-[202px] cursor-grab flex-col rounded-lg border border-gray-200 bg-white px-3 py-3 text-left touch-none active:cursor-grabbing",
+        "group flex min-h-[202px] cursor-grab flex-col rounded-lg border border-gray-200 bg-white px-3 py-3 text-left touch-pan-y active:cursor-grabbing",
         "transition-all duration-150 hover:border-gray-300 hover:shadow-md",
         isDragging && "z-50 rotate-1 opacity-50 shadow-xl"
       )}

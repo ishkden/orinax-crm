@@ -8,7 +8,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
     <SidebarProvider>
       <div className="flex h-screen min-h-0 overflow-hidden bg-surface">
         <Sidebar />
-        <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto">
+        <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           {children}
         </main>
       </div>

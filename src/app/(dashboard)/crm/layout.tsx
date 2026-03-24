@@ -8,12 +8,13 @@ export default function CrmLayout({ children }: { children: React.ReactNode }) {
   return (
     <CrmHeaderActionProvider>
       <CrmDealPipelineProvider>
-        <div className="flex w-full min-w-0 flex-col">
-          <CrmHeader />
-          <div className="flex w-full min-w-0">
-            <div className="flex min-w-0 flex-1 flex-col">
+        {/* Занимает высоту области main; прокрутка только в левой колонке — табы и контент уезжают вместе */}
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-row overflow-hidden">
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overflow-x-hidden overscroll-y-contain">
+              <CrmHeader />
               <CrmSubNav />
-              <div className="flex min-w-0 flex-col pb-8">{children}</div>
+              <div className="min-w-0 pb-8">{children}</div>
             </div>
             <CrmRightBar />
           </div>

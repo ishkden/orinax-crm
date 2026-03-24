@@ -24,7 +24,7 @@ export default function CrmHeader() {
       ?.title ?? "CRM";
 
   return (
-    <header className="sticky top-0 z-30 shrink-0 border-b border-gray-100 bg-white/95 px-6 py-2 backdrop-blur-sm supports-[backdrop-filter]:bg-white/90 min-h-[3.5rem] flex items-center justify-between gap-4">
+    <header className="shrink-0 border-b border-gray-100 bg-white px-6 py-2 min-h-[3.5rem] flex items-center justify-between gap-4">
       <div className="flex min-w-0 flex-1 items-center gap-2">
         <h1 className="shrink-0 text-xl font-semibold tracking-tight text-gray-900 sm:text-2xl">
           {title}

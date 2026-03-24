@@ -11,9 +11,9 @@ export type MigrationTaskStatus = "PENDING" | "RUNNING" | "DONE" | "FAILED";
 export type MigrationStage =
   | "COMPANIES"
   | "CONTACTS"
-  | "CHANNELS"
+  | "PIPELINES"
+  | "STAGES"
   | "DEALS"
-  | "LEADS"
   | "MESSAGES"
   | "DONE";
 

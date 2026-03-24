@@ -24,18 +24,18 @@ import {
 const PIPELINE_STAGES: MigrationStage[] = [
   "COMPANIES",
   "CONTACTS",
-  "CHANNELS",
+  "PIPELINES",
+  "STAGES",
   "DEALS",
-  "LEADS",
   "MESSAGES",
 ];
 
 const STAGE_LABELS: Record<MigrationStage, string> = {
   COMPANIES: "Компании",
   CONTACTS: "Контакты",
-  CHANNELS: "Каналы",
+  PIPELINES: "Воронки",
+  STAGES: "Стадии",
   DEALS: "Сделки",
-  LEADS: "Лиды",
   MESSAGES: "Сообщения",
   DONE: "Завершено",
 };

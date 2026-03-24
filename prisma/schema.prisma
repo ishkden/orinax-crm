@@ -31,6 +31,8 @@ model Org {
   activities    Activity[]
   comments      Comment[]
   conversations Conversation[]
+  pipelines     Pipeline[]
+  stages        Stage[]
 }
 
 // Связь User ↔ Org через промежуточную таблицу (один user — много org)
@@ -164,6 +166,42 @@ model Contact {
   @@unique([orgId, sourceId])
 }
 
+model Pipeline {
+  id        String   @id @default(cuid())
+  orgId     String
+  sourceId  String?
+  name      String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  org    Org     @relation(fields: [orgId], references: [id])
+  stages Stage[]
+  deals  Deal[]
+
+  @@unique([orgId, sourceId])
+}
+
+model Stage {
+  id         String   @id @default(cuid())
+  orgId      String
+  pipelineId String
+  sourceId   String?
+  name       String
+  color      String?
+  sortOrder  Int      @default(0)
+  isFinal    Boolean  @default(false)
+  isWon      Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  org      Org      @relation(fields: [orgId], references: [id])
+  pipeline Pipeline @relation(fields: [pipelineId], references: [id])
+  deals    Deal[]
+
+  @@unique([orgId, sourceId])
+}
+
 model Deal {
   id          String    @id @default(cuid())
   orgId       String
@@ -181,12 +219,18 @@ model Deal {
   // Маппинг внешних источников
   sourceId String? // ID в Битрикс24 (из сервиса Аналитики)
 
+  // Динамические воронки и стадии (из Аналитики / Битрикса)
+  pipelineId String?
+  stageId    String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   org        Org        @relation(fields: [orgId], references: [id])
   contact    Contact?   @relation(fields: [contactId], references: [id])
   assigned   User?      @relation("AssignedDeals", fields: [assignedId], references: [id])
+  pipeline   Pipeline?  @relation(fields: [pipelineId], references: [id])
+  stageRel   Stage?     @relation(fields: [stageId], references: [id])
   tasks      Task[]
   activities Activity[] @relation("DealActivities")
   comments   Comment[]

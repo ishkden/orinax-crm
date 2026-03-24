@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
   if (invalid) return badRequest("Each deal must have sourceId and title");
 
   try {
-    // Resolve contactSourceIds → internal Contact.id in a single query
+    // Resolve contactSourceIds → internal Contact.id
     const contactSourceIds = [
       ...new Set(data.map((d) => d.contactSourceId).filter(Boolean) as string[]),
     ];
@@ -53,10 +53,46 @@ export async function POST(request: NextRequest) {
 
     const contactMap = new Map(contacts.map((c) => [c.sourceId!, c.id]));
 
+    // Resolve pipelineSourceIds → internal Pipeline.id
+    const pipelineSourceIds = [
+      ...new Set(data.map((d) => d.pipelineSourceId).filter(Boolean) as string[]),
+    ];
+
+    const pipelines =
+      pipelineSourceIds.length > 0
+        ? await prisma.pipeline.findMany({
+            where: { orgId, sourceId: { in: pipelineSourceIds } },
+            select: { id: true, sourceId: true },
+          })
+        : [];
+
+    const pipelineMap = new Map(pipelines.map((p) => [p.sourceId!, p.id]));
+
+    // Resolve stageSourceIds → internal Stage.id
+    const stageSourceIds = [
+      ...new Set(data.map((d) => d.stageSourceId).filter(Boolean) as string[]),
+    ];
+
+    const stages =
+      stageSourceIds.length > 0
+        ? await prisma.stage.findMany({
+            where: { orgId, sourceId: { in: stageSourceIds } },
+            select: { id: true, sourceId: true },
+          })
+        : [];
+
+    const stageMap = new Map(stages.map((s) => [s.sourceId!, s.id]));
+
     const results = await prisma.$transaction(
       data.map((deal) => {
         const contactId = deal.contactSourceId
           ? (contactMap.get(deal.contactSourceId) ?? null)
+          : null;
+        const pipelineId = deal.pipelineSourceId
+          ? (pipelineMap.get(deal.pipelineSourceId) ?? null)
+          : null;
+        const stageId = deal.stageSourceId
+          ? (stageMap.get(deal.stageSourceId) ?? null)
           : null;
         const stage = resolveStage(deal.stage);
 
@@ -72,6 +108,8 @@ export async function POST(request: NextRequest) {
             description: deal.description ?? null,
             tags: deal.tags ?? [],
             contactId,
+            pipelineId,
+            stageId,
             ...(deal.closeDate ? { closeDate: new Date(deal.closeDate) } : {}),
           },
           update: {
@@ -82,6 +120,8 @@ export async function POST(request: NextRequest) {
             description: deal.description ?? null,
             tags: deal.tags ?? [],
             ...(contactId ? { contactId } : {}),
+            ...(pipelineId ? { pipelineId } : {}),
+            ...(stageId ? { stageId } : {}),
             ...(deal.closeDate ? { closeDate: new Date(deal.closeDate) } : {}),
           },
           select: { id: true, sourceId: true },

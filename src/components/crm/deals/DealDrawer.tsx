@@ -4,55 +4,34 @@ import { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X,
-  User,
+  Briefcase,
   Building2,
-  Phone,
-  Mail,
-  MessageSquare,
+  User,
   Calendar,
-  Star,
-  MoreHorizontal,
-  Paperclip,
+  Banknote,
 } from "lucide-react";
+import { formatCurrency, formatDate } from "@/lib/utils";
 import type { Deal } from "./mockData";
 import { useCrmDrawerInset } from "@/components/crm/useCrmDrawerInset";
 
-interface ContactDrawerProps {
+interface DealDrawerProps {
   deal: Deal | null;
+  stages: { id: string; label: string }[];
   onClose: () => void;
 }
 
-function mockPhone(seed: string) {
-  let n = 0;
-  for (let i = 0; i < seed.length; i++) n = (n + seed.charCodeAt(i) * (i + 1)) % 10000000;
-  const p = String(9000000000 + n).slice(0, 10);
-  return `+7 (${p.slice(0, 3)}) ${p.slice(3, 6)}-${p.slice(6, 8)}-${p.slice(8, 10)}`;
-}
-
-function mockEmail(name: string, company: string) {
-  const slug = (s: string) =>
-    s
-      .toLowerCase()
-      .replace(/[^a-zа-яё0-9]+/gi, ".")
-      .replace(/^\.|\.$/g, "")
-      .slice(0, 24) || "contact";
-  const domain = slug(company).replace(/\./g, "") || "company";
-  return `${slug(name)}@${domain}.ru`;
-}
-
 const TOOLBAR_ICONS = [
-  { Icon: Phone, label: "Позвонить" },
-  { Icon: Mail, label: "Почта" },
-  { Icon: MessageSquare, label: "Чат" },
-  { Icon: Calendar, label: "Встреча" },
-  { Icon: Paperclip, label: "Файлы" },
-  { Icon: Star, label: "Важное" },
-  { Icon: MoreHorizontal, label: "Ещё" },
+  { Icon: Banknote, label: "Оплата" },
+  { Icon: Calendar, label: "Сроки" },
+  { Icon: User, label: "Участники" },
+  { Icon: Building2, label: "Компания" },
 ];
 
-export default function ContactDrawer({ deal, onClose }: ContactDrawerProps) {
+export default function DealDrawer({ deal, stages, onClose }: DealDrawerProps) {
   const open = deal !== null;
   const { left, right } = useCrmDrawerInset();
+
+  const stageLabel = stages.find((s) => s.id === deal?.stage)?.label ?? deal?.stage;
 
   useEffect(() => {
     if (!open) return;
@@ -86,7 +65,7 @@ export default function ContactDrawer({ deal, onClose }: ContactDrawerProps) {
             onClick={onClose}
           />
           <motion.div
-            key="contact-drawer"
+            key="deal-drawer"
             role="dialog"
             aria-modal="true"
             className="fixed bottom-0 z-[90] flex max-h-[85vh] rounded-t-2xl overflow-hidden shadow-2xl border border-gray-200 bg-white"
@@ -97,14 +76,19 @@ export default function ContactDrawer({ deal, onClose }: ContactDrawerProps) {
             transition={{ type: "spring", damping: 28, stiffness: 320 }}
           >
             <div className="flex-1 flex flex-col min-w-0 min-h-0">
-              <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-gray-100 shrink-0">
-                <div className="min-w-0">
-                  <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">
-                    Контакт
-                  </p>
-                  <h2 className="text-lg font-semibold text-gray-900 mt-0.5 truncate">
-                    {deal.contactName}
-                  </h2>
+              <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-gray-100 shrink-0 gap-3">
+                <div className="min-w-0 flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-brand-50 flex items-center justify-center shrink-0">
+                    <Briefcase size={20} className="text-brand-600" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">
+                      Сделка
+                    </p>
+                    <h2 className="text-lg font-semibold text-gray-900 mt-0.5 line-clamp-2">
+                      {deal.title}
+                    </h2>
+                  </div>
                 </div>
                 <button
                   type="button"
@@ -116,18 +100,30 @@ export default function ContactDrawer({ deal, onClose }: ContactDrawerProps) {
               </div>
 
               <div className="overflow-y-auto px-5 py-4 space-y-4 flex-1">
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-full bg-brand-100 flex items-center justify-center shrink-0">
-                    <User size={20} className="text-brand-600" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-gray-900">{deal.contactName}</p>
-                    <p className="text-xs text-gray-500 mt-0.5">Связан со сделкой</p>
-                    <p className="text-sm text-brand-600 mt-1 line-clamp-2">{deal.title}</p>
-                  </div>
-                </div>
-
                 <div className="rounded-xl border border-gray-100 bg-gray-50/50 divide-y divide-gray-100">
+                  <div className="flex items-center gap-3 px-4 py-3">
+                    <Banknote size={16} className="text-gray-400 shrink-0" />
+                    <div>
+                      <p className="text-xs text-gray-400">Сумма</p>
+                      <p className="text-sm text-gray-900">
+                        {formatCurrency(deal.value, deal.currency)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 px-4 py-3">
+                    <Briefcase size={16} className="text-gray-400 shrink-0" />
+                    <div>
+                      <p className="text-xs text-gray-400">Этап</p>
+                      <p className="text-sm text-gray-900">{stageLabel}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 px-4 py-3">
+                    <User size={16} className="text-gray-400 shrink-0" />
+                    <div>
+                      <p className="text-xs text-gray-400">Контакт</p>
+                      <p className="text-sm text-gray-900">{deal.contactName}</p>
+                    </div>
+                  </div>
                   <div className="flex items-center gap-3 px-4 py-3">
                     <Building2 size={16} className="text-gray-400 shrink-0" />
                     <div>
@@ -136,25 +132,16 @@ export default function ContactDrawer({ deal, onClose }: ContactDrawerProps) {
                     </div>
                   </div>
                   <div className="flex items-center gap-3 px-4 py-3">
-                    <Phone size={16} className="text-gray-400 shrink-0" />
+                    <Calendar size={16} className="text-gray-400 shrink-0" />
                     <div>
-                      <p className="text-xs text-gray-400">Телефон</p>
-                      <p className="text-sm text-gray-900">{mockPhone(deal.id)}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 px-4 py-3">
-                    <Mail size={16} className="text-gray-400 shrink-0" />
-                    <div>
-                      <p className="text-xs text-gray-400">E-mail</p>
-                      <p className="text-sm text-gray-900 break-all">
-                        {mockEmail(deal.contactName, deal.company)}
-                      </p>
+                      <p className="text-xs text-gray-400">Срок</p>
+                      <p className="text-sm text-gray-900">{formatDate(deal.dueDate)}</p>
                     </div>
                   </div>
                 </div>
 
                 <p className="text-xs text-gray-400 text-center pb-2">
-                  Данные демонстрационные. Позже здесь будет карточка контакта из CRM.
+                  Данные демонстрационные. Позже здесь будет карточка сделки из CRM.
                 </p>
               </div>
             </div>

@@ -1,12 +1,15 @@
 "use client";
 
 import { useState, useMemo, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import DealsToolbar, { type ViewMode } from "./DealsToolbar";
 import KanbanBoard from "./KanbanBoard";
 import DealsListView from "./DealsListView";
 import CreateDealModal from "./CreateDealModal";
 import ContactDrawer from "./ContactDrawer";
+import DealDrawer from "./DealDrawer";
 import { useCrmHeaderAction } from "@/components/crm/CrmHeaderActionContext";
+import { useCrmDealPipeline } from "@/components/crm/CrmDealPipelineContext";
 import { pipelines, mockDeals, type Deal } from "./mockData";
 
 const STAGE_OVERRIDES_KEY = "crm-kanban-stage-overrides";
@@ -14,7 +17,9 @@ const STAGE_OVERRIDES_KEY = "crm-kanban-stage-overrides";
 type StageOverrides = Record<string, Record<string, { label?: string; color?: string }>>;
 
 export default function DealsClient() {
+  const router = useRouter();
   const { setHeaderAction } = useCrmHeaderAction();
+  const { setPipeline } = useCrmDealPipeline();
   const [deals, setDeals] = useState<Deal[]>(mockDeals);
   const [activePipelineId, setActivePipelineId] = useState("main");
   const [viewMode, setViewMode] = useState<ViewMode>("kanban");
@@ -25,19 +30,34 @@ export default function DealsClient() {
   const [modalStage, setModalStage] = useState<string | null>(null);
   const [stageOverrides, setStageOverrides] = useState<StageOverrides>({});
   const [contactDeal, setContactDeal] = useState<Deal | null>(null);
+  const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
 
   const openCreateDeal = useCallback(() => {
     setModalStage(null);
     setModalOpen(true);
   }, []);
 
+  const goToLeads = useCallback(() => {
+    router.push("/crm/leads");
+  }, [router]);
+
   useEffect(() => {
     setHeaderAction({
-      label: "Создать сделку",
+      label: "Добавить сделку",
       onClick: openCreateDeal,
+      secondary: { label: "Добавить лид", onClick: goToLeads },
     });
     return () => setHeaderAction(null);
-  }, [setHeaderAction, openCreateDeal]);
+  }, [setHeaderAction, openCreateDeal, goToLeads]);
+
+  useEffect(() => {
+    setPipeline({
+      pipelines,
+      activePipelineId,
+      onPipelineChange: setActivePipelineId,
+    });
+    return () => setPipeline(null);
+  }, [setPipeline, activePipelineId]);
 
   useEffect(() => {
     try {
@@ -130,9 +150,6 @@ export default function DealsClient() {
   return (
     <>
       <DealsToolbar
-        pipelines={pipelines}
-        activePipelineId={activePipelineId}
-        onPipelineChange={setActivePipelineId}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         viewMode={viewMode}
@@ -152,11 +169,13 @@ export default function DealsClient() {
           onAddDeal={handleAddDeal}
           onStageUpdate={handleStageUpdate}
           onContactClick={setContactDeal}
+          onDealClick={setSelectedDeal}
         />
       ) : (
         <DealsListView
           deals={filteredDeals}
           stages={activePipelineWithOverrides.stages}
+          onDealClick={setSelectedDeal}
         />
       )}
 
@@ -171,6 +190,12 @@ export default function DealsClient() {
       />
 
       <ContactDrawer deal={contactDeal} onClose={() => setContactDeal(null)} />
+
+      <DealDrawer
+        deal={selectedDeal}
+        stages={activePipelineWithOverrides.stages}
+        onClose={() => setSelectedDeal(null)}
+      />
     </>
   );
 }

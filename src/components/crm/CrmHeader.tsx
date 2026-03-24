@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { getInitials } from "@/lib/utils";
-import { Bell } from "lucide-react";
+import { Bell, Plus } from "lucide-react";
 import { useCrmHeaderAction } from "./CrmHeaderActionContext";
 
 const ROUTE_TITLES: { prefix: string; title: string }[] = [
@@ -25,18 +25,41 @@ export default function CrmHeader() {
 
   return (
     <header className="bg-white border-b border-gray-100 px-6 min-h-[3.5rem] flex items-center justify-between shrink-0 gap-4 py-2">
-      <div className="flex items-center gap-2.5 min-w-0 flex-1">
+      <div className="flex items-center gap-2 min-w-0 flex-1">
         <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 tracking-tight shrink-0">
           {title}
         </h1>
         {headerAction && (
-          <button
-            type="button"
-            onClick={headerAction.onClick}
-            className="shrink-0 text-xs sm:text-sm font-medium text-brand-600 px-2 py-1 rounded-md hover:bg-brand-50 transition-colors"
-          >
-            {headerAction.label}
-          </button>
+          <div className="group flex h-8 shrink-0 items-stretch overflow-hidden rounded-lg border border-transparent text-brand-600 transition-colors hover:border-gray-200 hover:bg-gray-50/80">
+            <button
+              type="button"
+              onClick={headerAction.onClick}
+              className="flex w-8 shrink-0 items-center justify-center rounded-l-lg hover:bg-gray-100/80 transition-colors"
+              aria-label={headerAction.label}
+            >
+              <Plus size={18} strokeWidth={2} />
+            </button>
+            <div className="flex max-w-0 items-stretch overflow-hidden transition-[max-width] duration-300 ease-out group-hover:max-w-[min(100vw-12rem,380px)]">
+              <div className="flex items-stretch border-l border-gray-200/80">
+                <button
+                  type="button"
+                  onClick={headerAction.onClick}
+                  className="inline-flex items-center whitespace-nowrap px-2.5 text-xs font-medium text-brand-700 hover:bg-gray-100/80 transition-colors"
+                >
+                  {headerAction.label}
+                </button>
+                {headerAction.secondary && (
+                  <button
+                    type="button"
+                    onClick={headerAction.secondary.onClick}
+                    className="inline-flex items-center whitespace-nowrap border-l border-gray-200/80 px-2.5 text-xs font-medium text-brand-700 hover:bg-gray-100/80 transition-colors"
+                  >
+                    {headerAction.secondary.label}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
         )}
       </div>
 

@@ -12,6 +12,8 @@ import {
 export type CrmHeaderPrimaryAction = {
   label: string;
   onClick: () => void;
+  /** Second action shown on hover (e.g. «Добавить лид»). */
+  secondary?: { label: string; onClick: () => void };
 } | null;
 
 type Ctx = {

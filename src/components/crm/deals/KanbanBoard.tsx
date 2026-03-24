@@ -23,6 +23,7 @@ interface KanbanBoardProps {
   onAddDeal?: (stageId: string) => void;
   onStageUpdate?: (stageId: string, updates: { label?: string; color?: string }) => void;
   onContactClick?: (deal: Deal) => void;
+  onDealClick?: (deal: Deal) => void;
 }
 
 export default function KanbanBoard({
@@ -32,6 +33,7 @@ export default function KanbanBoard({
   onAddDeal,
   onStageUpdate,
   onContactClick,
+  onDealClick,
 }: KanbanBoardProps) {
   const [activeDeal, setActiveDeal] = useState<Deal | null>(null);
 
@@ -105,6 +107,7 @@ export default function KanbanBoard({
             onAddDeal={onAddDeal}
             onStageUpdate={onStageUpdate}
             onContactClick={onContactClick}
+            onDealClick={onDealClick}
           />
         ))}
       </div>

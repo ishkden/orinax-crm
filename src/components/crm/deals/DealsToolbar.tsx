@@ -1,23 +1,14 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import {
-  Search,
-  ChevronDown,
-  LayoutGrid,
-  List,
-  X,
-} from "lucide-react";
+import { Search, LayoutGrid, List, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { Pipeline, Deal } from "./mockData";
+import type { Deal } from "./mockData";
 import { assignees, priorities } from "./mockData";
 
 export type ViewMode = "kanban" | "list";
 
 interface DealsToolbarProps {
-  pipelines: Pipeline[];
-  activePipelineId: string;
-  onPipelineChange: (id: string) => void;
   searchQuery: string;
   onSearchChange: (q: string) => void;
   viewMode: ViewMode;
@@ -30,9 +21,6 @@ interface DealsToolbarProps {
 }
 
 export default function DealsToolbar({
-  pipelines,
-  activePipelineId,
-  onPipelineChange,
   searchQuery,
   onSearchChange,
   viewMode,
@@ -43,19 +31,13 @@ export default function DealsToolbar({
   onFilterPriority,
   totalDeals,
 }: DealsToolbarProps) {
-  const [pipelineOpen, setPipelineOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
-  const pipelineRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLDivElement>(null);
 
-  const activePipeline = pipelines.find((p) => p.id === activePipelineId);
   const hasFilters = filterAssignee || filterPriority;
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
-      if (pipelineRef.current && !pipelineRef.current.contains(e.target as Node)) {
-        setPipelineOpen(false);
-      }
       if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
         setSearchOpen(false);
       }
@@ -67,49 +49,6 @@ export default function DealsToolbar({
   return (
     <div className="px-6 py-3 flex flex-col gap-3">
       <div className="flex items-center gap-3">
-        <div ref={pipelineRef} className="relative">
-          <button
-            type="button"
-            onClick={() => setPipelineOpen((v) => !v)}
-            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-white border border-gray-200 text-sm font-medium text-gray-800 hover:border-gray-300 transition-colors"
-          >
-            <span>{activePipeline?.label ?? "Воронка"}</span>
-            <ChevronDown
-              size={14}
-              className={cn(
-                "text-gray-400 transition-transform",
-                pipelineOpen && "rotate-180"
-              )}
-            />
-          </button>
-
-          {pipelineOpen && (
-            <div className="absolute top-full left-0 mt-1 w-56 bg-white rounded-lg border border-gray-200 shadow-lg z-50 py-1">
-              {pipelines.map((p) => (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => {
-                    onPipelineChange(p.id);
-                    setPipelineOpen(false);
-                  }}
-                  className={cn(
-                    "w-full text-left px-4 py-2 text-sm hover:bg-gray-50 transition-colors",
-                    p.id === activePipelineId
-                      ? "text-brand-600 font-medium bg-brand-50/50"
-                      : "text-gray-700"
-                  )}
-                >
-                  {p.label}
-                  <span className="ml-2 text-xs text-gray-400">
-                    {p.stages.length} этапов
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
         <span className="text-xs text-gray-400">
           {totalDeals} {totalDeals === 1 ? "сделка" : "сделок"}
         </span>

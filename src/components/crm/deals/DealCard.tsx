@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Calendar, User } from "lucide-react";
@@ -10,9 +11,10 @@ import { priorities } from "./mockData";
 interface DealCardProps {
   deal: Deal;
   onContactClick?: (deal: Deal) => void;
+  onDealClick?: (deal: Deal) => void;
 }
 
-export default function DealCard({ deal, onContactClick }: DealCardProps) {
+export default function DealCard({ deal, onContactClick, onDealClick }: DealCardProps) {
   const {
     attributes,
     listeners,
@@ -21,6 +23,8 @@ export default function DealCard({ deal, onContactClick }: DealCardProps) {
     transition,
     isDragging,
   } = useSortable({ id: deal.id });
+
+  const pointerStart = useRef<{ x: number; y: number } | null>(null);
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -38,6 +42,26 @@ export default function DealCard({ deal, onContactClick }: DealCardProps) {
       style={style}
       {...attributes}
       {...listeners}
+      onPointerDown={(e) => {
+        listeners?.onPointerDown?.(e);
+        if (e.button === 0) {
+          pointerStart.current = { x: e.clientX, y: e.clientY };
+        }
+      }}
+      onPointerUp={(e) => {
+        listeners?.onPointerUp?.(e);
+        if (!pointerStart.current || e.button !== 0) {
+          pointerStart.current = null;
+          return;
+        }
+        const dx = Math.abs(e.clientX - pointerStart.current.x);
+        const dy = Math.abs(e.clientY - pointerStart.current.y);
+        pointerStart.current = null;
+        if (dx >= 10 || dy >= 10) return;
+        const el = e.target as HTMLElement;
+        if (el.closest("[data-contact-link]")) return;
+        onDealClick?.(deal);
+      }}
       className={cn(
         "group flex flex-col bg-white rounded-lg border border-gray-200 px-3 py-3 min-h-[168px] cursor-grab active:cursor-grabbing touch-none",
         "hover:border-gray-300 hover:shadow-md transition-all duration-150",
@@ -51,7 +75,7 @@ export default function DealCard({ deal, onContactClick }: DealCardProps) {
             style={{ backgroundColor: priorityInfo?.color ?? "#9CA3AF" }}
             title={priorityInfo?.label}
           />
-          <h4 className="text-sm leading-snug font-semibold text-gray-900 line-clamp-4 min-h-[2.5rem]">
+          <h4 className="text-sm leading-snug font-medium text-gray-900 line-clamp-4 min-h-[2.5rem]">
             {deal.title}
           </h4>
         </div>
@@ -59,6 +83,7 @@ export default function DealCard({ deal, onContactClick }: DealCardProps) {
         <div className="pl-3 mb-2 shrink-0">
           <button
             type="button"
+            data-contact-link
             onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => {
               e.stopPropagation();
@@ -72,7 +97,7 @@ export default function DealCard({ deal, onContactClick }: DealCardProps) {
         </div>
 
         <div className="mt-auto pt-3 border-t border-gray-100 flex items-center justify-between gap-2 pl-3 shrink-0">
-          <span className="text-sm font-bold text-gray-900 tabular-nums">
+          <span className="text-sm text-gray-900 tabular-nums font-normal">
             {formatCurrency(deal.value, deal.currency)}
           </span>
 

@@ -9,6 +9,7 @@ import { priorities } from "./mockData";
 interface DealsListViewProps {
   deals: Deal[];
   stages: Stage[];
+  onDealClick?: (deal: Deal) => void;
 }
 
 const priorityBadgeVariant: Record<string, "default" | "info" | "warning" | "danger"> = {
@@ -18,7 +19,7 @@ const priorityBadgeVariant: Record<string, "default" | "info" | "warning" | "dan
   URGENT: "danger",
 };
 
-export default function DealsListView({ deals, stages }: DealsListViewProps) {
+export default function DealsListView({ deals, stages, onDealClick }: DealsListViewProps) {
   const stageMap = Object.fromEntries(stages.map((s) => [s.id, s]));
   const totalValue = deals.reduce((s, d) => s + d.value, 0);
 
@@ -30,7 +31,7 @@ export default function DealsListView({ deals, stages }: DealsListViewProps) {
           <span className="text-sm text-gray-500">
             {deals.length} {deals.length === 1 ? "сделка" : "сделок"}
           </span>
-          <span className="text-sm font-semibold text-gray-900">
+          <span className="text-sm font-normal text-gray-900 tabular-nums">
             {formatCurrency(totalValue)}
           </span>
         </div>
@@ -69,6 +70,15 @@ export default function DealsListView({ deals, stages }: DealsListViewProps) {
                 return (
                   <tr
                     key={deal.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => onDealClick?.(deal)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        onDealClick?.(deal);
+                      }
+                    }}
                     className="hover:bg-gray-50/70 transition-colors cursor-pointer"
                   >
                     <td className="px-4 py-3">
@@ -104,7 +114,7 @@ export default function DealsListView({ deals, stages }: DealsListViewProps) {
                     <td className="px-4 py-3 text-gray-600">
                       {deal.assignee}
                     </td>
-                    <td className="px-4 py-3 text-right font-semibold text-gray-900">
+                    <td className="px-4 py-3 text-right font-normal text-gray-900 tabular-nums">
                       {formatCurrency(deal.value, deal.currency)}
                     </td>
                     <td className="px-4 py-3">

@@ -19,6 +19,7 @@ interface KanbanColumnProps {
   onAddDeal?: (stageId: string) => void;
   onStageUpdate?: (stageId: string, updates: { label?: string; color?: string }) => void;
   onContactClick?: (deal: Deal) => void;
+  onDealClick?: (deal: Deal) => void;
 }
 
 export default function KanbanColumn({
@@ -27,6 +28,7 @@ export default function KanbanColumn({
   onAddDeal,
   onStageUpdate,
   onContactClick,
+  onDealClick,
 }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: stage.id });
   const totalValue = deals.reduce((sum, d) => sum + d.value, 0);
@@ -123,7 +125,7 @@ export default function KanbanColumn({
       >
         <div
           ref={headerRef}
-          className="relative rounded-t-xl px-2 min-h-[44px] flex items-center justify-center"
+          className="relative rounded-t-xl px-1.5 min-h-[34px] py-1 flex items-center justify-center"
           style={{
             backgroundColor: headerBg,
             color: headerFg,
@@ -132,7 +134,7 @@ export default function KanbanColumn({
           {!editing && (
             <>
               <span
-                className="absolute left-2 top-1/2 -translate-y-1/2 text-xs font-semibold tabular-nums px-2 py-0.5 rounded-full"
+                className="absolute left-1.5 top-1/2 -translate-y-1/2 text-[10px] font-medium tabular-nums px-1.5 py-0.5 rounded-full"
                 style={{
                   backgroundColor:
                     headerFg === "#ffffff" ? "rgba(255,255,255,0.25)" : "rgba(0,0,0,0.12)",
@@ -141,7 +143,7 @@ export default function KanbanColumn({
               >
                 {deals.length}
               </span>
-              <h3 className="text-sm font-semibold text-center truncate max-w-[68%] px-1 leading-tight">
+              <h3 className="text-[11px] font-medium text-center truncate max-w-[70%] px-1 leading-tight">
                 {stage.label}
               </h3>
               <button
@@ -150,22 +152,22 @@ export default function KanbanColumn({
                   e.stopPropagation();
                   setEditing(true);
                 }}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-md hover:bg-black/10 transition-colors"
+                className="absolute right-1 top-1/2 -translate-y-1/2 p-1 rounded-md hover:bg-black/10 transition-colors"
                 title="Редактировать название и цвет"
               >
-                <Pencil size={14} />
+                <Pencil size={11} />
               </button>
             </>
           )}
           {editing && (
-            <span className="text-sm font-semibold truncate px-8 py-2.5 opacity-90">
+            <span className="text-[11px] font-medium truncate px-7 py-1.5 opacity-90">
               {draftLabel || stage.label}
             </span>
           )}
         </div>
 
-        <div className="px-3 pt-3 pb-2 text-center">
-          <p className="text-xl font-bold text-gray-900 tracking-tight tabular-nums inline-block">
+        <div className="px-3 pt-2 pb-1.5 text-center">
+          <p className="text-base text-gray-800 tracking-tight tabular-nums font-normal inline-block">
             {formatCurrency(totalValue)}
           </p>
         </div>
@@ -194,6 +196,7 @@ export default function KanbanColumn({
                 key={deal.id}
                 deal={deal}
                 onContactClick={onContactClick}
+                onDealClick={onDealClick}
               />
             ))}
           </SortableContext>

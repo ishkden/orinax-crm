@@ -116,7 +116,7 @@ export default function KanbanColumn({
     <div className="flex shrink-0 flex-col">
       <div
         className={cn(
-          "flex flex-col bg-gray-50/80 rounded-xl min-w-[300px] w-[300px] shrink-0 max-h-full overflow-visible",
+          "flex flex-col bg-gray-50/80 rounded-xl min-w-[228px] w-[228px] shrink-0 max-h-full overflow-visible",
           "border border-transparent transition-colors duration-150",
           isOver && "border-brand-300 bg-brand-50/30"
         )}
@@ -164,8 +164,8 @@ export default function KanbanColumn({
           )}
         </div>
 
-        <div className="px-3 pt-3 pb-2">
-          <p className="text-xl font-bold text-gray-900 tracking-tight tabular-nums">
+        <div className="px-3 pt-3 pb-2 text-center">
+          <p className="text-xl font-bold text-gray-900 tracking-tight tabular-nums inline-block">
             {formatCurrency(totalValue)}
           </p>
         </div>

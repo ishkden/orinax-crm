@@ -24,16 +24,16 @@ export default function CrmHeader() {
       ?.title ?? "CRM";
 
   return (
-    <header className="bg-white border-b border-gray-100 px-6 h-14 flex items-center justify-between shrink-0 gap-4">
-      <div className="flex items-center gap-3 min-w-0 flex-1">
-        <h1 className="text-base font-semibold text-gray-900 tracking-tight shrink-0">
+    <header className="bg-white border-b border-gray-100 px-6 min-h-[3.5rem] flex items-center justify-between shrink-0 gap-4 py-2">
+      <div className="flex items-center gap-2.5 min-w-0 flex-1">
+        <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 tracking-tight shrink-0">
           {title}
         </h1>
         {headerAction && (
           <button
             type="button"
             onClick={headerAction.onClick}
-            className="shrink-0 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-brand-500 text-white text-sm font-medium hover:bg-brand-600 transition-colors shadow-sm"
+            className="shrink-0 text-xs sm:text-sm font-medium text-brand-600 px-2 py-1 rounded-md hover:bg-brand-50 transition-colors"
           >
             {headerAction.label}
           </button>

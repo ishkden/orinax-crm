@@ -111,7 +111,7 @@ export default function KanbanBoard({
 
       <DragOverlay>
         {activeDeal ? (
-          <div className="w-[284px] rotate-2 opacity-95">
+          <div className="w-[212px] rotate-2 opacity-95 pointer-events-none">
             <DealCard deal={activeDeal} />
           </div>
         ) : null}

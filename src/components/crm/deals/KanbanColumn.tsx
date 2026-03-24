@@ -119,6 +119,11 @@ export default function KanbanColumn({
 
   const pickerColor = /^#[0-9A-Fa-f]{6}$/.test(draftColor) ? draftColor : stage.color;
 
+  const formatStageTotal = useCallback(
+    (n: number) => formatCurrency(n, currencyForTotal),
+    [currencyForTotal]
+  );
+
   return (
     <div className="flex h-full min-h-0 w-[228px] min-w-[228px] shrink-0 flex-col self-stretch">
       <div
@@ -175,7 +180,7 @@ export default function KanbanColumn({
             value={committedStageTotal}
             duration={0.38}
             className="inline-block text-2xl font-semibold tabular-nums tracking-tight text-gray-900"
-            formatValue={(n) => formatCurrency(n, currencyForTotal)}
+            formatValue={formatStageTotal}
           />
         </div>
 

@@ -30,7 +30,7 @@ export default async function ContactsPage() {
           <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
             <p className="text-sm text-gray-500">{contacts.length} контактов</p>
             <Link
-              href="/contacts/new"
+              href="/crm/contacts/new"
               className="inline-flex items-center gap-2 bg-indigo-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
             >
               <UserPlus size={16} />

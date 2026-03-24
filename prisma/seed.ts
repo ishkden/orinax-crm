@@ -9,16 +9,17 @@ const adapter = new PrismaPg({ connectionString });
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
-  // Дефолтный workspace
-  const workspace = await prisma.workspace.upsert({
+  // Дефолтная Org (seed-запись; externalId должен совпадать с ID из SSO)
+  const org = await prisma.org.upsert({
     where: { slug: "orinax" },
     update: {},
     create: {
+      externalId: "seed-orinax",
       name: "Orinax",
       slug: "orinax",
     },
   });
-  console.log(`✅ Workspace ready: ${workspace.name} (${workspace.slug})`);
+  console.log(`✅ Org ready: ${org.name} (${org.slug})`);
 
   // Admin user
   let admin = await prisma.user.findUnique({
@@ -40,22 +41,22 @@ async function main() {
     console.log("⚡ Admin user already exists");
   }
 
-  // Привязываем admin к workspace (если ещё не привязан)
-  await prisma.workspaceMember.upsert({
+  // Привязываем admin к org (если ещё не привязан)
+  await prisma.orgMember.upsert({
     where: {
-      userId_workspaceId: {
+      userId_orgId: {
         userId: admin.id,
-        workspaceId: workspace.id,
+        orgId: org.id,
       },
     },
     update: {},
     create: {
       userId: admin.id,
-      workspaceId: workspace.id,
+      orgId: org.id,
       role: "OWNER",
     },
   });
-  console.log("✅ Admin linked to workspace as OWNER");
+  console.log("✅ Admin linked to org as OWNER");
 }
 
 main()

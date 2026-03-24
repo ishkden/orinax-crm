@@ -91,34 +91,36 @@ export default function KanbanBoard({
   }
 
   return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={closestCorners}
-      onDragStart={handleDragStart}
-      onDragOver={handleDragOver}
-      onDragEnd={handleDragEnd}
-    >
-      <div className="flex gap-3 overflow-x-auto pb-4 px-6 flex-1 min-h-0">
-        {stages.map((stage) => (
-          <KanbanColumn
-            key={stage.id}
-            stage={stage}
-            deals={deals.filter((d) => d.stage === stage.id)}
-            onAddDeal={onAddDeal}
-            onStageUpdate={onStageUpdate}
-            onContactClick={onContactClick}
-            onDealClick={onDealClick}
-          />
-        ))}
-      </div>
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCorners}
+        onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
+        onDragEnd={handleDragEnd}
+      >
+        <div className="flex min-h-0 flex-1 items-stretch gap-3 overflow-x-auto overflow-y-hidden px-6 pb-4 pt-2">
+          {stages.map((stage) => (
+            <KanbanColumn
+              key={stage.id}
+              stage={stage}
+              deals={deals.filter((d) => d.stage === stage.id)}
+              onAddDeal={onAddDeal}
+              onStageUpdate={onStageUpdate}
+              onContactClick={onContactClick}
+              onDealClick={onDealClick}
+            />
+          ))}
+        </div>
 
-      <DragOverlay>
-        {activeDeal ? (
-          <div className="w-[212px] rotate-2 opacity-95 pointer-events-none">
-            <DealCard deal={activeDeal} />
-          </div>
-        ) : null}
-      </DragOverlay>
-    </DndContext>
+        <DragOverlay>
+          {activeDeal ? (
+            <div className="w-[212px] rotate-2 opacity-95 pointer-events-none">
+              <DealCard deal={activeDeal} />
+            </div>
+          ) : null}
+        </DragOverlay>
+      </DndContext>
+    </div>
   );
 }

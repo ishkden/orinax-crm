@@ -6,7 +6,6 @@ import { CSS } from "@dnd-kit/utilities";
 import { Calendar, User } from "lucide-react";
 import { cn, formatCurrency, getInitials } from "@/lib/utils";
 import type { Deal } from "./mockData";
-import { priorities } from "./mockData";
 
 interface DealCardProps {
   deal: Deal;
@@ -30,8 +29,6 @@ export default function DealCard({ deal, onContactClick, onDealClick }: DealCard
     transform: CSS.Transform.toString(transform),
     transition,
   };
-
-  const priorityInfo = priorities.find((p) => p.value === deal.priority);
 
   const isOverdue =
     deal.dueDate && new Date(deal.dueDate) < new Date() && deal.stage !== "won" && deal.stage !== "lost";
@@ -63,68 +60,57 @@ export default function DealCard({ deal, onContactClick, onDealClick }: DealCard
         onDealClick?.(deal);
       }}
       className={cn(
-        "group flex flex-col bg-white rounded-lg border border-gray-200 px-3 py-3 min-h-[168px] cursor-grab active:cursor-grabbing touch-none",
-        "hover:border-gray-300 hover:shadow-md transition-all duration-150",
-        isDragging && "opacity-50 shadow-xl rotate-1 z-50"
+        "group flex min-h-[202px] cursor-grab flex-col rounded-lg border border-gray-200 bg-white px-3 py-3 text-left touch-none active:cursor-grabbing",
+        "transition-all duration-150 hover:border-gray-300 hover:shadow-md",
+        isDragging && "z-50 rotate-1 opacity-50 shadow-xl"
       )}
     >
-      <div className="flex flex-1 flex-col min-h-0 min-w-0">
-        <div className="flex items-start gap-1.5 mb-2 shrink-0">
-          <span
-            className="w-2 h-2 rounded-full shrink-0 mt-1"
-            style={{ backgroundColor: priorityInfo?.color ?? "#9CA3AF" }}
-            title={priorityInfo?.label}
-          />
-          <h4 className="text-sm leading-snug font-medium text-gray-900 line-clamp-4 min-h-[2.5rem]">
-            {deal.title}
-          </h4>
-        </div>
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <h4 className="break-words text-[11px] font-medium leading-snug text-gray-800">
+          {deal.title}
+        </h4>
 
-        <div className="pl-3 mb-2 shrink-0">
-          <button
-            type="button"
-            data-contact-link
-            onPointerDown={(e) => e.stopPropagation()}
-            onClick={(e) => {
-              e.stopPropagation();
-              onContactClick?.(deal);
-            }}
-            className="inline-flex items-center gap-1.5 text-left text-xs text-brand-600 hover:text-brand-700 hover:underline underline-offset-2 max-w-full"
-          >
-            <User size={12} className="shrink-0 opacity-80" />
-            <span className="truncate font-medium">{deal.contactName}</span>
-          </button>
-        </div>
+        <p className="mt-1.5 text-sm font-normal tabular-nums text-gray-900">
+          {formatCurrency(deal.value, deal.currency)}
+        </p>
 
-        <div className="mt-auto pt-3 border-t border-gray-100 flex items-center justify-between gap-2 pl-3 shrink-0">
-          <span className="text-sm text-gray-900 tabular-nums font-normal">
-            {formatCurrency(deal.value, deal.currency)}
-          </span>
+        <button
+          type="button"
+          data-contact-link
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            onContactClick?.(deal);
+          }}
+          className="mt-1.5 inline-flex max-w-full items-center gap-1.5 text-left text-xs font-medium text-brand-600 hover:text-brand-700 hover:underline hover:underline-offset-2"
+        >
+          <User size={12} className="shrink-0 opacity-80" />
+          <span className="min-w-0 break-words">{deal.contactName}</span>
+        </button>
 
-          <div className="flex items-center gap-2 shrink-0">
-            {deal.dueDate && (
-              <span
-                className={cn(
-                  "flex items-center gap-1 text-[11px]",
-                  isOverdue ? "text-red-500 font-medium" : "text-gray-400"
-                )}
-              >
-                <Calendar size={11} />
-                {new Date(deal.dueDate).toLocaleDateString("ru-RU", {
-                  day: "numeric",
-                  month: "short",
-                })}
-              </span>
-            )}
-
-            <div
-              className="w-6 h-6 rounded-full bg-brand-100 flex items-center justify-center shrink-0"
-              title={deal.assignee}
+        <div className="mt-auto flex shrink-0 flex-wrap items-center gap-2 border-t border-gray-100 pt-3">
+          {deal.dueDate && (
+            <span
+              className={cn(
+                "inline-flex items-center gap-1 text-[11px]",
+                isOverdue ? "font-medium text-red-500" : "text-gray-400"
+              )}
             >
-              <span className="text-brand-600 font-semibold text-[9px] leading-none">
-                {getInitials(deal.assignee)}
-              </span>
-            </div>
+              <Calendar size={11} />
+              {new Date(deal.dueDate).toLocaleDateString("ru-RU", {
+                day: "numeric",
+                month: "short",
+              })}
+            </span>
+          )}
+
+          <div
+            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-100"
+            title={deal.assignee}
+          >
+            <span className="text-[9px] font-semibold leading-none text-brand-600">
+              {getInitials(deal.assignee)}
+            </span>
           </div>
         </div>
       </div>

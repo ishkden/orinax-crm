@@ -149,35 +149,37 @@ export default function DealsClient() {
 
   return (
     <>
-      <DealsToolbar
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        viewMode={viewMode}
-        onViewModeChange={setViewMode}
-        filterAssignee={filterAssignee}
-        onFilterAssignee={setFilterAssignee}
-        filterPriority={filterPriority}
-        onFilterPriority={setFilterPriority}
-        totalDeals={filteredDeals.length}
-      />
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <DealsToolbar
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+          filterAssignee={filterAssignee}
+          onFilterAssignee={setFilterAssignee}
+          filterPriority={filterPriority}
+          onFilterPriority={setFilterPriority}
+          totalDeals={filteredDeals.length}
+        />
 
-      {viewMode === "kanban" ? (
-        <KanbanBoard
-          stages={activePipelineWithOverrides.stages}
-          deals={filteredDeals}
-          onMoveDeal={handleMoveDeal}
-          onAddDeal={handleAddDeal}
-          onStageUpdate={handleStageUpdate}
-          onContactClick={setContactDeal}
-          onDealClick={setSelectedDeal}
-        />
-      ) : (
-        <DealsListView
-          deals={filteredDeals}
-          stages={activePipelineWithOverrides.stages}
-          onDealClick={setSelectedDeal}
-        />
-      )}
+        {viewMode === "kanban" ? (
+          <KanbanBoard
+            stages={activePipelineWithOverrides.stages}
+            deals={filteredDeals}
+            onMoveDeal={handleMoveDeal}
+            onAddDeal={handleAddDeal}
+            onStageUpdate={handleStageUpdate}
+            onContactClick={setContactDeal}
+            onDealClick={setSelectedDeal}
+          />
+        ) : (
+          <DealsListView
+            deals={filteredDeals}
+            stages={activePipelineWithOverrides.stages}
+            onDealClick={setSelectedDeal}
+          />
+        )}
+      </div>
 
       <CreateDealModal
         open={modalOpen}

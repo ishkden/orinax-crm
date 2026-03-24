@@ -24,7 +24,7 @@ export default function DealsListView({ deals, stages, onDealClick }: DealsListV
   const totalValue = deals.reduce((s, d) => s + d.value, 0);
 
   return (
-    <div className="flex-1 overflow-auto px-6 pb-6">
+    <div className="min-h-0 flex-1 overflow-auto px-6 pb-6">
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         {/* Summary bar */}
         <div className="px-6 py-3 border-b border-gray-100 flex items-center gap-4">

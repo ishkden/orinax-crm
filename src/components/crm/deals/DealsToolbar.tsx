@@ -47,7 +47,7 @@ export default function DealsToolbar({
   }, []);
 
   return (
-    <div className="px-6 py-3 flex flex-col gap-3">
+    <div className="flex shrink-0 flex-col gap-3 px-6 py-3">
       <div className="flex items-center gap-3">
         <span className="text-xs text-gray-400">
           {totalDeals} {totalDeals === 1 ? "сделка" : "сделок"}

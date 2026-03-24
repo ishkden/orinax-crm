@@ -115,11 +115,10 @@ export default function KanbanColumn({
   const pickerColor = /^#[0-9A-Fa-f]{6}$/.test(draftColor) ? draftColor : stage.color;
 
   return (
-    <div className="flex shrink-0 flex-col">
+    <div className="flex h-full min-h-0 w-[228px] min-w-[228px] shrink-0 flex-col self-stretch">
       <div
         className={cn(
-          "flex flex-col bg-gray-50/80 rounded-xl min-w-[228px] w-[228px] shrink-0 max-h-full overflow-visible",
-          "border border-transparent transition-colors duration-150",
+          "flex min-h-0 flex-1 flex-col overflow-visible rounded-xl border border-transparent bg-gray-50/80 transition-colors duration-150",
           isOver && "border-brand-300 bg-brand-50/30"
         )}
       >
@@ -166,17 +165,17 @@ export default function KanbanColumn({
           )}
         </div>
 
-        <div className="px-3 pt-2 pb-1.5 text-center">
-          <p className="text-base text-gray-800 tracking-tight tabular-nums font-normal inline-block">
+        <div className="px-3 pt-2 pb-1.5 text-left">
+          <p className="inline-block text-base font-normal tracking-tight text-gray-800 tabular-nums">
             {formatCurrency(totalValue)}
           </p>
         </div>
 
-        <div className="px-3 pb-2 flex justify-center">
+        <div className="flex justify-start px-3 pb-2">
           <button
             type="button"
             onClick={() => onAddDeal?.(stage.id)}
-            className="flex items-center justify-center w-9 h-9 rounded-lg text-gray-500 hover:text-brand-600 hover:bg-brand-50/80 transition-colors"
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-brand-50/80 hover:text-brand-600"
             title="Добавить сделку"
           >
             <Plus size={22} strokeWidth={2} />
@@ -185,7 +184,7 @@ export default function KanbanColumn({
 
         <div
           ref={setNodeRef}
-          className="flex-1 overflow-y-auto px-2 pb-2 space-y-2.5 min-h-[60px]"
+          className="min-h-[60px] flex-1 space-y-2.5 overflow-y-auto overscroll-contain px-2 pb-2"
         >
           <SortableContext
             items={deals.map((d) => d.id)}

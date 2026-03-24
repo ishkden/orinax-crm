@@ -10,12 +10,16 @@ import {
 import { Plus, Pencil, Check, X } from "lucide-react";
 import { HexColorPicker } from "react-colorful";
 import { cn, formatCurrency, contrastTextOnHex } from "@/lib/utils";
+import AnimatedCounter from "@/components/ui/AnimatedCounter";
 import DealCard from "./DealCard";
 import type { Deal, Stage } from "./mockData";
 
 interface KanbanColumnProps {
   stage: Stage;
   deals: Deal[];
+  /** Сумма по стадии до отпускания карточки (при перетаскивании не меняется) */
+  committedStageTotal: number;
+  currencyForTotal?: string;
   onAddDeal?: (stageId: string) => void;
   onStageUpdate?: (stageId: string, updates: { label?: string; color?: string }) => void;
   onContactClick?: (deal: Deal) => void;
@@ -25,13 +29,14 @@ interface KanbanColumnProps {
 export default function KanbanColumn({
   stage,
   deals,
+  committedStageTotal,
+  currencyForTotal = "RUB",
   onAddDeal,
   onStageUpdate,
   onContactClick,
   onDealClick,
 }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: stage.id });
-  const totalValue = deals.reduce((sum, d) => sum + d.value, 0);
 
   const [editing, setEditing] = useState(false);
   const [draftLabel, setDraftLabel] = useState(stage.label);
@@ -165,13 +170,16 @@ export default function KanbanColumn({
           )}
         </div>
 
-        <div className="px-3 pt-2 pb-1.5 text-left">
-          <p className="inline-block text-base font-normal tracking-tight text-gray-800 tabular-nums">
-            {formatCurrency(totalValue)}
-          </p>
+        <div className="flex flex-col items-center px-3 pb-1 pt-2 text-center">
+          <AnimatedCounter
+            value={committedStageTotal}
+            duration={0.38}
+            className="inline-block text-2xl font-semibold tabular-nums tracking-tight text-gray-900"
+            formatValue={(n) => formatCurrency(n, currencyForTotal)}
+          />
         </div>
 
-        <div className="flex justify-start px-3 pb-2">
+        <div className="flex justify-center px-3 pb-2">
           <button
             type="button"
             onClick={() => onAddDeal?.(stage.id)}

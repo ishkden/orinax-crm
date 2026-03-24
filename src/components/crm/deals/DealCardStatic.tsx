@@ -1,68 +1,27 @@
 "use client";
 
-import { useRef } from "react";
-import { useSortable } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
 import { Calendar } from "lucide-react";
 import { cn, formatCurrency, getInitials } from "@/lib/utils";
 import type { Deal } from "./mockData";
 
-interface DealCardProps {
+/** Same look as DealCard, without dnd sortable — for DragOverlay */
+export default function DealCardStatic({
+  deal,
+  onContactClick,
+  onDealClick,
+}: {
   deal: Deal;
   onContactClick?: (deal: Deal) => void;
   onDealClick?: (deal: Deal) => void;
-}
-
-export default function DealCard({ deal, onContactClick, onDealClick }: DealCardProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: deal.id });
-
-  const pointerStart = useRef<{ x: number; y: number } | null>(null);
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  };
-
+}) {
   const isOverdue =
     deal.dueDate && new Date(deal.dueDate) < new Date() && deal.stage !== "won" && deal.stage !== "lost";
 
   return (
     <div
-      ref={setNodeRef}
-      style={style}
-      {...attributes}
-      {...listeners}
-      onPointerDown={(e) => {
-        listeners?.onPointerDown?.(e);
-        if (e.button === 0) {
-          pointerStart.current = { x: e.clientX, y: e.clientY };
-        }
-      }}
-      onPointerUp={(e) => {
-        listeners?.onPointerUp?.(e);
-        if (!pointerStart.current || e.button !== 0) {
-          pointerStart.current = null;
-          return;
-        }
-        const dx = Math.abs(e.clientX - pointerStart.current.x);
-        const dy = Math.abs(e.clientY - pointerStart.current.y);
-        pointerStart.current = null;
-        if (dx >= 10 || dy >= 10) return;
-        const el = e.target as HTMLElement;
-        if (el.closest("[data-contact-link]")) return;
-        onDealClick?.(deal);
-      }}
       className={cn(
-        "group flex min-h-[202px] cursor-grab flex-col rounded-lg border border-gray-200 bg-white px-3 py-3 text-left touch-pan-y active:cursor-grabbing",
-        "transition-all duration-150 hover:border-gray-300 hover:shadow-md",
-        isDragging && "z-50 rotate-1 opacity-50 shadow-xl"
+        "group flex min-h-[202px] cursor-grabbing flex-col rounded-lg border border-gray-200 bg-white px-3 py-3 text-left shadow-xl",
+        "transition-all duration-150"
       )}
     >
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
@@ -77,7 +36,6 @@ export default function DealCard({ deal, onContactClick, onDealClick }: DealCard
         <button
           type="button"
           data-contact-link
-          onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => {
             e.stopPropagation();
             onContactClick?.(deal);

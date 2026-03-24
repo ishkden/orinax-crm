@@ -24,27 +24,27 @@ export default function CrmHeader() {
       ?.title ?? "CRM";
 
   return (
-    <header className="bg-white border-b border-gray-100 px-6 min-h-[3.5rem] flex items-center justify-between shrink-0 gap-4 py-2">
-      <div className="flex items-center gap-2 min-w-0 flex-1">
-        <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 tracking-tight shrink-0">
+    <header className="sticky top-0 z-30 shrink-0 border-b border-gray-100 bg-white/95 px-6 py-2 backdrop-blur-sm supports-[backdrop-filter]:bg-white/90 min-h-[3.5rem] flex items-center justify-between gap-4">
+      <div className="flex min-w-0 flex-1 items-center gap-2">
+        <h1 className="shrink-0 text-xl font-semibold tracking-tight text-gray-900 sm:text-2xl">
           {title}
         </h1>
         {headerAction && (
-          <div className="group flex h-[calc(4rem/3)] shrink-0 items-stretch overflow-hidden rounded-lg border border-transparent text-brand-600 transition-colors hover:border-gray-200 hover:bg-gray-50/80">
+          <div className="group flex h-[calc(4rem/3)] shrink-0 items-stretch overflow-hidden rounded-lg border border-transparent text-brand-600 transition-colors duration-[600ms] ease-in-out hover:border-gray-200 hover:bg-gray-50/80">
             <button
               type="button"
               onClick={headerAction.onClick}
-              className="flex w-[calc(4rem/3)] shrink-0 items-center justify-center rounded-l-lg hover:bg-gray-100/80 transition-colors"
+              className="flex w-[calc(4rem/3)] shrink-0 items-center justify-center rounded-l-lg transition-colors duration-[600ms] ease-in-out hover:bg-gray-100/80"
               aria-label={headerAction.label}
             >
               <Plus size={12} strokeWidth={2.25} />
             </button>
-            <div className="flex max-w-0 items-stretch overflow-hidden transition-[max-width] duration-[600ms] ease-out group-hover:max-w-[min(100vw-12rem,380px)]">
+            <div className="flex max-w-0 items-stretch overflow-hidden transition-[max-width] duration-[600ms] ease-in-out group-hover:max-w-[min(100vw-12rem,380px)]">
               <div className="flex items-stretch border-l border-gray-200/80">
                 <button
                   type="button"
                   onClick={headerAction.onClick}
-                  className="inline-flex items-center whitespace-nowrap px-2 text-[11px] font-medium leading-none text-brand-700 hover:bg-gray-100/80 transition-colors"
+                  className="inline-flex items-center whitespace-nowrap px-2 text-[11px] font-medium leading-none text-brand-700 transition-colors duration-[600ms] ease-in-out hover:bg-gray-100/80"
                 >
                   {headerAction.label}
                 </button>
@@ -52,7 +52,7 @@ export default function CrmHeader() {
                   <button
                     type="button"
                     onClick={headerAction.secondary.onClick}
-                    className="inline-flex items-center whitespace-nowrap border-l border-gray-200/80 px-2 text-[11px] font-medium leading-none text-brand-700 hover:bg-gray-100/80 transition-colors"
+                    className="inline-flex items-center whitespace-nowrap border-l border-gray-200/80 px-2 text-[11px] font-medium leading-none text-brand-700 transition-colors duration-[600ms] ease-in-out hover:bg-gray-100/80"
                   >
                     {headerAction.secondary.label}
                   </button>

@@ -5,6 +5,8 @@ import gsap from "gsap";
 
 interface AnimatedCounterProps {
   value: number;
+  /** Format animated number (e.g. currency) */
+  formatValue?: (n: number) => string;
   prefix?: string;
   suffix?: string;
   duration?: number;
@@ -13,32 +15,59 @@ interface AnimatedCounterProps {
 
 export default function AnimatedCounter({
   value,
+  formatValue,
   prefix = "",
   suffix = "",
-  duration = 1.2,
+  duration = 0.45,
   className,
 }: AnimatedCounterProps) {
   const ref = useRef<HTMLSpanElement>(null);
+  const prevRef = useRef<number | null>(null);
+  const firstRef = useRef(true);
+  const tweenRef = useRef<ReturnType<typeof gsap.to> | null>(null);
 
   useEffect(() => {
     if (!ref.current) return;
 
-    const obj = { val: 0 };
-    gsap.to(obj, {
+    const fmt =
+      formatValue ??
+      ((n: number) => prefix + Math.round(n).toLocaleString("ru-RU") + suffix);
+
+    if (firstRef.current) {
+      firstRef.current = false;
+      prevRef.current = value;
+      ref.current.textContent = fmt(value);
+      return;
+    }
+
+    const from = prevRef.current ?? value;
+    prevRef.current = value;
+
+    tweenRef.current?.kill();
+    if (from === value) {
+      ref.current.textContent = fmt(value);
+      return;
+    }
+
+    const obj = { val: from };
+    tweenRef.current = gsap.to(obj, {
       val: value,
       duration,
       ease: "power2.out",
       onUpdate: () => {
         if (ref.current) {
-          ref.current.textContent = prefix + Math.round(obj.val).toLocaleString("ru-RU") + suffix;
+          ref.current.textContent = fmt(Math.round(obj.val));
         }
       },
+      onComplete: () => {
+        if (ref.current) ref.current.textContent = fmt(value);
+      },
     });
-  }, [value, prefix, suffix, duration]);
 
-  return (
-    <span ref={ref} className={className}>
-      {prefix}0{suffix}
-    </span>
-  );
+    return () => {
+      tweenRef.current?.kill();
+    };
+  }, [value, formatValue, prefix, suffix, duration]);
+
+  return <span ref={ref} className={className} />;
 }

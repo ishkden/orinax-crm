@@ -6,7 +6,7 @@ import KanbanBoard from "./KanbanBoard";
 import DealsListView from "./DealsListView";
 import CreateDealModal from "./CreateDealModal";
 import ContactDrawer from "./ContactDrawer";
-import DealDrawer from "./DealDrawer";
+import DealRightDrawer from "./DealRightDrawer";
 import { useCrmHeaderAction } from "@/components/crm/CrmHeaderActionContext";
 import { useCrmDealPipeline } from "@/components/crm/CrmDealPipelineContext";
 import { pipelines, type Deal, type CreateDealInput } from "./types";
@@ -215,7 +215,7 @@ export default function DealsClient({ initialDeals }: DealsClientProps) {
 
       <ContactDrawer deal={contactDeal} onClose={() => setContactDeal(null)} />
 
-      <DealDrawer
+      <DealRightDrawer
         deal={selectedDeal}
         stages={activePipelineWithOverrides.stages}
         onClose={() => setSelectedDeal(null)}

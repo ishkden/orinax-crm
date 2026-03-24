@@ -6,16 +6,25 @@ datasource db {
   provider = "postgresql"
 }
 
-// ─── WORKSPACE (мультитенантность) ────────────────────────────────────────────
+// ─── ORG (мультитенантность) ───────────────────────────────────────────────────
+//
+// Эта таблица — read-replica / кэш мастер-записи из SSO (основное Next.js-приложение).
+// Записи сюда попадают при первом обращении пользователя или через webhook от SSO.
+// Доступ к любому ресурсу CRM авторизуется по orgId, совпадающему с Org.externalId.
+//
+// НИКОГДА не создавать Org напрямую через CRM-UI — только через SSO или sync-endpoint.
 
-model Workspace {
-  id        String   @id @default(cuid())
-  name      String
-  slug      String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model Org {
+  id         String   @id @default(cuid())
+  /// ID организации в мастер-базе SSO (внешний ключ экосистемы)
+  externalId String   @unique
+  name       String
+  slug       String   @unique
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  users         WorkspaceMember[]
+  members       OrgMember[]
+  companies     Company[]
   contacts      Contact[]
   deals         Deal[]
   tasks         Task[]
@@ -24,18 +33,18 @@ model Workspace {
   conversations Conversation[]
 }
 
-// Связь User ↔ Workspace через промежуточную таблицу (один user — много workspace)
-model WorkspaceMember {
-  id          String              @id @default(cuid())
-  userId      String
-  workspaceId String
-  role        WorkspaceMemberRole @default(AGENT)
-  joinedAt    DateTime            @default(now())
+// Связь User ↔ Org через промежуточную таблицу (один user — много org)
+model OrgMember {
+  id       String        @id @default(cuid())
+  userId   String
+  orgId    String
+  role     OrgMemberRole @default(AGENT)
+  joinedAt DateTime      @default(now())
 
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  org  Org  @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, workspaceId])
+  @@unique([userId, orgId])
 }
 
 // ─── AUTH (NextAuth.js / @auth/prisma-adapter) ────────────────────────────────
@@ -51,15 +60,15 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  accounts    Account[]
-  sessions    Session[]
-  workspaces  WorkspaceMember[]
-  contacts    Contact[]         @relation("AssignedContacts")
-  deals       Deal[]            @relation("AssignedDeals")
-  tasks       Task[]            @relation("AssignedTasks")
-  activities  Activity[]
-  comments    Comment[]
-  messages    Message[]
+  accounts   Account[]
+  sessions   Session[]
+  orgs       OrgMember[]
+  contacts   Contact[]   @relation("AssignedContacts")
+  deals      Deal[]      @relation("AssignedDeals")
+  tasks      Task[]      @relation("AssignedTasks")
+  activities Activity[]
+  comments   Comment[]
+  messages   Message[]
 }
 
 model Account {
@@ -100,40 +109,64 @@ model VerificationToken {
 
 // ─── CRM CORE ─────────────────────────────────────────────────────────────────
 
+model Company {
+  id       String   @id @default(cuid())
+  orgId    String
+  sourceId String?  // ID в Битрикс24 (из сервиса Аналитики)
+  name     String
+  industry String?
+  phone    String?
+  email    String?
+  website  String?
+  address  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  org      Org       @relation(fields: [orgId], references: [id])
+  contacts Contact[]
+
+  @@unique([orgId, sourceId])
+}
+
 model Contact {
-  id          String        @id @default(cuid())
-  workspaceId String
-  firstName   String
-  lastName    String
-  email       String?
-  phone       String?
-  company     String?
-  position    String?
-  source      ContactSource @default(MANUAL)
-  status      ContactStatus @default(LEAD)
-  notes       String?       @db.Text
-  tags        String[]
+  id        String        @id @default(cuid())
+  orgId     String
+  firstName String
+  lastName  String
+  email     String?
+  phone     String?
+  company   String?
+  position  String?
+  source    ContactSource @default(MANUAL)
+  status    ContactStatus @default(LEAD)
+  notes     String?       @db.Text
+  tags      String[]
 
   // Маппинг внешних источников
-  sourceId          String?  // ID в Битрикс24 (из сервиса Аналитики)
-  connectorChatIds  String[] // ID чатов в сервисе Коннектора
+  sourceId         String?  // ID в Битрикс24 (из сервиса Аналитики)
+  connectorChatIds String[] // ID чатов в сервисе Коннектора
 
+  companyId  String?
   assignedId String?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  workspace     Workspace      @relation(fields: [workspaceId], references: [id])
+  org           Org            @relation(fields: [orgId], references: [id])
+  companyRel    Company?       @relation(fields: [companyId], references: [id])
   assigned      User?          @relation("AssignedContacts", fields: [assignedId], references: [id])
   deals         Deal[]
   tasks         Task[]
   activities    Activity[]     @relation("ContactActivities")
   comments      Comment[]
   conversations Conversation[]
+
+  @@unique([orgId, sourceId])
 }
 
 model Deal {
   id          String    @id @default(cuid())
-  workspaceId String
+  orgId       String
   title       String
   value       Float     @default(0)
   currency    String    @default("RUB")
@@ -151,17 +184,19 @@ model Deal {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  workspace  Workspace  @relation(fields: [workspaceId], references: [id])
+  org        Org        @relation(fields: [orgId], references: [id])
   contact    Contact?   @relation(fields: [contactId], references: [id])
   assigned   User?      @relation("AssignedDeals", fields: [assignedId], references: [id])
   tasks      Task[]
   activities Activity[] @relation("DealActivities")
   comments   Comment[]
+
+  @@unique([orgId, sourceId])
 }
 
 model Task {
   id          String     @id @default(cuid())
-  workspaceId String
+  orgId       String
   title       String
   description String?    @db.Text
   status      TaskStatus @default(TODO)
@@ -173,71 +208,72 @@ model Task {
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
-  workspace Workspace  @relation(fields: [workspaceId], references: [id])
-  contact   Contact?   @relation(fields: [contactId], references: [id])
-  deal      Deal?      @relation(fields: [dealId], references: [id])
-  assigned  User?      @relation("AssignedTasks", fields: [assignedId], references: [id])
-  comments  Comment[]
+  org      Org       @relation(fields: [orgId], references: [id])
+  contact  Contact?  @relation(fields: [contactId], references: [id])
+  deal     Deal?     @relation(fields: [dealId], references: [id])
+  assigned User?     @relation("AssignedTasks", fields: [assignedId], references: [id])
+  comments Comment[]
 }
 
 model Activity {
-  id          String       @id @default(cuid())
-  workspaceId String
-  type        ActivityType
-  title       String
-  body        String?      @db.Text
-  userId      String
-  contactId   String?
-  dealId      String?
-  createdAt   DateTime     @default(now())
+  id        String       @id @default(cuid())
+  orgId     String
+  type      ActivityType
+  title     String
+  body      String?      @db.Text
+  userId    String
+  contactId String?
+  dealId    String?
+  createdAt DateTime     @default(now())
 
-  workspace Workspace @relation(fields: [workspaceId], references: [id])
-  user      User      @relation(fields: [userId], references: [id])
-  contact   Contact?  @relation("ContactActivities", fields: [contactId], references: [id])
-  deal      Deal?     @relation("DealActivities", fields: [dealId], references: [id])
+  org     Org      @relation(fields: [orgId], references: [id])
+  user    User     @relation(fields: [userId], references: [id])
+  contact Contact? @relation("ContactActivities", fields: [contactId], references: [id])
+  deal    Deal?    @relation("DealActivities", fields: [dealId], references: [id])
 }
 
 model Comment {
-  id          String   @id @default(cuid())
-  workspaceId String
-  body        String   @db.Text
-  userId      String
-  contactId   String?
-  dealId      String?
-  taskId      String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(cuid())
+  orgId     String
+  body      String   @db.Text
+  userId    String
+  contactId String?
+  dealId    String?
+  taskId    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  workspace Workspace @relation(fields: [workspaceId], references: [id])
-  user      User      @relation(fields: [userId], references: [id])
-  contact   Contact?  @relation(fields: [contactId], references: [id])
-  deal      Deal?     @relation(fields: [dealId], references: [id])
-  task      Task?     @relation(fields: [taskId], references: [id])
+  org     Org      @relation(fields: [orgId], references: [id])
+  user    User     @relation(fields: [userId], references: [id])
+  contact Contact? @relation(fields: [contactId], references: [id])
+  deal    Deal?    @relation(fields: [dealId], references: [id])
+  task    Task?    @relation(fields: [taskId], references: [id])
 }
 
 // ─── ЧАТЫ / КОННЕКТОР ─────────────────────────────────────────────────────────
 
 model Conversation {
-  id          String              @id @default(cuid())
-  workspaceId String
-  contactId   String?
-  channel     ConversationChannel
-  externalId  String?             // ID чата в сервисе Коннектора
-  status      ConversationStatus  @default(OPEN)
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
+  id         String              @id @default(cuid())
+  orgId      String
+  contactId  String?
+  channel    ConversationChannel
+  externalId String?             // ID чата в сервисе Коннектора
+  status     ConversationStatus  @default(OPEN)
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
 
-  workspace Workspace @relation(fields: [workspaceId], references: [id])
-  contact   Contact?  @relation(fields: [contactId], references: [id])
-  messages  Message[]
+  org      Org       @relation(fields: [orgId], references: [id])
+  contact  Contact?  @relation(fields: [contactId], references: [id])
+  messages Message[]
 
   @@index([externalId])
-  @@index([workspaceId, status])
+  @@index([orgId, status])
 }
 
 model Message {
   id             String   @id @default(cuid())
   conversationId String
+  sourceId       String?  // ID в Битрикс24 (из сервиса Аналитики)
   authorId       String?  // User.id, null если сообщение от клиента
   fromExternal   Boolean  @default(false) // true = от клиента, false = от агента
   body           String?  @db.Text
@@ -247,6 +283,7 @@ model Message {
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   author       User?        @relation(fields: [authorId], references: [id])
 
+  @@unique([conversationId, sourceId])
   @@index([conversationId, createdAt])
 }
 
@@ -258,7 +295,7 @@ enum UserRole {
   AGENT
 }
 
-enum WorkspaceMemberRole {
+enum OrgMemberRole {
   OWNER
   ADMIN
   MANAGER

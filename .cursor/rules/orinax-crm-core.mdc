@@ -1,0 +1,52 @@
+---
+description: Core rules for orinax-crm project — server isolation, git commit and deploy workflow
+alwaysApply: true
+---
+
+# Orinax CRM — Core Rules
+
+## Server Isolation (CRITICAL)
+
+The server at `188.225.86.66` hosts multiple projects. You MUST:
+
+- **ONLY** work inside `/root/orinax-crm/` on the server — NEVER touch any other directory
+- **NEVER** modify `/root/crm-app/`, `/etc/nginx/sites-enabled/crm-app`, or any other existing project files
+- **NEVER** restart services that belong to other projects (e.g., PM2 processes not named `orinax-crm`)
+- Before any server command, verify it targets `/root/orinax-crm/` or `crm.orinax.ai` configs only
+
+## After Every Code Change
+
+After every meaningful code change, you MUST:
+
+1. `git add . && git commit -m "..."` — commit to GitHub repo `orinax-crm`
+2. `git push origin main`
+3. SSH into server and run deploy: `cd /root/orinax-crm && git pull && npm install && npm run build && pm2 restart orinax-crm`
+
+Never skip this. Code changes without commit + deploy are incomplete.
+
+## Project Details
+
+- **Local path**: `/Users/ishkden/orinax-crm`
+- **Server path**: `/root/orinax-crm`
+- **URL**: `https://crm.orinax.ai`
+- **Port**: `3001`
+- **PM2 process name**: `orinax-crm`
+- **Database**: PostgreSQL, DB name `orinax_crm`, user `orinax_crm_user`
+- **GitHub repo**: `github.com/ishkden/orinax-crm` (or org equivalent)
+- **Node**: via NVM at `/root/.nvm/versions/node/v24.14.0/bin/node`
+
+## SSH Access
+
+```
+ssh root@188.225.86.66
+password: j#3WQM?jn8pcoL
+# Use sshpass for non-interactive: sshpass -p 'j#3WQM?jn8pcoL' ssh -o StrictHostKeyChecking=no root@188.225.86.66 "..."
+```
+
+## Tech Stack
+
+- Next.js 14 (App Router) + TypeScript
+- Tailwind CSS + shadcn/ui
+- Prisma ORM + PostgreSQL
+- NextAuth.js
+- PM2 for process management

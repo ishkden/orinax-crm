@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 
 export default function LoginPage() {
@@ -34,20 +33,23 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen bg-surface flex items-center justify-center p-4">
+      <div className="w-full max-w-sm">
+
+        {/* Logo */}
         <div className="text-center mb-8">
-          <div className="w-12 h-12 bg-indigo-500 rounded-xl flex items-center justify-center mx-auto mb-4">
-            <span className="text-white font-bold text-xl">O</span>
+          <div className="w-11 h-11 bg-brand-500 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-sm">
+            <span className="text-white font-bold text-lg tracking-tight">O</span>
           </div>
-          <h1 className="text-2xl font-bold text-white">Orinax CRM</h1>
-          <p className="text-gray-400 mt-2 text-sm">Войдите в свой аккаунт</p>
+          <h1 className="text-xl font-semibold text-gray-900 tracking-tight">Orinax CRM</h1>
+          <p className="text-sm text-gray-500 mt-1">Войдите в свой аккаунт</p>
         </div>
 
-        <div className="bg-gray-900 rounded-2xl p-8 border border-gray-800 shadow-xl">
-          <form onSubmit={handleSubmit} className="space-y-5">
+        {/* Form */}
+        <div className="bg-white rounded-2xl border border-gray-200 p-7 shadow-sm">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-1.5">
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1.5">
                 Email
               </label>
               <input
@@ -57,12 +59,12 @@ export default function LoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
                 required
-                className="block w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2.5 text-sm text-white placeholder-gray-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                className="block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 transition-colors"
               />
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-1.5">
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1.5">
                 Пароль
               </label>
               <input
@@ -72,21 +74,23 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 required
-                className="block w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2.5 text-sm text-white placeholder-gray-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                className="block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 transition-colors"
               />
             </div>
 
             {error && (
-              <div className="rounded-lg bg-red-900/30 border border-red-800 px-3 py-2.5 text-sm text-red-400">
+              <div className="rounded-lg bg-red-50 border border-red-100 px-3 py-2.5 text-sm text-red-600">
                 {error}
               </div>
             )}
 
-            <Button type="submit" loading={loading} className="w-full" size="lg">
+            <Button type="submit" loading={loading} className="w-full mt-1" size="lg">
               Войти
             </Button>
           </form>
         </div>
+
+        <p className="text-center text-xs text-gray-400 mt-5">crm.orinax.ai</p>
       </div>
     </div>
   );

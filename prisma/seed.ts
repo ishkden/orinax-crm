@@ -9,13 +9,25 @@ const adapter = new PrismaPg({ connectionString });
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
-  const existingAdmin = await prisma.user.findUnique({
+  // Дефолтный workspace
+  const workspace = await prisma.workspace.upsert({
+    where: { slug: "orinax" },
+    update: {},
+    create: {
+      name: "Orinax",
+      slug: "orinax",
+    },
+  });
+  console.log(`✅ Workspace ready: ${workspace.name} (${workspace.slug})`);
+
+  // Admin user
+  let admin = await prisma.user.findUnique({
     where: { email: "admin@orinax.ai" },
   });
 
-  if (!existingAdmin) {
+  if (!admin) {
     const hashedPassword = await bcrypt.hash("Admin2024!", 12);
-    await prisma.user.create({
+    admin = await prisma.user.create({
       data: {
         name: "Admin",
         email: "admin@orinax.ai",
@@ -27,6 +39,23 @@ async function main() {
   } else {
     console.log("⚡ Admin user already exists");
   }
+
+  // Привязываем admin к workspace (если ещё не привязан)
+  await prisma.workspaceMember.upsert({
+    where: {
+      userId_workspaceId: {
+        userId: admin.id,
+        workspaceId: workspace.id,
+      },
+    },
+    update: {},
+    create: {
+      userId: admin.id,
+      workspaceId: workspace.id,
+      role: "OWNER",
+    },
+  });
+  console.log("✅ Admin linked to workspace as OWNER");
 }
 
 main()

@@ -21,6 +21,7 @@ interface KanbanBoardProps {
   deals: Deal[];
   onMoveDeal: (dealId: string, newStage: string) => void;
   onAddDeal?: (stageId: string) => void;
+  onStageUpdate?: (stageId: string, updates: { label?: string; color?: string }) => void;
 }
 
 export default function KanbanBoard({
@@ -28,6 +29,7 @@ export default function KanbanBoard({
   deals,
   onMoveDeal,
   onAddDeal,
+  onStageUpdate,
 }: KanbanBoardProps) {
   const [activeDeal, setActiveDeal] = useState<Deal | null>(null);
 
@@ -99,6 +101,7 @@ export default function KanbanBoard({
             stage={stage}
             deals={deals.filter((d) => d.stage === stage.id)}
             onAddDeal={onAddDeal}
+            onStageUpdate={onStageUpdate}
           />
         ))}
       </div>

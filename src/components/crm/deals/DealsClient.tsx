@@ -1,11 +1,15 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import DealsToolbar, { type ViewMode } from "./DealsToolbar";
 import KanbanBoard from "./KanbanBoard";
 import DealsListView from "./DealsListView";
 import CreateDealModal from "./CreateDealModal";
 import { pipelines, mockDeals, type Deal } from "./mockData";
+
+const STAGE_OVERRIDES_KEY = "crm-kanban-stage-overrides";
+
+type StageOverrides = Record<string, Record<string, { label?: string; color?: string }>>;
 
 export default function DealsClient() {
   const [deals, setDeals] = useState<Deal[]>(mockDeals);
@@ -16,8 +20,29 @@ export default function DealsClient() {
   const [filterPriority, setFilterPriority] = useState<Deal["priority"] | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalStage, setModalStage] = useState<string | null>(null);
+  const [stageOverrides, setStageOverrides] = useState<StageOverrides>({});
 
-  const activePipeline = pipelines.find((p) => p.id === activePipelineId) ?? pipelines[0];
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STAGE_OVERRIDES_KEY);
+      if (raw) setStageOverrides(JSON.parse(raw) as StageOverrides);
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const activePipelineWithOverrides = useMemo(() => {
+    const p = pipelines.find((x) => x.id === activePipelineId) ?? pipelines[0];
+    const ov = stageOverrides[p.id] ?? {};
+    return {
+      ...p,
+      stages: p.stages.map((s) => ({
+        ...s,
+        label: ov[s.id]?.label ?? s.label,
+        color: ov[s.id]?.color ?? s.color,
+      })),
+    };
+  }, [activePipelineId, stageOverrides]);
 
   const filteredDeals = useMemo(() => {
     let result = deals;
@@ -42,6 +67,28 @@ export default function DealsClient() {
 
     return result;
   }, [deals, searchQuery, filterAssignee, filterPriority]);
+
+  const handleStageUpdate = useCallback(
+    (stageId: string, updates: { label?: string; color?: string }) => {
+      setStageOverrides((prev) => {
+        const pid = activePipelineId;
+        const next: StageOverrides = {
+          ...prev,
+          [pid]: {
+            ...prev[pid],
+            [stageId]: { ...prev[pid]?.[stageId], ...updates },
+          },
+        };
+        try {
+          localStorage.setItem(STAGE_OVERRIDES_KEY, JSON.stringify(next));
+        } catch {
+          // ignore
+        }
+        return next;
+      });
+    },
+    [activePipelineId]
+  );
 
   function handleMoveDeal(dealId: string, newStage: string) {
     setDeals((prev) =>
@@ -86,15 +133,16 @@ export default function DealsClient() {
 
       {viewMode === "kanban" ? (
         <KanbanBoard
-          stages={activePipeline.stages}
+          stages={activePipelineWithOverrides.stages}
           deals={filteredDeals}
           onMoveDeal={handleMoveDeal}
           onAddDeal={handleAddDeal}
+          onStageUpdate={handleStageUpdate}
         />
       ) : (
         <DealsListView
           deals={filteredDeals}
-          stages={activePipeline.stages}
+          stages={activePipelineWithOverrides.stages}
         />
       )}
 
@@ -104,7 +152,7 @@ export default function DealsClient() {
           setModalOpen(false);
           setModalStage(null);
         }}
-        pipeline={activePipeline}
+        pipeline={activePipelineWithOverrides}
         onSave={handleCreateDeal}
       />
     </>

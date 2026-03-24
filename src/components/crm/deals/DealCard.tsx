@@ -2,7 +2,7 @@
 
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Calendar, Building2 } from "lucide-react";
+import { Calendar, Building2 } from "lucide-react";
 import { cn, formatCurrency, getInitials } from "@/lib/utils";
 import type { Deal } from "./mockData";
 import { priorities } from "./mockData";
@@ -35,21 +35,15 @@ export default function DealCard({ deal }: DealCardProps) {
     <div
       ref={setNodeRef}
       style={style}
+      {...attributes}
+      {...listeners}
       className={cn(
-        "group bg-white rounded-lg border border-gray-200 p-3 cursor-grab active:cursor-grabbing",
+        "group bg-white rounded-lg border border-gray-200 p-3 cursor-grab active:cursor-grabbing touch-none",
         "hover:border-gray-300 hover:shadow-sm transition-all duration-150",
         isDragging && "opacity-50 shadow-lg rotate-2 z-50"
       )}
     >
       <div className="flex items-start gap-2">
-        <button
-          {...attributes}
-          {...listeners}
-          className="mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity text-gray-300 hover:text-gray-500 shrink-0 cursor-grab"
-        >
-          <GripVertical size={14} />
-        </button>
-
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 mb-1">
             <span

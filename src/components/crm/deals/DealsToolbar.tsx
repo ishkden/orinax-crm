@@ -7,7 +7,6 @@ import {
   LayoutGrid,
   List,
   Plus,
-  SlidersHorizontal,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -48,9 +47,9 @@ export default function DealsToolbar({
   totalDeals,
 }: DealsToolbarProps) {
   const [pipelineOpen, setPipelineOpen] = useState(false);
-  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const pipelineRef = useRef<HTMLDivElement>(null);
-  const filtersRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLDivElement>(null);
 
   const activePipeline = pipelines.find((p) => p.id === activePipelineId);
   const hasFilters = filterAssignee || filterPriority;
@@ -60,8 +59,8 @@ export default function DealsToolbar({
       if (pipelineRef.current && !pipelineRef.current.contains(e.target as Node)) {
         setPipelineOpen(false);
       }
-      if (filtersRef.current && !filtersRef.current.contains(e.target as Node)) {
-        setFiltersOpen(false);
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setSearchOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClick);
@@ -70,11 +69,10 @@ export default function DealsToolbar({
 
   return (
     <div className="px-6 py-3 flex flex-col gap-3">
-      {/* Row 1: Pipeline + actions */}
       <div className="flex items-center gap-3">
-        {/* Pipeline selector */}
         <div ref={pipelineRef} className="relative">
           <button
+            type="button"
             onClick={() => setPipelineOpen((v) => !v)}
             className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-white border border-gray-200 text-sm font-medium text-gray-800 hover:border-gray-300 transition-colors"
           >
@@ -93,6 +91,7 @@ export default function DealsToolbar({
               {pipelines.map((p) => (
                 <button
                   key={p.id}
+                  type="button"
                   onClick={() => {
                     onPipelineChange(p.id);
                     setPipelineOpen(false);
@@ -120,128 +119,147 @@ export default function DealsToolbar({
 
         <div className="flex-1" />
 
-        {/* Search */}
-        <div className="relative">
-          <Search
-            size={14}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-          />
-          <input
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Поиск по сделкам..."
-            className="pl-9 pr-3 py-2 w-64 text-sm rounded-lg border border-gray-200 bg-white placeholder-gray-400 focus:outline-none focus:border-brand-400 focus:ring-1 focus:ring-brand-400 transition-colors"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => onSearchChange("")}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500"
-            >
-              <X size={14} />
-            </button>
-          )}
-        </div>
-
-        {/* Filters toggle */}
-        <div ref={filtersRef} className="relative">
+        {/* Search + filters (filters only when search panel open) */}
+        <div ref={searchRef} className="relative z-40">
           <button
-            onClick={() => setFiltersOpen((v) => !v)}
+            type="button"
+            onClick={() => setSearchOpen((v) => !v)}
             className={cn(
-              "inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border text-sm transition-colors",
-              hasFilters
-                ? "border-brand-300 bg-brand-50 text-brand-600"
+              "inline-flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-colors",
+              searchOpen || searchQuery || hasFilters
+                ? "border-brand-300 bg-brand-50/40 text-brand-700"
                 : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
             )}
           >
-            <SlidersHorizontal size={14} />
-            Фильтры
-            {hasFilters && (
+            <Search size={16} className="shrink-0 text-gray-400" />
+            <span>Поиск</span>
+            {(searchQuery || hasFilters) && (
               <span className="w-1.5 h-1.5 rounded-full bg-brand-500" />
             )}
           </button>
 
-          {filtersOpen && (
-            <div className="absolute top-full right-0 mt-1 w-72 bg-white rounded-lg border border-gray-200 shadow-lg z-50 p-4 space-y-4">
-              <div>
-                <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Ответственный
-                </label>
-                <div className="mt-2 space-y-1">
-                  <button
-                    onClick={() => onFilterAssignee(null)}
-                    className={cn(
-                      "w-full text-left px-3 py-1.5 rounded-md text-sm transition-colors",
-                      !filterAssignee ? "bg-brand-50 text-brand-600" : "text-gray-600 hover:bg-gray-50"
-                    )}
-                  >
-                    Все
-                  </button>
-                  {assignees.map((a) => (
+          {searchOpen && (
+            <div className="absolute top-full right-0 mt-2 w-[min(100vw-2rem,22rem)] bg-white rounded-xl border border-gray-200 shadow-xl z-50 overflow-hidden">
+              <div className="p-3 border-b border-gray-100">
+                <div className="relative">
+                  <Search
+                    size={14}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                  />
+                  <input
+                    autoFocus
+                    value={searchQuery}
+                    onChange={(e) => onSearchChange(e.target.value)}
+                    placeholder="Название, компания, контакт…"
+                    className="w-full pl-9 pr-8 py-2.5 text-sm rounded-lg border border-gray-200 bg-gray-50/80 placeholder-gray-400 focus:outline-none focus:border-brand-400 focus:ring-1 focus:ring-brand-400"
+                  />
+                  {searchQuery && (
                     <button
-                      key={a}
-                      onClick={() => onFilterAssignee(a)}
-                      className={cn(
-                        "w-full text-left px-3 py-1.5 rounded-md text-sm transition-colors",
-                        filterAssignee === a ? "bg-brand-50 text-brand-600" : "text-gray-600 hover:bg-gray-50"
-                      )}
+                      type="button"
+                      onClick={() => onSearchChange("")}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500 p-1"
                     >
-                      {a}
+                      <X size={14} />
                     </button>
-                  ))}
+                  )}
                 </div>
               </div>
 
-              <div className="border-t border-gray-100 pt-4">
-                <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Приоритет
-                </label>
-                <div className="mt-2 space-y-1">
-                  <button
-                    onClick={() => onFilterPriority(null)}
-                    className={cn(
-                      "w-full text-left px-3 py-1.5 rounded-md text-sm transition-colors",
-                      !filterPriority ? "bg-brand-50 text-brand-600" : "text-gray-600 hover:bg-gray-50"
-                    )}
-                  >
-                    Все
-                  </button>
-                  {priorities.map((p) => (
+              <div className="p-3 space-y-4 max-h-[min(60vh,320px)] overflow-y-auto">
+                <div>
+                  <p className="text-[11px] font-medium text-gray-400 uppercase tracking-wider mb-2">
+                    Ответственный
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
                     <button
-                      key={p.value}
-                      onClick={() => onFilterPriority(p.value)}
+                      type="button"
+                      onClick={() => onFilterAssignee(null)}
                       className={cn(
-                        "w-full text-left px-3 py-1.5 rounded-md text-sm flex items-center gap-2 transition-colors",
-                        filterPriority === p.value ? "bg-brand-50 text-brand-600" : "text-gray-600 hover:bg-gray-50"
+                        "px-2.5 py-1 rounded-md text-xs font-medium transition-colors",
+                        !filterAssignee
+                          ? "bg-brand-100 text-brand-700"
+                          : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                       )}
                     >
-                      <span
-                        className="w-2 h-2 rounded-full"
-                        style={{ backgroundColor: p.color }}
-                      />
-                      {p.label}
+                      Все
                     </button>
-                  ))}
+                    {assignees.map((a) => (
+                      <button
+                        key={a}
+                        type="button"
+                        onClick={() => onFilterAssignee(a)}
+                        className={cn(
+                          "px-2.5 py-1 rounded-md text-xs font-medium transition-colors max-w-full truncate",
+                          filterAssignee === a
+                            ? "bg-brand-100 text-brand-700"
+                            : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                        )}
+                      >
+                        {a}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
 
-              {hasFilters && (
-                <button
-                  onClick={() => {
-                    onFilterAssignee(null);
-                    onFilterPriority(null);
-                  }}
-                  className="w-full text-center text-xs text-red-500 hover:text-red-600 pt-2 border-t border-gray-100"
-                >
-                  Сбросить фильтры
-                </button>
-              )}
+                <div>
+                  <p className="text-[11px] font-medium text-gray-400 uppercase tracking-wider mb-2">
+                    Приоритет
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => onFilterPriority(null)}
+                      className={cn(
+                        "px-2.5 py-1 rounded-md text-xs font-medium transition-colors",
+                        !filterPriority
+                          ? "bg-brand-100 text-brand-700"
+                          : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                      )}
+                    >
+                      Все
+                    </button>
+                    {priorities.map((p) => (
+                      <button
+                        key={p.value}
+                        type="button"
+                        onClick={() => onFilterPriority(p.value)}
+                        className={cn(
+                          "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors",
+                          filterPriority === p.value
+                            ? "bg-brand-100 text-brand-700"
+                            : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                        )}
+                      >
+                        <span
+                          className="w-2 h-2 rounded-full shrink-0"
+                          style={{ backgroundColor: p.color }}
+                        />
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {hasFilters && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onFilterAssignee(null);
+                      onFilterPriority(null);
+                    }}
+                    className="w-full text-center text-xs text-red-500 hover:text-red-600 py-1"
+                  >
+                    Сбросить фильтры
+                  </button>
+                )}
+              </div>
             </div>
           )}
         </div>
 
-        {/* View toggle */}
         <div className="flex items-center bg-gray-100 rounded-lg p-0.5">
           <button
+            type="button"
             onClick={() => onViewModeChange("kanban")}
             className={cn(
               "flex items-center justify-center w-8 h-8 rounded-md transition-all duration-150",
@@ -254,6 +272,7 @@ export default function DealsToolbar({
             <LayoutGrid size={15} />
           </button>
           <button
+            type="button"
             onClick={() => onViewModeChange("list")}
             className={cn(
               "flex items-center justify-center w-8 h-8 rounded-md transition-all duration-150",
@@ -267,8 +286,8 @@ export default function DealsToolbar({
           </button>
         </div>
 
-        {/* Create deal */}
         <button
+          type="button"
           onClick={onCreateDeal}
           className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-brand-500 text-white text-sm font-medium hover:bg-brand-600 transition-colors shadow-sm"
         >
@@ -276,35 +295,6 @@ export default function DealsToolbar({
           Создать сделку
         </button>
       </div>
-
-      {/* Active filter chips */}
-      {hasFilters && (
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-400">Фильтры:</span>
-          {filterAssignee && (
-            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-brand-50 text-brand-600 text-xs font-medium">
-              {filterAssignee}
-              <button
-                onClick={() => onFilterAssignee(null)}
-                className="hover:text-brand-800"
-              >
-                <X size={12} />
-              </button>
-            </span>
-          )}
-          {filterPriority && (
-            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-brand-50 text-brand-600 text-xs font-medium">
-              {priorities.find((p) => p.value === filterPriority)?.label}
-              <button
-                onClick={() => onFilterPriority(null)}
-                className="hover:text-brand-800"
-              >
-                <X size={12} />
-              </button>
-            </span>
-          )}
-        </div>
-      )}
     </div>
   );
 }

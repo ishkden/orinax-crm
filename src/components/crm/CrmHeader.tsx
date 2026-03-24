@@ -30,21 +30,21 @@ export default function CrmHeader() {
           {title}
         </h1>
         {headerAction && (
-          <div className="group flex h-8 shrink-0 items-stretch overflow-hidden rounded-lg border border-transparent text-brand-600 transition-colors hover:border-gray-200 hover:bg-gray-50/80">
+          <div className="group flex h-[calc(2rem/3)] shrink-0 items-stretch overflow-hidden rounded-md border border-transparent text-brand-600 transition-colors hover:border-gray-200 hover:bg-gray-50/80">
             <button
               type="button"
               onClick={headerAction.onClick}
-              className="flex w-8 shrink-0 items-center justify-center rounded-l-lg hover:bg-gray-100/80 transition-colors"
+              className="flex w-[calc(2rem/3)] shrink-0 items-center justify-center rounded-l-md hover:bg-gray-100/80 transition-colors"
               aria-label={headerAction.label}
             >
-              <Plus size={18} strokeWidth={2} />
+              <Plus size={6} strokeWidth={2.5} />
             </button>
-            <div className="flex max-w-0 items-stretch overflow-hidden transition-[max-width] duration-300 ease-out group-hover:max-w-[min(100vw-12rem,380px)]">
+            <div className="flex max-w-0 items-stretch overflow-hidden transition-[max-width] duration-[600ms] ease-out group-hover:max-w-[min(100vw-12rem,380px)]">
               <div className="flex items-stretch border-l border-gray-200/80">
                 <button
                   type="button"
                   onClick={headerAction.onClick}
-                  className="inline-flex items-center whitespace-nowrap px-2.5 text-xs font-medium text-brand-700 hover:bg-gray-100/80 transition-colors"
+                  className="inline-flex items-center whitespace-nowrap px-1.5 text-[9px] font-medium leading-none text-brand-700 hover:bg-gray-100/80 transition-colors"
                 >
                   {headerAction.label}
                 </button>
@@ -52,7 +52,7 @@ export default function CrmHeader() {
                   <button
                     type="button"
                     onClick={headerAction.secondary.onClick}
-                    className="inline-flex items-center whitespace-nowrap border-l border-gray-200/80 px-2.5 text-xs font-medium text-brand-700 hover:bg-gray-100/80 transition-colors"
+                    className="inline-flex items-center whitespace-nowrap border-l border-gray-200/80 px-1.5 text-[9px] font-medium leading-none text-brand-700 hover:bg-gray-100/80 transition-colors"
                   >
                     {headerAction.secondary.label}
                   </button>

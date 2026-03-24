@@ -14,12 +14,15 @@ import {
 import { useMemo, useRef, useState } from "react";
 import KanbanColumn from "./KanbanColumn";
 import DealCardStatic from "./DealCardStatic";
-import type { Deal, Stage } from "./mockData";
+import type { Deal, Stage } from "./types";
 
 interface KanbanBoardProps {
   stages: Stage[];
   deals: Deal[];
+  /** Optimistic local move — called during drag-over for live preview. */
   onMoveDeal: (dealId: string, newStage: string) => void;
+  /** Called once on drag-end when the stage actually changed; use to persist to DB. */
+  onStageCommit?: (dealId: string, newStage: string, previousStage: string) => void;
   onAddDeal?: (stageId: string) => void;
   onStageUpdate?: (stageId: string, updates: { label?: string; color?: string }) => void;
   onContactClick?: (deal: Deal) => void;
@@ -41,6 +44,7 @@ export default function KanbanBoard({
   stages,
   deals,
   onMoveDeal,
+  onStageCommit,
   onAddDeal,
   onStageUpdate,
   onContactClick,
@@ -51,9 +55,7 @@ export default function KanbanBoard({
   const snapshotRef = useRef<Deal[] | null>(null);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: { distance: 5 },
-    })
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   );
 
   const stageTotals = useMemo(() => {
@@ -73,13 +75,11 @@ export default function KanbanBoard({
   function handleDragOver(event: DragOverEvent) {
     const { active, over } = event;
     if (!over) return;
-
     const activeDealObj = deals.find((d) => d.id === active.id);
     if (!activeDealObj) return;
 
     const overId = String(over.id);
     const isOverColumn = stages.some((s) => s.id === overId);
-
     if (isOverColumn && activeDealObj.stage !== overId) {
       onMoveDeal(String(active.id), overId);
     } else {
@@ -94,14 +94,12 @@ export default function KanbanBoard({
     const { active, over } = event;
     setActiveDeal(null);
 
-    if (!over) {
-      setTotalsFrozen(false);
-      snapshotRef.current = null;
-      return;
-    }
+    // Stage before the drag started (for DB diff and potential revert)
+    const originalStage = snapshotRef.current?.find(
+      (d) => d.id === String(active.id)
+    )?.stage;
 
-    const activeDealObj = deals.find((d) => d.id === active.id);
-    if (!activeDealObj) {
+    if (!over || !originalStage) {
       setTotalsFrozen(false);
       snapshotRef.current = null;
       return;
@@ -110,12 +108,20 @@ export default function KanbanBoard({
     const overId = String(over.id);
     const isOverColumn = stages.some((s) => s.id === overId);
 
+    let finalStage: string | null = null;
     if (isOverColumn) {
-      onMoveDeal(String(active.id), overId);
+      finalStage = overId;
     } else {
       const overDeal = deals.find((d) => d.id === overId);
-      if (overDeal) {
-        onMoveDeal(String(active.id), overDeal.stage);
+      if (overDeal) finalStage = overDeal.stage;
+    }
+
+    if (finalStage) {
+      // Ensure local state is in sync with the final column
+      onMoveDeal(String(active.id), finalStage);
+      // Persist only if the stage actually changed
+      if (finalStage !== originalStage) {
+        onStageCommit?.(String(active.id), finalStage, originalStage);
       }
     }
 

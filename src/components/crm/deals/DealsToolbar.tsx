@@ -3,8 +3,8 @@
 import { useState, useRef, useEffect } from "react";
 import { Search, LayoutGrid, List, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { Deal } from "./mockData";
-import { assignees, priorities } from "./mockData";
+import { priorities } from "./types";
+import type { Deal } from "./types";
 
 export type ViewMode = "kanban" | "list";
 
@@ -18,6 +18,8 @@ interface DealsToolbarProps {
   filterPriority: Deal["priority"] | null;
   onFilterPriority: (p: Deal["priority"] | null) => void;
   totalDeals: number;
+  /** Derived from the loaded deals — unique list of assignee names. */
+  assignees: string[];
 }
 
 export default function DealsToolbar({
@@ -30,6 +32,7 @@ export default function DealsToolbar({
   filterPriority,
   onFilterPriority,
   totalDeals,
+  assignees,
 }: DealsToolbarProps) {
   const [searchOpen, setSearchOpen] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
@@ -101,40 +104,42 @@ export default function DealsToolbar({
               </div>
 
               <div className="p-3 space-y-4 max-h-[min(60vh,320px)] overflow-y-auto">
-                <div>
-                  <p className="text-[11px] font-medium text-gray-400 uppercase tracking-wider mb-2">
-                    Ответственный
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => onFilterAssignee(null)}
-                      className={cn(
-                        "px-2.5 py-1 rounded-md text-xs font-medium transition-colors",
-                        !filterAssignee
-                          ? "bg-brand-100 text-brand-700"
-                          : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                      )}
-                    >
-                      Все
-                    </button>
-                    {assignees.map((a) => (
+                {assignees.length > 0 && (
+                  <div>
+                    <p className="text-[11px] font-medium text-gray-400 uppercase tracking-wider mb-2">
+                      Ответственный
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
                       <button
-                        key={a}
                         type="button"
-                        onClick={() => onFilterAssignee(a)}
+                        onClick={() => onFilterAssignee(null)}
                         className={cn(
-                          "px-2.5 py-1 rounded-md text-xs font-medium transition-colors max-w-full truncate",
-                          filterAssignee === a
+                          "px-2.5 py-1 rounded-md text-xs font-medium transition-colors",
+                          !filterAssignee
                             ? "bg-brand-100 text-brand-700"
                             : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                         )}
                       >
-                        {a}
+                        Все
                       </button>
-                    ))}
+                      {assignees.map((a) => (
+                        <button
+                          key={a}
+                          type="button"
+                          onClick={() => onFilterAssignee(a)}
+                          className={cn(
+                            "px-2.5 py-1 rounded-md text-xs font-medium transition-colors max-w-full truncate",
+                            filterAssignee === a
+                              ? "bg-brand-100 text-brand-700"
+                              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                          )}
+                        >
+                          {a}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 <div>
                   <p className="text-[11px] font-medium text-gray-400 uppercase tracking-wider mb-2">

@@ -14,7 +14,7 @@ import {
   MoreHorizontal,
   Paperclip,
 } from "lucide-react";
-import type { Deal } from "./mockData";
+import type { Deal } from "./types";
 import { useCrmDrawerInset } from "@/components/crm/useCrmDrawerInset";
 
 interface ContactDrawerProps {
@@ -22,32 +22,14 @@ interface ContactDrawerProps {
   onClose: () => void;
 }
 
-function mockPhone(seed: string) {
-  let n = 0;
-  for (let i = 0; i < seed.length; i++) n = (n + seed.charCodeAt(i) * (i + 1)) % 10000000;
-  const p = String(9000000000 + n).slice(0, 10);
-  return `+7 (${p.slice(0, 3)}) ${p.slice(3, 6)}-${p.slice(6, 8)}-${p.slice(8, 10)}`;
-}
-
-function mockEmail(name: string, company: string) {
-  const slug = (s: string) =>
-    s
-      .toLowerCase()
-      .replace(/[^a-zа-яё0-9]+/gi, ".")
-      .replace(/^\.|\.$/g, "")
-      .slice(0, 24) || "contact";
-  const domain = slug(company).replace(/\./g, "") || "company";
-  return `${slug(name)}@${domain}.ru`;
-}
-
 const TOOLBAR_ICONS = [
-  { Icon: Phone, label: "Позвонить" },
-  { Icon: Mail, label: "Почта" },
-  { Icon: MessageSquare, label: "Чат" },
-  { Icon: Calendar, label: "Встреча" },
-  { Icon: Paperclip, label: "Файлы" },
-  { Icon: Star, label: "Важное" },
-  { Icon: MoreHorizontal, label: "Ещё" },
+  { Icon: Phone,         label: "Позвонить" },
+  { Icon: Mail,          label: "Почта"     },
+  { Icon: MessageSquare, label: "Чат"       },
+  { Icon: Calendar,      label: "Встреча"   },
+  { Icon: Paperclip,     label: "Файлы"     },
+  { Icon: Star,          label: "Важное"    },
+  { Icon: MoreHorizontal,label: "Ещё"       },
 ];
 
 export default function ContactDrawer({ deal, onClose }: ContactDrawerProps) {
@@ -66,9 +48,7 @@ export default function ContactDrawer({ deal, onClose }: ContactDrawerProps) {
   useEffect(() => {
     if (open) document.body.style.overflow = "hidden";
     else document.body.style.overflow = "";
-    return () => {
-      document.body.style.overflow = "";
-    };
+    return () => { document.body.style.overflow = ""; };
   }, [open]);
 
   return (
@@ -132,14 +112,20 @@ export default function ContactDrawer({ deal, onClose }: ContactDrawerProps) {
                     <Building2 size={16} className="text-gray-400 shrink-0" />
                     <div>
                       <p className="text-xs text-gray-400">Компания</p>
-                      <p className="text-sm text-gray-900">{deal.company}</p>
+                      <p className="text-sm text-gray-900">{deal.company || "—"}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3 px-4 py-3">
                     <Phone size={16} className="text-gray-400 shrink-0" />
                     <div>
                       <p className="text-xs text-gray-400">Телефон</p>
-                      <p className="text-sm text-gray-900">{mockPhone(deal.id)}</p>
+                      <p className="text-sm text-gray-900">
+                        {deal.contactPhone ? (
+                          <a href={`tel:${deal.contactPhone}`} className="text-brand-600 hover:underline">
+                            {deal.contactPhone}
+                          </a>
+                        ) : "—"}
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3 px-4 py-3">
@@ -147,15 +133,15 @@ export default function ContactDrawer({ deal, onClose }: ContactDrawerProps) {
                     <div>
                       <p className="text-xs text-gray-400">E-mail</p>
                       <p className="text-sm text-gray-900 break-all">
-                        {mockEmail(deal.contactName, deal.company)}
+                        {deal.contactEmail ? (
+                          <a href={`mailto:${deal.contactEmail}`} className="text-brand-600 hover:underline">
+                            {deal.contactEmail}
+                          </a>
+                        ) : "—"}
                       </p>
                     </div>
                   </div>
                 </div>
-
-                <p className="text-xs text-gray-400 text-center pb-2">
-                  Данные демонстрационные. Позже здесь будет карточка контакта из CRM.
-                </p>
               </div>
             </div>
 

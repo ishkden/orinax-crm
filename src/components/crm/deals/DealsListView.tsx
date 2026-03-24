@@ -3,8 +3,8 @@
 import { ArrowUpDown, Building2, Calendar } from "lucide-react";
 import { cn, formatCurrency } from "@/lib/utils";
 import Badge from "@/components/ui/Badge";
-import type { Deal, Stage } from "./mockData";
-import { priorities } from "./mockData";
+import { CLOSED_STAGE_IDS, priorities } from "./types";
+import type { Deal, Stage } from "./types";
 
 interface DealsListViewProps {
   deals: Deal[];
@@ -13,9 +13,9 @@ interface DealsListViewProps {
 }
 
 const priorityBadgeVariant: Record<string, "default" | "info" | "warning" | "danger"> = {
-  LOW: "default",
+  LOW:    "default",
   MEDIUM: "info",
-  HIGH: "warning",
+  HIGH:   "warning",
   URGENT: "danger",
 };
 
@@ -26,7 +26,6 @@ export default function DealsListView({ deals, stages, onDealClick }: DealsListV
   return (
     <div className="min-h-0 flex-1 overflow-auto px-6 pb-6">
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        {/* Summary bar */}
         <div className="px-6 py-3 border-b border-gray-100 flex items-center gap-4">
           <span className="text-sm text-gray-500">
             {deals.length} {deals.length === 1 ? "сделка" : "сделок"}
@@ -65,8 +64,7 @@ export default function DealsListView({ deals, stages, onDealClick }: DealsListV
                 const isOverdue =
                   deal.dueDate &&
                   new Date(deal.dueDate) < new Date() &&
-                  deal.stage !== "won" &&
-                  deal.stage !== "lost";
+                  !CLOSED_STAGE_IDS.has(deal.stage);
                 return (
                   <tr
                     key={deal.id}
@@ -83,14 +81,12 @@ export default function DealsListView({ deals, stages, onDealClick }: DealsListV
                   >
                     <td className="px-4 py-3">
                       <p className="font-medium text-gray-900">{deal.title}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        {deal.contactName}
-                      </p>
+                      <p className="text-xs text-gray-400 mt-0.5">{deal.contactName}</p>
                     </td>
                     <td className="px-4 py-3">
                       <span className="flex items-center gap-1.5 text-gray-600">
                         <Building2 size={12} className="text-gray-400" />
-                        {deal.company}
+                        {deal.company || "—"}
                       </span>
                     </td>
                     <td className="px-4 py-3">
@@ -100,9 +96,7 @@ export default function DealsListView({ deals, stages, onDealClick }: DealsListV
                             className="w-2 h-2 rounded-full"
                             style={{ backgroundColor: stage.color }}
                           />
-                          <span className="text-sm text-gray-700">
-                            {stage.label}
-                          </span>
+                          <span className="text-sm text-gray-700">{stage.label}</span>
                         </span>
                       )}
                     </td>
@@ -111,25 +105,27 @@ export default function DealsListView({ deals, stages, onDealClick }: DealsListV
                         {pri?.label ?? deal.priority}
                       </Badge>
                     </td>
-                    <td className="px-4 py-3 text-gray-600">
-                      {deal.assignee}
-                    </td>
+                    <td className="px-4 py-3 text-gray-600">{deal.assignee || "—"}</td>
                     <td className="px-4 py-3 text-right font-normal text-gray-900 tabular-nums">
                       {formatCurrency(deal.value, deal.currency)}
                     </td>
                     <td className="px-4 py-3">
-                      <span
-                        className={cn(
-                          "flex items-center gap-1 text-sm",
-                          isOverdue ? "text-red-500" : "text-gray-500"
-                        )}
-                      >
-                        <Calendar size={12} />
-                        {new Date(deal.dueDate).toLocaleDateString("ru-RU", {
-                          day: "numeric",
-                          month: "short",
-                        })}
-                      </span>
+                      {deal.dueDate ? (
+                        <span
+                          className={cn(
+                            "flex items-center gap-1 text-sm",
+                            isOverdue ? "text-red-500" : "text-gray-500"
+                          )}
+                        >
+                          <Calendar size={12} />
+                          {new Date(deal.dueDate).toLocaleDateString("ru-RU", {
+                            day: "numeric",
+                            month: "short",
+                          })}
+                        </span>
+                      ) : (
+                        <span className="text-gray-300">—</span>
+                      )}
                     </td>
                   </tr>
                 );

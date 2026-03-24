@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import type { Pipeline } from "@/components/crm/deals/mockData";
+import type { Pipeline } from "@/components/crm/deals/types";
 
 export type CrmPipelineState = {
   pipelines: Pipeline[];

@@ -11,7 +11,7 @@ import {
   Banknote,
 } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import type { Deal } from "./mockData";
+import type { Deal } from "./types";
 import { useCrmDrawerInset } from "@/components/crm/useCrmDrawerInset";
 
 interface DealDrawerProps {
@@ -128,14 +128,16 @@ export default function DealDrawer({ deal, stages, onClose }: DealDrawerProps) {
                     <Building2 size={16} className="text-gray-400 shrink-0" />
                     <div>
                       <p className="text-xs text-gray-400">Компания</p>
-                      <p className="text-sm text-gray-900">{deal.company}</p>
+                      <p className="text-sm text-gray-900">{deal.company || "—"}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3 px-4 py-3">
                     <Calendar size={16} className="text-gray-400 shrink-0" />
                     <div>
                       <p className="text-xs text-gray-400">Срок</p>
-                      <p className="text-sm text-gray-900">{formatDate(deal.dueDate)}</p>
+                      <p className="text-sm text-gray-900">
+                        {deal.dueDate ? formatDate(deal.dueDate) : "—"}
+                      </p>
                     </div>
                   </div>
                 </div>

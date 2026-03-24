@@ -5,7 +5,8 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Calendar } from "lucide-react";
 import { cn, formatCurrency, getInitials } from "@/lib/utils";
-import type { Deal } from "./mockData";
+import { CLOSED_STAGE_IDS } from "./types";
+import type { Deal } from "./types";
 
 interface DealCardProps {
   deal: Deal;
@@ -31,7 +32,9 @@ export default function DealCard({ deal, onContactClick, onDealClick }: DealCard
   };
 
   const isOverdue =
-    deal.dueDate && new Date(deal.dueDate) < new Date() && deal.stage !== "won" && deal.stage !== "lost";
+    deal.dueDate &&
+    new Date(deal.dueDate) < new Date() &&
+    !CLOSED_STAGE_IDS.has(deal.stage);
 
   return (
     <div
@@ -103,14 +106,16 @@ export default function DealCard({ deal, onContactClick, onDealClick }: DealCard
             </span>
           )}
 
-          <div
-            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-100"
-            title={deal.assignee}
-          >
-            <span className="text-[9px] font-semibold leading-none text-brand-600">
-              {getInitials(deal.assignee)}
-            </span>
-          </div>
+          {deal.assignee && (
+            <div
+              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-100"
+              title={deal.assignee}
+            >
+              <span className="text-[9px] font-semibold leading-none text-brand-600">
+                {getInitials(deal.assignee)}
+              </span>
+            </div>
+          )}
         </div>
       </div>
     </div>

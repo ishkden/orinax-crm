@@ -12,7 +12,7 @@ import { HexColorPicker } from "react-colorful";
 import { cn, formatCurrency, contrastTextOnHex } from "@/lib/utils";
 import AnimatedCounter from "@/components/ui/AnimatedCounter";
 import DealCard from "./DealCard";
-import type { Deal, Stage } from "./mockData";
+import type { Deal, Stage } from "./types";
 
 interface KanbanColumnProps {
   stage: Stage;

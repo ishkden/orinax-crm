@@ -12,12 +12,12 @@ import { HexColorPicker } from "react-colorful";
 import { cn, formatCurrency, contrastTextOnHex } from "@/lib/utils";
 import AnimatedCounter from "@/components/ui/AnimatedCounter";
 import DealCard from "./DealCard";
+import { useKanbanStyles } from "./KanbanStyleContext";
 import type { Deal, Stage } from "./types";
 
 interface KanbanColumnProps {
   stage: Stage;
   deals: Deal[];
-  /** Сумма по стадии до отпускания карточки (при перетаскивании не меняется) */
   committedStageTotal: number;
   currencyForTotal?: string;
   onAddDeal?: (stageId: string) => void;
@@ -38,6 +38,7 @@ export default function KanbanColumn({
   onContactClick,
   onDealClick,
 }: KanbanColumnProps) {
+  const s = useKanbanStyles();
   const { setNodeRef, isOver } = useDroppable({ id: stage.id });
 
   const [editing, setEditing] = useState(false);
@@ -142,26 +143,38 @@ export default function KanbanColumn({
   );
 
   return (
-    <div className="flex h-full min-h-0 w-[228px] min-w-[228px] shrink-0 flex-col self-stretch">
+    <div
+      className="flex h-full min-h-0 shrink-0 flex-col self-stretch"
+      style={{ width: s.column.width, minWidth: s.column.width }}
+    >
       <div
-        className={cn(
-          "flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-transparent bg-gray-50/80 transition-colors duration-150",
-          isOver && "border-brand-300 bg-brand-50/30"
-        )}
+        className="flex min-h-0 flex-1 flex-col overflow-hidden border transition-colors duration-150"
+        style={{
+          borderRadius: s.column.borderRadius,
+          backgroundColor: isOver ? s.column.dragOverBgColor : s.column.backgroundColor,
+          borderColor: isOver ? s.column.dragOverBorderColor : "transparent",
+          opacity: s.column.backgroundOpacity / 100,
+        }}
       >
         <div
           ref={headerRef}
-          className="relative rounded-t-xl px-1.5 min-h-[34px] py-1 flex items-center justify-center"
+          className="relative flex items-center justify-center"
           style={{
             backgroundColor: headerBg,
             color: headerFg,
+            minHeight: s.columnHeader.minHeight,
+            padding: `${s.columnHeader.paddingY}px ${s.columnHeader.paddingX}px`,
+            borderTopLeftRadius: s.columnHeader.borderRadius,
+            borderTopRightRadius: s.columnHeader.borderRadius,
           }}
         >
           {!editing && (
             <>
               <span
-                className="absolute left-1.5 top-1/2 -translate-y-1/2 text-[10px] font-medium tabular-nums px-1.5 py-0.5 rounded-full"
+                className="absolute left-1.5 top-1/2 -translate-y-1/2 font-medium tabular-nums rounded-full"
                 style={{
+                  fontSize: s.columnHeader.countBadgeFontSize,
+                  padding: `${s.columnHeader.countBadgePaddingY}px ${s.columnHeader.countBadgePaddingX}px`,
                   backgroundColor:
                     headerFg === "#ffffff" ? "rgba(255,255,255,0.25)" : "rgba(0,0,0,0.12)",
                   color: headerFg,
@@ -169,7 +182,13 @@ export default function KanbanColumn({
               >
                 {deals.length}
               </span>
-              <h3 className="text-[11px] font-medium text-center truncate max-w-[70%] px-1 leading-tight">
+              <h3
+                className="text-center truncate max-w-[70%] px-1 leading-tight"
+                style={{
+                  fontSize: s.columnHeader.fontSize,
+                  fontWeight: s.columnHeader.fontWeight,
+                }}
+              >
                 {stage.label}
               </h3>
               <button
@@ -186,53 +205,82 @@ export default function KanbanColumn({
             </>
           )}
           {editing && (
-            <span className="text-[11px] font-medium truncate px-7 py-1.5 opacity-90">
+            <span
+              className="truncate px-7 py-1.5 opacity-90"
+              style={{
+                fontSize: s.columnHeader.fontSize,
+                fontWeight: s.columnHeader.fontWeight,
+              }}
+            >
               {draftLabel || stage.label}
             </span>
           )}
         </div>
 
-        <div className="flex flex-col items-center px-3 pb-1 pt-2 text-center">
-          <AnimatedCounter
-            value={committedStageTotal}
-            duration={0.38}
-            className="inline-block text-base font-normal tabular-nums tracking-tight text-gray-800"
-            formatValue={formatStageTotal}
-          />
-        </div>
+        {s.stageTotal.show && (
+          <div className="flex flex-col items-center px-3 pb-1 pt-2 text-center">
+            <AnimatedCounter
+              value={committedStageTotal}
+              duration={0.38}
+              className="inline-block tabular-nums tracking-tight"
+              style={{
+                fontSize: s.stageTotal.fontSize,
+                fontWeight: s.stageTotal.fontWeight,
+                color: s.stageTotal.textColor,
+              }}
+              formatValue={formatStageTotal}
+            />
+          </div>
+        )}
 
-        <div className="flex justify-center px-3 pb-2">
-          <button
-            type="button"
-            onClick={() => onAddDeal?.(stage.id)}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-brand-50/80 hover:text-brand-600"
-            title="Добавить сделку"
-          >
-            <Plus size={22} strokeWidth={2} />
-          </button>
-        </div>
+        {s.addButton.show && (
+          <div className="flex justify-center px-3 pb-2">
+            <button
+              type="button"
+              onClick={() => onAddDeal?.(stage.id)}
+              className="flex items-center justify-center text-gray-500 transition-colors hover:bg-brand-50/80 hover:text-brand-600"
+              style={{
+                width: s.addButton.size,
+                height: s.addButton.size,
+                borderRadius: s.addButton.borderRadius,
+              }}
+              title="Добавить сделку"
+            >
+              <Plus size={s.addButton.iconSize} strokeWidth={2} />
+            </button>
+          </div>
+        )}
 
         <div
           ref={setNodeRef}
-          className="min-h-0 flex-1 touch-pan-y space-y-2.5 overflow-y-auto overscroll-y-contain px-2 pb-2 [-webkit-overflow-scrolling:touch]"
+          className="min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-y-contain px-2 pb-2 [-webkit-overflow-scrolling:touch]"
+          style={{ gap: s.column.cardGap }}
         >
           <SortableContext
             items={deals.map((d) => d.id)}
             strategy={verticalListSortingStrategy}
           >
-            {deals.map((deal) => (
-              <DealCard
-                key={deal.id}
-                deal={deal}
-                onContactClick={onContactClick}
-                onDealClick={onDealClick}
-              />
-            ))}
+            <div style={{ display: "flex", flexDirection: "column", gap: s.column.cardGap }}>
+              {deals.map((deal) => (
+                <DealCard
+                  key={deal.id}
+                  deal={deal}
+                  onContactClick={onContactClick}
+                  onDealClick={onDealClick}
+                />
+              ))}
+            </div>
           </SortableContext>
 
           {deals.length === 0 && (
-            <div className="flex items-center justify-center h-16 text-xs text-gray-300">
-              Перетащите сделку сюда
+            <div
+              className="flex items-center justify-center h-16"
+              style={{
+                fontSize: s.emptyState.fontSize,
+                color: s.emptyState.textColor,
+              }}
+            >
+              {s.emptyState.text}
             </div>
           )}
         </div>

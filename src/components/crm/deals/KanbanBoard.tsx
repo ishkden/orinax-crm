@@ -14,14 +14,13 @@ import {
 import { useMemo, useRef, useState } from "react";
 import KanbanColumn from "./KanbanColumn";
 import DealCardStatic from "./DealCardStatic";
+import { useKanbanStyles } from "./KanbanStyleContext";
 import type { Deal, Stage } from "./types";
 
 interface KanbanBoardProps {
   stages: Stage[];
   deals: Deal[];
-  /** Optimistic local move — called during drag-over for live preview. */
   onMoveDeal: (dealId: string, newStage: string) => void;
-  /** Called once on drag-end when the stage actually changed; use to persist to DB. */
   onStageCommit?: (dealId: string, newStage: string, previousStage: string) => void;
   onAddDeal?: (stageId: string) => void;
   onStageUpdate?: (stageId: string, updates: { label?: string; color?: string }) => void;
@@ -52,6 +51,7 @@ export default function KanbanBoard({
   onContactClick,
   onDealClick,
 }: KanbanBoardProps) {
+  const ks = useKanbanStyles();
   const [activeDeal, setActiveDeal] = useState<Deal | null>(null);
   const [totalsFrozen, setTotalsFrozen] = useState(false);
   const snapshotRef = useRef<Deal[] | null>(null);
@@ -96,7 +96,6 @@ export default function KanbanBoard({
     const { active, over } = event;
     setActiveDeal(null);
 
-    // Stage before the drag started (for DB diff and potential revert)
     const originalStage = snapshotRef.current?.find(
       (d) => d.id === String(active.id)
     )?.stage;
@@ -119,9 +118,7 @@ export default function KanbanBoard({
     }
 
     if (finalStage) {
-      // Ensure local state is in sync with the final column
       onMoveDeal(String(active.id), finalStage);
-      // Persist only if the stage actually changed
       if (finalStage !== originalStage) {
         onStageCommit?.(String(active.id), finalStage, originalStage);
       }
@@ -164,7 +161,13 @@ export default function KanbanBoard({
   }
 
   return (
-    <div className="flex h-[min(720px,calc(100dvh-12rem))] min-h-[320px] w-full min-w-0 flex-col overflow-hidden">
+    <div
+      className="flex w-full min-w-0 flex-col overflow-hidden"
+      style={{
+        height: `min(${ks.board.maxHeight}px, calc(100dvh - 12rem))`,
+        minHeight: ks.board.minHeight,
+      }}
+    >
       <DndContext
         sensors={sensors}
         collisionDetection={closestCorners}
@@ -172,7 +175,16 @@ export default function KanbanBoard({
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
       >
-        <div className="flex min-h-0 min-w-0 flex-1 items-stretch gap-3 overflow-x-auto overflow-y-hidden px-6 pb-4 pt-2">
+        <div
+          className="flex min-h-0 min-w-0 flex-1 items-stretch overflow-x-auto overflow-y-hidden"
+          style={{
+            gap: ks.board.columnGap,
+            paddingLeft: ks.board.paddingX,
+            paddingRight: ks.board.paddingX,
+            paddingTop: ks.board.paddingTop,
+            paddingBottom: ks.board.paddingBottom,
+          }}
+        >
           {stages.map((stage) => {
             const meta = stageTotals.get(stage.id) ?? { total: 0, currency: "RUB" };
             return (
@@ -194,7 +206,14 @@ export default function KanbanBoard({
 
         <DragOverlay>
           {activeDeal ? (
-            <div className="pointer-events-none w-[212px] rotate-2 opacity-95">
+            <div
+              className="pointer-events-none"
+              style={{
+                width: ks.dragOverlay.width,
+                transform: `rotate(${ks.dragOverlay.rotation}deg)`,
+                opacity: ks.dragOverlay.opacity / 100,
+              }}
+            >
               <DealCardStatic deal={activeDeal} />
             </div>
           ) : null}

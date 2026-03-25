@@ -1,10 +1,14 @@
 "use client";
 
-import { ArrowUpDown, Building2, Calendar } from "lucide-react";
+import { useState, useEffect } from "react";
+import { ArrowUpDown, Building2, Calendar, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn, formatCurrency } from "@/lib/utils";
 import Badge from "@/components/ui/Badge";
 import { CLOSED_STAGE_IDS, priorities } from "./types";
 import type { Deal, Stage } from "./types";
+
+const PAGE_SIZE_OPTIONS = [20, 50, 100] as const;
+type PageSize = (typeof PAGE_SIZE_OPTIONS)[number];
 
 interface DealsListViewProps {
   deals: Deal[];
@@ -23,6 +27,17 @@ export default function DealsListView({ deals, stages, onDealClick }: DealsListV
   const stageMap = Object.fromEntries(stages.map((s) => [s.id, s]));
   const totalValue = deals.reduce((s, d) => s + d.value, 0);
 
+  const [pageSize, setPageSize] = useState<PageSize>(20);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [deals, pageSize]);
+
+  const totalPages = Math.max(1, Math.ceil(deals.length / pageSize));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedDeals = deals.slice((safePage - 1) * pageSize, safePage * pageSize);
+
   return (
     <div className="min-h-0 flex-1 overflow-auto px-6 pb-6">
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -34,6 +49,7 @@ export default function DealsListView({ deals, stages, onDealClick }: DealsListV
             {formatCurrency(totalValue)}
           </span>
         </div>
+
 
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -58,7 +74,7 @@ export default function DealsListView({ deals, stages, onDealClick }: DealsListV
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {deals.map((deal) => {
+              {paginatedDeals.map((deal) => {
                 const stage = stageMap[deal.stage];
                 const pri = priorities.find((p) => p.value === deal.priority);
                 const isOverdue =
@@ -140,6 +156,56 @@ export default function DealsListView({ deals, stages, onDealClick }: DealsListV
             </tbody>
           </table>
         </div>
+
+        {deals.length > 0 && (
+          <div className="px-6 py-3 border-t border-gray-100 flex items-center justify-between gap-4 flex-wrap">
+            <span className="text-sm text-gray-500">
+              {(safePage - 1) * pageSize + 1}–{Math.min(safePage * pageSize, deals.length)} из {deals.length}
+            </span>
+
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm text-gray-400">Показывать по</span>
+                {PAGE_SIZE_OPTIONS.map((size) => (
+                  <button
+                    key={size}
+                    onClick={() => setPageSize(size)}
+                    className={cn(
+                      "px-2.5 py-1 text-sm rounded-md transition-colors",
+                      pageSize === size
+                        ? "bg-gray-900 text-white font-medium"
+                        : "text-gray-500 hover:bg-gray-100"
+                    )}
+                  >
+                    {size}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={safePage === 1}
+                  className="p-1.5 rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  aria-label="Предыдущая страница"
+                >
+                  <ChevronLeft size={16} />
+                </button>
+                <span className="text-sm text-gray-600 tabular-nums px-1">
+                  {safePage} / {totalPages}
+                </span>
+                <button
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={safePage === totalPages}
+                  className="p-1.5 rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  aria-label="Следующая страница"
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

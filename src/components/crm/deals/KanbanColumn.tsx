@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useLayoutEffect, useCallback } from "react";
+import { useState, useEffect, useRef, useLayoutEffect, useCallback, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { useDroppable } from "@dnd-kit/core";
 import {
@@ -44,6 +44,19 @@ export default function KanbanColumn({
   const [draftLabel, setDraftLabel] = useState(stage.label);
   const [draftColor, setDraftColor] = useState(stage.color);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [toast, setToast] = useState(false);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [, startDeleteTransition] = useTransition();
+
+  const showToast = useCallback(() => {
+    setToast(true);
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => setToast(false), 3000);
+  }, []);
+
+  useEffect(() => () => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+  }, []);
   const headerRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const [panelPos, setPanelPos] = useState<{ top: number; left: number } | null>(null);
@@ -284,7 +297,13 @@ export default function KanbanColumn({
                 {!confirmDelete ? (
                   <button
                     type="button"
-                    onClick={() => setConfirmDelete(true)}
+                    onClick={() => {
+                      if (deals.length > 0) {
+                        showToast();
+                      } else {
+                        setConfirmDelete(true);
+                      }
+                    }}
                     className="inline-flex w-full items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-red-500 hover:bg-red-50 transition-colors"
                   >
                     <Trash2 size={13} /> Удалить стадию
@@ -292,12 +311,8 @@ export default function KanbanColumn({
                 ) : (
                   <div className="flex flex-col gap-2">
                     <p className="text-xs text-center text-gray-500">
-                      Удалить стадию <span className="font-medium text-gray-800">&quot;{stage.label}&quot;</span>?
-                      {deals.length > 0 && (
-                        <span className="block mt-0.5 text-amber-600">
-                          {deals.length} сдел{deals.length === 1 ? "ка" : deals.length < 5 ? "ки" : "ок"} будут откреплены
-                        </span>
-                      )}
+                      Удалить стадию{" "}
+                      <span className="font-medium text-gray-800">&quot;{stage.label}&quot;</span>?
                     </p>
                     <div className="flex gap-2">
                       <button
@@ -310,7 +325,9 @@ export default function KanbanColumn({
                       <button
                         type="button"
                         onClick={() => {
-                          onStageDelete(stage.id);
+                          startDeleteTransition(() => {
+                            onStageDelete(stage.id);
+                          });
                           setEditing(false);
                           setConfirmDelete(false);
                         }}
@@ -323,6 +340,23 @@ export default function KanbanColumn({
                 )}
               </div>
             )}
+          </div>,
+          document.body
+        )}
+
+      {toast &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            className={cn(
+              "fixed bottom-6 left-1/2 -translate-x-1/2 z-[200]",
+              "flex items-center gap-2 rounded-xl px-4 py-2.5",
+              "bg-gray-900/90 text-white text-sm shadow-xl backdrop-blur-sm",
+              "animate-in fade-in slide-in-from-bottom-2 duration-200"
+            )}
+          >
+            <X size={14} className="shrink-0 text-red-400" />
+            Пока есть сделки в стадии, стадию удалить нельзя
           </div>,
           document.body
         )}

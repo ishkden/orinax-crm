@@ -1,28 +1,34 @@
-import { Building2 } from "lucide-react";
+import { prisma } from "@/lib/prisma";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import CrmRegisterPrimaryAction from "@/components/crm/CrmRegisterPrimaryAction";
+import CompaniesListClient from "@/components/crm/companies/CompaniesListClient";
 
-export default function CompaniesPage() {
+async function getCompanies() {
+  const session = await getServerSession(authOptions);
+  const userId = (session?.user as { id?: string } | undefined)?.id;
+  if (!userId) return [];
+
+  const member = await prisma.orgMember.findFirst({
+    where: { userId },
+    select: { orgId: true },
+  });
+  if (!member) return [];
+
+  return prisma.company.findMany({
+    where: { orgId: member.orgId },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
+export default async function CompaniesPage() {
+  const companies = await getCompanies();
+
   return (
     <>
       <CrmRegisterPrimaryAction label="Добавить компанию" href="/crm/companies/new" />
       <div className="flex-1 overflow-auto p-6">
-        <div className="bg-white rounded-xl border border-gray-200">
-          <div className="px-6 py-4 border-b border-gray-100">
-            <p className="text-sm text-gray-500">0 компаний</p>
-          </div>
-
-          <div className="px-6 py-24 text-center">
-            <div className="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <Building2 size={24} className="text-gray-400" />
-            </div>
-            <h3 className="text-sm font-medium text-gray-900 mb-1">
-              Компании появятся здесь
-            </h3>
-            <p className="text-sm text-gray-400 max-w-sm mx-auto">
-              Добавляйте компании для удобной группировки контактов и сделок по организациям.
-            </p>
-          </div>
-        </div>
+        <CompaniesListClient companies={companies} />
       </div>
     </>
   );

@@ -165,6 +165,18 @@ export async function updateDealStage(
   });
 }
 
+export async function deleteStage(stageId: string): Promise<void> {
+  const orgId = await getOrgId();
+  // Detach deals from this stage before deleting
+  await prisma.deal.updateMany({
+    where: { stageId, orgId },
+    data: { stageId: null },
+  });
+  await prisma.stage.delete({
+    where: { id: stageId, orgId },
+  });
+}
+
 export async function createDeal(input: CreateDealInput): Promise<Deal> {
   const orgId = await getOrgId();
   const deal = await prisma.deal.create({

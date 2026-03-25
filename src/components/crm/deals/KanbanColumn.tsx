@@ -7,7 +7,7 @@ import {
   SortableContext,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { Plus, Pencil, Check, X } from "lucide-react";
+import { Plus, Pencil, Check, X, Trash2 } from "lucide-react";
 import { HexColorPicker } from "react-colorful";
 import { cn, formatCurrency, contrastTextOnHex } from "@/lib/utils";
 import AnimatedCounter from "@/components/ui/AnimatedCounter";
@@ -22,6 +22,7 @@ interface KanbanColumnProps {
   currencyForTotal?: string;
   onAddDeal?: (stageId: string) => void;
   onStageUpdate?: (stageId: string, updates: { label?: string; color?: string }) => void;
+  onStageDelete?: (stageId: string) => void;
   onContactClick?: (deal: Deal) => void;
   onDealClick?: (deal: Deal) => void;
 }
@@ -33,6 +34,7 @@ export default function KanbanColumn({
   currencyForTotal = "RUB",
   onAddDeal,
   onStageUpdate,
+  onStageDelete,
   onContactClick,
   onDealClick,
 }: KanbanColumnProps) {
@@ -41,6 +43,7 @@ export default function KanbanColumn({
   const [editing, setEditing] = useState(false);
   const [draftLabel, setDraftLabel] = useState(stage.label);
   const [draftColor, setDraftColor] = useState(stage.color);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const headerRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const [panelPos, setPanelPos] = useState<{ top: number; left: number } | null>(null);
@@ -88,6 +91,7 @@ export default function KanbanColumn({
   const cancelEdit = useCallback(() => {
     setDraftLabel(stage.label);
     setDraftColor(stage.color);
+    setConfirmDelete(false);
     setEditing(false);
   }, [stage.label, stage.color]);
 
@@ -274,6 +278,51 @@ export default function KanbanColumn({
                 <Check size={14} /> Готово
               </button>
             </div>
+
+            {onStageDelete && (
+              <div className="mt-3 pt-3 border-t border-gray-100">
+                {!confirmDelete ? (
+                  <button
+                    type="button"
+                    onClick={() => setConfirmDelete(true)}
+                    className="inline-flex w-full items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-red-500 hover:bg-red-50 transition-colors"
+                  >
+                    <Trash2 size={13} /> Удалить стадию
+                  </button>
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    <p className="text-xs text-center text-gray-500">
+                      Удалить стадию <span className="font-medium text-gray-800">&quot;{stage.label}&quot;</span>?
+                      {deals.length > 0 && (
+                        <span className="block mt-0.5 text-amber-600">
+                          {deals.length} сдел{deals.length === 1 ? "ка" : deals.length < 5 ? "ки" : "ок"} будут откреплены
+                        </span>
+                      )}
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setConfirmDelete(false)}
+                        className="flex-1 px-3 py-1.5 rounded-lg text-sm text-gray-600 hover:bg-gray-100 transition-colors"
+                      >
+                        Нет
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onStageDelete(stage.id);
+                          setEditing(false);
+                          setConfirmDelete(false);
+                        }}
+                        className="flex-1 inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium bg-red-500 text-white hover:bg-red-600 transition-colors"
+                      >
+                        <Trash2 size={13} /> Удалить
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>,
           document.body
         )}

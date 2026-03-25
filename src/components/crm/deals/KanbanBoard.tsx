@@ -25,6 +25,7 @@ interface KanbanBoardProps {
   onStageCommit?: (dealId: string, newStage: string, previousStage: string) => void;
   onAddDeal?: (stageId: string) => void;
   onStageUpdate?: (stageId: string, updates: { label?: string; color?: string }) => void;
+  onStageDelete?: (stageId: string) => void;
   onContactClick?: (deal: Deal) => void;
   onDealClick?: (deal: Deal) => void;
 }
@@ -47,6 +48,7 @@ export default function KanbanBoard({
   onStageCommit,
   onAddDeal,
   onStageUpdate,
+  onStageDelete,
   onContactClick,
   onDealClick,
 }: KanbanBoardProps) {
@@ -182,6 +184,7 @@ export default function KanbanBoard({
                 currencyForTotal={meta.currency}
                 onAddDeal={onAddDeal}
                 onStageUpdate={onStageUpdate}
+                onStageDelete={onStageDelete}
                 onContactClick={onContactClick}
                 onDealClick={onDealClick}
               />

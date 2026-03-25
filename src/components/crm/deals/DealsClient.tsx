@@ -11,7 +11,7 @@ import { useCrmHeaderAction } from "@/components/crm/CrmHeaderActionContext";
 import { useCrmDealPipeline } from "@/components/crm/CrmDealPipelineContext";
 import type { DbPipeline } from "@/app/actions/deals";
 import type { Deal, CreateDealInput, Stage, Pipeline } from "./types";
-import { updateDealStage, createDeal } from "@/app/actions/deals";
+import { updateDealStage, createDeal, deleteStage } from "@/app/actions/deals";
 
 const STAGE_OVERRIDES_KEY = "crm-kanban-stage-overrides";
 const DEFAULT_STAGE_COLOR = "#6B7280";
@@ -162,6 +162,18 @@ export default function DealsClient({ initialDeals, initialPipelines }: DealsCli
     });
   }
 
+  function handleStageDelete(stageId: string) {
+    startTransition(async () => {
+      try {
+        await deleteStage(stageId);
+        // Reload the page to get fresh pipelines from the server
+        window.location.reload();
+      } catch (err) {
+        console.error("Failed to delete stage:", err);
+      }
+    });
+  }
+
   function handleAddDeal(stageId: string) {
     setModalStage(stageId);
     setModalOpen(true);
@@ -205,6 +217,7 @@ export default function DealsClient({ initialDeals, initialPipelines }: DealsCli
             onStageCommit={handleStageCommit}
             onAddDeal={handleAddDeal}
             onStageUpdate={handleStageUpdate}
+            onStageDelete={handleStageDelete}
             onContactClick={setContactDeal}
             onDealClick={setSelectedDeal}
           />

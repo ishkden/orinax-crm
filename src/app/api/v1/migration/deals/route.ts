@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { validateMigrationKey, unauthorized, badRequest, internalError } from "@/lib/migration/auth";
+import { validateMigrationKey, resolveOrgId, unauthorized, badRequest, internalError } from "@/lib/migration/auth";
 import type { MigrationBatch, DealPayload } from "@/lib/migration/types";
 import type { DealStage } from "@prisma/client";
 
@@ -32,6 +32,9 @@ export async function POST(request: NextRequest) {
 
   const { orgId, data } = body;
   if (!orgId) return badRequest("orgId is required");
+
+  const internalOrgId = await resolveOrgId(orgId);
+  if (!internalOrgId) return badRequest("Org not found for externalId: " + orgId);
   if (!Array.isArray(data) || data.length === 0) return badRequest("data must be a non-empty array");
 
   const invalid = data.find((d) => !d.sourceId || !d.title);
@@ -97,9 +100,9 @@ export async function POST(request: NextRequest) {
         const stage = resolveStage(deal.stage);
 
         return prisma.deal.upsert({
-          where: { orgId_sourceId: { orgId, sourceId: deal.sourceId } },
+          where: { orgId_sourceId: { orgId: internalOrgId, sourceId: deal.sourceId } },
           create: {
-            orgId,
+            orgId: internalOrgId,
             sourceId: deal.sourceId,
             title: deal.title,
             value: deal.value ?? 0,

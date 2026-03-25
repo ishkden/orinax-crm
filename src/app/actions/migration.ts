@@ -47,7 +47,7 @@ export type TriggerResult = {
 
 // ─── Internal helpers ────────────────────────────────────────────────────────
 
-async function getOrgId(): Promise<string> {
+async function getOrgIds(): Promise<{ internalOrgId: string; externalOrgId: string }> {
   const session = await getServerSession(authOptions);
   const userId = (session?.user as { id?: string } | undefined)?.id;
   if (!userId) throw new Error("Unauthorized");
@@ -57,7 +57,19 @@ async function getOrgId(): Promise<string> {
     select: { orgId: true },
   });
   if (!member) throw new Error("No org found for this user");
-  return member.orgId;
+
+  const org = await prisma.org.findUnique({
+    where: { id: member.orgId },
+    select: { id: true, externalId: true },
+  });
+  if (!org) throw new Error("No org found for this user");
+
+  return { internalOrgId: org.id, externalOrgId: org.externalId };
+}
+
+async function getOrgId(): Promise<string> {
+  const { internalOrgId } = await getOrgIds();
+  return internalOrgId;
 }
 
 export async function getSessionOrgId(): Promise<string> {
@@ -76,9 +88,10 @@ export async function startMigration(): Promise<TriggerResult> {
     return { ok: false, message: "ANALYTICS_API_URL is not configured" };
   }
 
-  let orgId: string;
+  let externalOrgId: string;
   try {
-    orgId = await getOrgId();
+    const ids = await getOrgIds();
+    externalOrgId = ids.externalOrgId;
   } catch (err) {
     return {
       ok: false,
@@ -91,7 +104,7 @@ export async function startMigration(): Promise<TriggerResult> {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        orgId,
+        orgId: externalOrgId,
         targetApiUrl: `${appUrl}/api/v1`,
         targetApiKey: apiKey,
         batchSize: 50,
@@ -116,16 +129,17 @@ export async function getMigrationStatus(): Promise<MigrationStatusResponse | nu
   const analyticsUrl = process.env.ANALYTICS_API_URL;
   if (!analyticsUrl) return null;
 
-  let orgId: string;
+  let externalOrgId: string;
   try {
-    orgId = await getOrgId();
+    const ids = await getOrgIds();
+    externalOrgId = ids.externalOrgId;
   } catch {
     return null;
   }
 
   try {
     const res = await fetch(
-      `${analyticsUrl}/api/migration/status?orgId=${encodeURIComponent(orgId)}`,
+      `${analyticsUrl}/api/migration/status?orgId=${encodeURIComponent(externalOrgId)}`,
       { cache: "no-store" }
     );
 

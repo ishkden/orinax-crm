@@ -83,3 +83,17 @@ export interface MessagePayload {
   createdAt?: string;
   metadata?: Record<string, unknown>;
 }
+
+export interface LeadPayload {
+  sourceId: string;
+  title?: string;
+  statusId?: string;
+  statusSemantic?: string;
+  value?: number;
+  currency?: string;
+  description?: string;
+  tags?: string[];
+  contactSourceId?: string;
+  companySourceId?: string;
+  createdAt?: string;
+}

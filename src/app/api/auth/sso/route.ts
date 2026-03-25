@@ -105,7 +105,8 @@ export async function GET(req: NextRequest) {
   const useSecureCookies = process.env.NEXTAUTH_URL?.startsWith("https://") ?? false;
   const cookieName = `${useSecureCookies ? "__Secure-" : ""}next-auth.session-token`;
 
-  const redirectUrl = new URL("/crm/deals", req.url);
+  const appBase = (process.env.NEXTAUTH_URL || "https://crm.orinax.ai").replace(/\/$/, "");
+  const redirectUrl = new URL("/crm/deals", appBase);
   const response = NextResponse.redirect(redirectUrl);
 
   response.cookies.set(cookieName, sessionToken, {

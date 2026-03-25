@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { validateMigrationKey, unauthorized, badRequest, internalError } from "@/lib/migration/auth";
+import { validateMigrationKey, resolveOrgId, unauthorized, badRequest, internalError } from "@/lib/migration/auth";
 import type { MigrationBatch, StagePayload } from "@/lib/migration/types";
 
 export const dynamic = "force-dynamic";
@@ -17,6 +17,9 @@ export async function POST(request: NextRequest) {
 
   const { orgId, data } = body;
   if (!orgId) return badRequest("orgId is required");
+
+  const internalOrgId = await resolveOrgId(orgId);
+  if (!internalOrgId) return badRequest("Org not found for externalId: " + orgId);
   if (!Array.isArray(data) || data.length === 0) return badRequest("data must be a non-empty array");
 
   const invalid = data.find((s) => !s.sourceId || !s.name || !s.pipelineSourceId);
@@ -27,7 +30,7 @@ export async function POST(request: NextRequest) {
     const pipelineSourceIds = [...new Set(data.map((s) => s.pipelineSourceId))];
 
     const pipelines = await prisma.pipeline.findMany({
-      where: { orgId, sourceId: { in: pipelineSourceIds } },
+      where: { orgId: internalOrgId, sourceId: { in: pipelineSourceIds } },
       select: { id: true, sourceId: true },
     });
 
@@ -43,9 +46,9 @@ export async function POST(request: NextRequest) {
         const pipelineId = pipelineMap.get(stage.pipelineSourceId)!;
 
         return prisma.stage.upsert({
-          where: { orgId_sourceId: { orgId, sourceId: stage.sourceId } },
+          where: { orgId_sourceId: { orgId: internalOrgId, sourceId: stage.sourceId } },
           create: {
-            orgId,
+            orgId: internalOrgId,
             pipelineId,
             sourceId: stage.sourceId,
             name: stage.name,

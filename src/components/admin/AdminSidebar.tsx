@@ -6,6 +6,8 @@ import {
   LayoutDashboard,
   Users,
   Building2,
+  Paintbrush,
+  Database,
   LogOut,
   Shield,
 } from "lucide-react";
@@ -15,6 +17,8 @@ const navItems = [
   { href: "/admin/dashboard", label: "Дашборд", icon: LayoutDashboard },
   { href: "/admin/users", label: "Пользователи", icon: Users },
   { href: "/admin/orgs", label: "Организации", icon: Building2 },
+  { href: "/admin/database", label: "База данных", icon: Database },
+  { href: "/admin/styles", label: "Стили", icon: Paintbrush },
 ];
 
 export default function AdminSidebar() {

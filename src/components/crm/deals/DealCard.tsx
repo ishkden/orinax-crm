@@ -4,8 +4,9 @@ import { useRef } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Calendar } from "lucide-react";
-import { cn, formatCurrency, getInitials } from "@/lib/utils";
+import { formatCurrency, getInitials } from "@/lib/utils";
 import { CLOSED_STAGE_IDS } from "./types";
+import { useKanbanStyles } from "./KanbanStyleContext";
 import type { Deal } from "./types";
 
 interface DealCardProps {
@@ -14,7 +15,17 @@ interface DealCardProps {
   onDealClick?: (deal: Deal) => void;
 }
 
+const lineHeightMap = { tight: 1.25, snug: 1.375, normal: 1.5, relaxed: 1.625 };
+const shadowMap = {
+  none: "none",
+  sm: "0 1px 2px 0 rgb(0 0 0 / 0.05)",
+  md: "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
+  lg: "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
+  xl: "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)",
+};
+
 export default function DealCard({ deal, onContactClick, onDealClick }: DealCardProps) {
+  const s = useKanbanStyles();
   const {
     attributes,
     listeners,
@@ -39,7 +50,22 @@ export default function DealCard({ deal, onContactClick, onDealClick }: DealCard
   return (
     <div
       ref={setNodeRef}
-      style={style}
+      style={{
+        ...style,
+        minHeight: s.card.minHeight,
+        borderRadius: s.card.borderRadius,
+        backgroundColor: s.card.backgroundColor,
+        borderColor: s.card.borderColor,
+        padding: `${s.card.paddingY}px ${s.card.paddingX}px`,
+        ...(isDragging
+          ? {
+              transform: [CSS.Transform.toString(transform), `rotate(${s.dragOverlay.draggingRotation}deg)`].filter(Boolean).join(" "),
+              opacity: s.dragOverlay.draggingOpacity / 100,
+              boxShadow: shadowMap.xl,
+              zIndex: 50,
+            }
+          : {}),
+      }}
       {...attributes}
       {...listeners}
       onPointerDown={(e) => {
@@ -62,61 +88,124 @@ export default function DealCard({ deal, onContactClick, onDealClick }: DealCard
         if (el.closest("[data-contact-link]")) return;
         onDealClick?.(deal);
       }}
-      className={cn(
-        "group flex min-h-[202px] cursor-grab flex-col rounded-lg border border-gray-200 bg-white px-3 py-3 text-left touch-pan-y active:cursor-grabbing",
-        "transition-all duration-150 hover:border-gray-300 hover:shadow-md",
-        isDragging && "z-50 rotate-1 opacity-50 shadow-xl"
-      )}
+      className="group flex cursor-grab flex-col border text-left touch-pan-y active:cursor-grabbing transition-all duration-150"
+      onMouseEnter={(e) => {
+        const el = e.currentTarget;
+        el.style.borderColor = s.card.hoverBorderColor;
+        el.style.boxShadow = isDragging ? shadowMap.xl : shadowMap[s.card.hoverShadow];
+      }}
+      onMouseLeave={(e) => {
+        const el = e.currentTarget;
+        el.style.borderColor = s.card.borderColor;
+        if (!isDragging) el.style.boxShadow = "none";
+      }}
     >
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <h4 className="break-words text-[11px] font-medium leading-snug text-gray-800">
-          {deal.title}
-        </h4>
+        {s.cardTitle.show && (
+          <h4
+            style={{
+              fontSize: s.cardTitle.fontSize,
+              fontWeight: s.cardTitle.fontWeight,
+              lineHeight: lineHeightMap[s.cardTitle.lineHeight],
+              color: s.cardTitle.textColor,
+            }}
+            className="break-words"
+          >
+            {deal.title}
+          </h4>
+        )}
 
-        <p className="mt-1.5 text-sm font-normal tabular-nums text-gray-900">
-          {formatCurrency(deal.value, deal.currency)}
-        </p>
+        {s.cardValue.show && (
+          <p
+            style={{
+              fontSize: s.cardValue.fontSize,
+              fontWeight: s.cardValue.fontWeight,
+              color: s.cardValue.textColor,
+              marginTop: s.cardValue.marginTop,
+            }}
+            className="tabular-nums"
+          >
+            {formatCurrency(deal.value, deal.currency)}
+          </p>
+        )}
 
-        <button
-          type="button"
-          data-contact-link
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={(e) => {
-            e.stopPropagation();
-            onContactClick?.(deal);
-          }}
-          className="mt-1.5 inline-flex max-w-full items-center text-left text-xs font-medium text-brand-600 hover:text-brand-700 hover:underline hover:underline-offset-2"
-        >
-          <span className="min-w-0 break-words">{deal.contactName}</span>
-        </button>
+        {s.cardContact.show && (
+          <button
+            type="button"
+            data-contact-link
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              onContactClick?.(deal);
+            }}
+            style={{
+              fontSize: s.cardContact.fontSize,
+              fontWeight: s.cardContact.fontWeight,
+              color: s.cardContact.textColor,
+              marginTop: s.cardContact.marginTop,
+            }}
+            className="inline-flex max-w-full items-center text-left hover:underline hover:underline-offset-2"
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLElement).style.color = s.cardContact.hoverTextColor;
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLElement).style.color = s.cardContact.textColor;
+            }}
+          >
+            <span className="min-w-0 break-words">{deal.contactName}</span>
+          </button>
+        )}
 
-        <div className="mt-auto flex shrink-0 flex-wrap items-center gap-2 border-t border-gray-100 pt-3">
-          {deal.dueDate && (
-            <span
-              className={cn(
-                "inline-flex items-center gap-1 text-[11px]",
-                isOverdue ? "font-medium text-red-500" : "text-gray-400"
-              )}
-            >
-              <Calendar size={11} />
-              {new Date(deal.dueDate).toLocaleDateString("ru-RU", {
-                day: "numeric",
-                month: "short",
-              })}
-            </span>
-          )}
-
-          {deal.assignee && (
-            <div
-              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-100"
-              title={deal.assignee}
-            >
-              <span className="text-[9px] font-semibold leading-none text-brand-600">
-                {getInitials(deal.assignee)}
+        {s.cardFooter.show && (deal.dueDate || deal.assignee) && (
+          <div
+            style={{
+              borderTopColor: s.cardFooter.borderColor,
+              paddingTop: s.cardFooter.paddingTop,
+              gap: s.cardFooter.gap,
+            }}
+            className="mt-auto flex shrink-0 flex-wrap items-center border-t"
+          >
+            {s.cardDate.show && deal.dueDate && (
+              <span
+                style={{
+                  fontSize: s.cardDate.fontSize,
+                  color: isOverdue ? s.cardDate.overdueColor : s.cardDate.normalColor,
+                  fontWeight: isOverdue ? 500 : 400,
+                }}
+                className="inline-flex items-center gap-1"
+              >
+                <Calendar size={s.cardDate.iconSize} />
+                {new Date(deal.dueDate).toLocaleDateString("ru-RU", {
+                  day: "numeric",
+                  month: "short",
+                })}
               </span>
-            </div>
-          )}
-        </div>
+            )}
+
+            {s.cardAssignee.show && deal.assignee && (
+              <div
+                style={{
+                  width: s.cardAssignee.size,
+                  height: s.cardAssignee.size,
+                  backgroundColor: s.cardAssignee.backgroundColor,
+                }}
+                className="flex shrink-0 items-center justify-center rounded-full"
+                title={deal.assignee}
+              >
+                <span
+                  style={{
+                    fontSize: s.cardAssignee.fontSize,
+                    fontWeight: s.cardAssignee.fontWeight,
+                    color: s.cardAssignee.textColor,
+                  }}
+                  className="leading-none"
+                >
+                  {getInitials(deal.assignee)}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

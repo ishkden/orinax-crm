@@ -414,3 +414,11 @@ enum ConversationStatus {
   RESOLVED
   CLOSED
 }
+
+// ─── SYSTEM SETTINGS (key-value store for admin config) ──────────────────────
+
+model SystemSetting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}

@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
     const contacts =
       contactSourceIds.length > 0
         ? await prisma.contact.findMany({
-            where: { orgId, sourceId: { in: contactSourceIds } },
+            where: { orgId: internalOrgId, sourceId: { in: contactSourceIds } },
             select: { id: true, sourceId: true },
           })
         : [];
@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
     const pipelines =
       pipelineSourceIds.length > 0
         ? await prisma.pipeline.findMany({
-            where: { orgId, sourceId: { in: pipelineSourceIds } },
+            where: { orgId: internalOrgId, sourceId: { in: pipelineSourceIds } },
             select: { id: true, sourceId: true },
           })
         : [];
@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
     const stages =
       stageSourceIds.length > 0
         ? await prisma.stage.findMany({
-            where: { orgId, sourceId: { in: stageSourceIds } },
+            where: { orgId: internalOrgId, sourceId: { in: stageSourceIds } },
             select: { id: true, sourceId: true },
           })
         : [];

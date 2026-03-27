@@ -4,7 +4,9 @@ import { NextRequest, NextResponse } from "next/server";
 const PUBLIC_PATHS = ["/login", "/api/auth", "/api/v1", "/api/admin", "/admin", "/_next", "/favicon.ico"];
 
 function isPublic(pathname: string) {
-  return PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/") || pathname.startsWith(p));
+  return PUBLIC_PATHS.some(
+    (p) => pathname === p || pathname.startsWith(p + "/")
+  );
 }
 
 export async function middleware(req: NextRequest) {
@@ -15,9 +17,9 @@ export async function middleware(req: NextRequest) {
   const token = await getToken({
     req,
     secret: process.env.NEXTAUTH_SECRET,
-    cookieName: req.nextUrl.protocol === "https:"
-      ? "__Secure-next-auth.session-token"
-      : "next-auth.session-token",
+    // Use env var instead of req.nextUrl.protocol — behind nginx the request
+    // is always http:// even for HTTPS connections, so protocol detection fails.
+    secureCookie: process.env.NEXTAUTH_URL?.startsWith("https://") ?? false,
   });
 
   if (!token) {

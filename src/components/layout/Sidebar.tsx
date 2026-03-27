@@ -15,6 +15,7 @@ import {
   PanelLeftClose,
   PanelLeft,
   Database,
+  ExternalLink,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { useSidebar } from "./SidebarContext";
@@ -27,6 +28,11 @@ const navItems = [
   { href: "/analytics", basePath: "/analytics", icon: BarChart2, label: "Аналитика" },
   { href: "/integrations", basePath: "/integrations", icon: Plug, label: "Интеграции" },
   { href: "/settings", basePath: "/settings", icon: Settings, label: "Настройки" },
+];
+
+const platformLinks = [
+  { href: "https://my.orinax.ai/dashboard", label: "Аналитика", icon: BarChart2 },
+  { href: "https://my.orinax.ai/dashboard/services", label: "Все сервисы", icon: ExternalLink },
 ];
 
 export default function Sidebar() {
@@ -85,6 +91,29 @@ export default function Sidebar() {
             </Link>
           );
         })}
+
+        {!collapsed && (
+          <div className="pt-3 mt-3 border-t border-gray-100">
+            <p className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-gray-400">Платформа</p>
+          </div>
+        )}
+        {collapsed && <div className="pt-2 mt-2 border-t border-gray-100" />}
+        {platformLinks.map(({ href, label, icon: Icon }) => (
+          <a
+            key={href}
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            title={label}
+            className={cn(
+              "flex items-center rounded-lg text-sm text-gray-500 hover:bg-gray-50 hover:text-gray-800 transition-colors duration-150",
+              collapsed ? "justify-center px-2 py-2.5" : "gap-2.5 px-3 py-2"
+            )}
+          >
+            <Icon size={18} className="shrink-0 text-gray-400" />
+            {!collapsed && label}
+          </a>
+        ))}
       </nav>
 
       <div className="px-2 py-2 border-t border-gray-100 space-y-0.5">
@@ -115,7 +144,7 @@ export default function Sidebar() {
         </button>
         <button
           type="button"
-          onClick={() => signOut({ callbackUrl: "/login" })}
+          onClick={async () => { await signOut({ redirect: false }); window.location.href = "https://my.orinax.ai/login"; }}
           title="Выйти"
           className={cn(
             "flex items-center w-full rounded-lg text-sm text-gray-500 hover:bg-gray-50 hover:text-gray-800 transition-colors duration-150",

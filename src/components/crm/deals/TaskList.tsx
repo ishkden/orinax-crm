@@ -126,6 +126,12 @@ export default function TaskList({ dealId }: { dealId: string }) {
     try {
       const data = await getDealTasks(dealId);
       setTasks(data);
+    } catch (err) {
+      // #region agent log
+      const errMsg = err instanceof Error ? err.message : String(err);
+      fetch('http://127.0.0.1:7361/ingest/c3d66395-7c43-4c80-bafe-22e2cba21bb3',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'054ca9'},body:JSON.stringify({sessionId:'054ca9',location:'TaskList.tsx:load',message:'getDealTasks threw',data:{dealId,error:errMsg},hypothesisId:'B',timestamp:Date.now()})}).catch(()=>{});
+      console.error('[DEBUG-054ca9] TaskList.load error', errMsg, err);
+      // #endregion
     } finally {
       setLoading(false);
     }
@@ -143,8 +149,16 @@ export default function TaskList({ dealId }: { dealId: string }) {
       )
     );
     startTransition(async () => {
-      await toggleTaskStatus(taskId, isDone);
-      await load();
+      try {
+        await toggleTaskStatus(taskId, isDone);
+        await load();
+      } catch (err) {
+        // #region agent log
+        const errMsg = err instanceof Error ? err.message : String(err);
+        fetch('http://127.0.0.1:7361/ingest/c3d66395-7c43-4c80-bafe-22e2cba21bb3',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'054ca9'},body:JSON.stringify({sessionId:'054ca9',location:'TaskList.tsx:handleToggle',message:'toggleTaskStatus/load threw in transition',data:{taskId,isDone,error:errMsg},hypothesisId:'C',timestamp:Date.now()})}).catch(()=>{});
+        console.error('[DEBUG-054ca9] TaskList.handleToggle transition error', errMsg, err);
+        // #endregion
+      }
     });
   }
 
@@ -152,9 +166,17 @@ export default function TaskList({ dealId }: { dealId: string }) {
     const title = newTitle.trim();
     if (!title) return;
     startTransition(async () => {
-      await createDealTask(dealId, title);
-      setNewTitle("");
-      await load();
+      try {
+        await createDealTask(dealId, title);
+        setNewTitle("");
+        await load();
+      } catch (err) {
+        // #region agent log
+        const errMsg = err instanceof Error ? err.message : String(err);
+        fetch('http://127.0.0.1:7361/ingest/c3d66395-7c43-4c80-bafe-22e2cba21bb3',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'054ca9'},body:JSON.stringify({sessionId:'054ca9',location:'TaskList.tsx:handleAddTask',message:'createDealTask/load threw in transition',data:{title,error:errMsg},hypothesisId:'C',timestamp:Date.now()})}).catch(()=>{});
+        console.error('[DEBUG-054ca9] TaskList.handleAddTask transition error', errMsg, err);
+        // #endregion
+      }
     });
   }
 

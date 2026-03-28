@@ -117,6 +117,12 @@ export default function ActivityFeed({ dealId }: { dealId: string }) {
     try {
       const data = await getDealActivities(dealId);
       setItems(data);
+    } catch (err) {
+      // #region agent log
+      const errMsg = err instanceof Error ? err.message : String(err);
+      fetch('http://127.0.0.1:7361/ingest/c3d66395-7c43-4c80-bafe-22e2cba21bb3',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'054ca9'},body:JSON.stringify({sessionId:'054ca9',location:'ActivityFeed.tsx:load',message:'getDealActivities threw',data:{dealId,error:errMsg},hypothesisId:'A',timestamp:Date.now()})}).catch(()=>{});
+      console.error('[DEBUG-054ca9] ActivityFeed.load error', errMsg, err);
+      // #endregion
     } finally {
       setLoading(false);
     }
@@ -130,9 +136,17 @@ export default function ActivityFeed({ dealId }: { dealId: string }) {
     const text = noteText.trim();
     if (!text) return;
     startTransition(async () => {
-      await createDealNote(dealId, text);
-      setNoteText("");
-      await load();
+      try {
+        await createDealNote(dealId, text);
+        setNoteText("");
+        await load();
+      } catch (err) {
+        // #region agent log
+        const errMsg = err instanceof Error ? err.message : String(err);
+        fetch('http://127.0.0.1:7361/ingest/c3d66395-7c43-4c80-bafe-22e2cba21bb3',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'054ca9'},body:JSON.stringify({sessionId:'054ca9',location:'ActivityFeed.tsx:handleNote',message:'createDealNote/load threw in transition',data:{dealId,error:errMsg},hypothesisId:'C',timestamp:Date.now()})}).catch(()=>{});
+        console.error('[DEBUG-054ca9] ActivityFeed.handleNote transition error', errMsg, err);
+        // #endregion
+      }
     });
   }
 

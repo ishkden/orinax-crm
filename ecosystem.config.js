@@ -15,11 +15,12 @@ module.exports = {
         ANALYTICS_API_URL: "https://my.orinax.ai",
         MIGRATION_API_KEY: "9b6c52d01911593fd53745044522289206eb33633d1b32b4",
       },
+      node_args: "--max-old-space-size=512",
       exec_mode: "fork",
       instances: 1,
       autorestart: true,
       watch: false,
-      max_memory_restart: "512M",
+      max_memory_restart: "1024M",
     },
   ],
 };

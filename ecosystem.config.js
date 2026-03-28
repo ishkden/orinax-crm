@@ -2,7 +2,7 @@ module.exports = {
   apps: [
     {
       name: "orinax-crm",
-      script: ".next/standalone/server.js",
+      script: "server-wrapper.js",
       cwd: "/root/orinax-crm",
       env: {
         NODE_ENV: "production",

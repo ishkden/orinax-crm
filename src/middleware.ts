@@ -12,6 +12,13 @@ function isPublic(pathname: string) {
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
+  // #region agent log
+  const actionId = req.headers.get("Next-Action");
+  if (actionId) {
+    console.error(`[CRM-DEBUG-054ca9] Next-Action header detected: action="${actionId}" path=${pathname} method=${req.method} ua=${req.headers.get("user-agent")?.slice(0,80)}`);
+  }
+  // #endregion
+
   if (isPublic(pathname)) return NextResponse.next();
 
   const token = await getToken({

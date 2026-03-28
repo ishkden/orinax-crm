@@ -94,6 +94,8 @@ export async function GET(req: NextRequest) {
       email: user.email,
       name: user.name,
       role: user.role,
+      orgId: org.id,
+      externalOrgId: orgId,
       iat: Math.floor(Date.now() / 1000),
       exp: Math.floor(Date.now() / 1000) + sessionMaxAgeSec,
     },

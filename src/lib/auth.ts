@@ -63,11 +63,17 @@ export const authOptions: NextAuthOptions = {
         const isValid = await bcrypt.compare(credentials.password, user.password);
         if (!isValid) return null;
 
+        const member = await prisma.orgMember.findFirst({
+          where: { userId: user.id },
+          select: { orgId: true },
+        });
+
         return {
           id: user.id,
           email: user.email,
           name: user.name,
           role: user.role,
+          orgId: member?.orgId ?? null,
         };
       },
     }),
@@ -77,13 +83,16 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.role = (user as { role?: string }).role;
         token.id = user.id;
+        token.orgId = (user as { orgId?: string | null }).orgId ?? null;
       }
       return token;
     },
     async session({ session, token }) {
       if (token && session.user) {
-        (session.user as { id?: string; role?: string }).id = token.id as string;
-        (session.user as { id?: string; role?: string }).role = token.role as string;
+        const u = session.user as { id?: string; role?: string; orgId?: string | null };
+        u.id = token.id as string;
+        u.role = token.role as string;
+        u.orgId = (token.orgId as string) ?? null;
       }
       return session;
     },

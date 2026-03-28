@@ -14,5 +14,15 @@ process.on('uncaughtException', (err) => {
   // #endregion
 });
 
+// #region agent log
+process.on('exit', (code) => {
+  console.error('[WRAPPER-054ca9] process exiting with code:', code);
+});
+process.on('SIGTERM', () => {
+  console.error('[WRAPPER-054ca9] SIGTERM received');
+  process.exit(0);
+});
+// #endregion
+
 // Start the actual Next.js standalone server
 require('./.next/standalone/server.js');

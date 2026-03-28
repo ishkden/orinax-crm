@@ -1,28 +1,13 @@
-// Server wrapper: catch unhandled rejections so process doesn't crash.
-// Node.js v24 exits on unhandled rejections by default; Next.js 16 can
-// surface "Failed to find Server Action" as such a rejection.
+// Prevent Node.js v24 from crashing the process on unhandled rejections.
+// Next.js 16 can surface internal errors (e.g. "Failed to find Server Action")
+// as unhandled rejections; without this, PM2 repeatedly restarts the process.
 process.on('unhandledRejection', (reason) => {
-  // #region agent log
-  const msg = reason instanceof Error ? reason.message : String(reason);
-  console.error('[WRAPPER-054ca9] unhandledRejection caught (no crash):', msg);
-  // #endregion
+  console.error('[orinax-crm] unhandledRejection (suppressed):', reason instanceof Error ? reason.message : reason);
 });
 
 process.on('uncaughtException', (err) => {
-  // #region agent log
-  console.error('[WRAPPER-054ca9] uncaughtException caught (no crash):', err.message, err.stack);
-  // #endregion
+  console.error('[orinax-crm] uncaughtException (suppressed):', err.message);
 });
-
-// #region agent log
-process.on('exit', (code) => {
-  console.error('[WRAPPER-054ca9] process exiting with code:', code);
-});
-process.on('SIGTERM', () => {
-  console.error('[WRAPPER-054ca9] SIGTERM received');
-  process.exit(0);
-});
-// #endregion
 
 // Start the actual Next.js standalone server
 require('./.next/standalone/server.js');

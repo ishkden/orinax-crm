@@ -7,13 +7,6 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  // #region agent log
-  const errMsg = error?.message ?? String(error);
-  const digest = error?.digest ?? "";
-  fetch('http://127.0.0.1:7361/ingest/c3d66395-7c43-4c80-bafe-22e2cba21bb3',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'054ca9'},body:JSON.stringify({sessionId:'054ca9',location:'global-error.tsx',message:'Global error boundary triggered',data:{error:errMsg,digest},hypothesisId:'E',timestamp:Date.now()})}).catch(()=>{});
-  console.error('[DEBUG-054ca9] global-error caught', errMsg, digest, error);
-  // #endregion
-
   return (
     <html>
       <body>

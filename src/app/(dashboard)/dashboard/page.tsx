@@ -1,7 +1,6 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import Header from "@/components/layout/Header";
 import PageTransition from "@/components/layout/PageTransition";
 import Badge from "@/components/ui/Badge";
 import AnimatedCounter from "@/components/ui/AnimatedCounter";
@@ -84,7 +83,6 @@ export default async function DashboardPage() {
 
   return (
     <PageTransition>
-      <Header title={`Добро пожаловать, ${session?.user?.name?.split(" ")[0] || ""}!`} />
       <div className="flex-1 overflow-auto p-6 space-y-6">
 
         {/* Stats grid */}

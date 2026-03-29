@@ -1,4 +1,3 @@
-import Header from "@/components/layout/Header";
 import { Plug } from "lucide-react";
 import Badge from "@/components/ui/Badge";
 
@@ -32,7 +31,6 @@ const integrations = [
 export default function IntegrationsPage() {
   return (
     <>
-      <Header title="Интеграции" />
       <div className="flex-1 overflow-auto p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {integrations.map((integration) => (

@@ -1,5 +1,4 @@
 import { prisma } from "@/lib/prisma";
-import Header from "@/components/layout/Header";
 import { formatDate } from "@/lib/utils";
 import Badge from "@/components/ui/Badge";
 import { Plus } from "lucide-react";
@@ -32,7 +31,6 @@ export default async function TasksPage() {
 
   return (
     <>
-      <Header title="Задачи" />
       <div className="flex-1 overflow-auto p-6">
         <div className="bg-white rounded-xl border border-gray-200">
           <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">

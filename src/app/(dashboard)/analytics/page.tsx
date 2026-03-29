@@ -1,10 +1,8 @@
-import Header from "@/components/layout/Header";
 import { BarChart2, ExternalLink } from "lucide-react";
 
 export default function AnalyticsPage() {
   return (
     <>
-      <Header title="Аналитика" />
       <div className="flex-1 p-6 flex items-center justify-center">
         <div className="text-center max-w-md">
           <div className="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center mx-auto mb-4">

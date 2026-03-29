@@ -22,5 +22,21 @@ module.exports = {
       watch: false,
       max_memory_restart: "1024M",
     },
+    {
+      name: "crm-webhook-worker",
+      script: "crm-worker.js",
+      cwd: "/root/orinax-crm",
+      env: {
+        NODE_ENV: "production",
+        DATABASE_URL: "postgresql://orinax_crm_user:OrinaxCRM2024!@localhost:5432/orinax_crm",
+        REDIS_URL: "redis://:OrinaxRedis2024!@localhost:6379",
+        MAX_DEFAULT_ORG_ID: "cmn4xvxih00002yx3ox63sv4q",
+      },
+      exec_mode: "fork",
+      instances: 1,
+      autorestart: true,
+      watch: false,
+      max_memory_restart: "256M",
+    },
   ],
 };

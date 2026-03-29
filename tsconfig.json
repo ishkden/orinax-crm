@@ -19,9 +19,7 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"],
-      "@orinax/ui": ["../orinax-ui/index.ts"],
-      "@orinax/ui/*": ["../orinax-ui/*"]
+      "@/*": ["./src/*"]
     }
   },
   "include": [

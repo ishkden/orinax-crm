@@ -25,9 +25,8 @@ export default function AdminSidebar() {
   const pathname = usePathname();
   const router = useRouter();
 
-  async function handleLogout() {
-    await fetch("/api/admin/logout", { method: "POST" });
-    router.push("/admin");
+  function handleLogout() {
+    window.location.href = "https://my.orinax.ai/api/auth/logout?callbackUrl=https://my.orinax.ai/login";
   }
 
   return (

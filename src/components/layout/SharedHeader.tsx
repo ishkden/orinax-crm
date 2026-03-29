@@ -1,7 +1,6 @@
 "use client";
 
 import { LogOut } from "lucide-react";
-import { useRouter } from "next/navigation";
 
 interface SharedHeaderProps {
   orgName: string;
@@ -19,7 +18,7 @@ const SERVICES = [
   {
     key: "analytics" as const,
     label: "Аналитика",
-    href: "https://my.orinax.ai/dashboard",
+    href: "https://analytics.orinax.ai/dashboard",
   },
   {
     key: "crm" as const,
@@ -29,7 +28,7 @@ const SERVICES = [
   {
     key: "connector" as const,
     label: "Мессенджеры",
-    href: "https://my.orinax.ai/dashboard/messengers",
+    href: "https://connector.orinax.ai/",
   },
 ];
 
@@ -38,12 +37,12 @@ export default function SharedHeader({
   userName,
   activeService = "crm",
 }: SharedHeaderProps) {
-  const router = useRouter();
   const orgInitial = (orgName?.[0] || "O").toUpperCase();
   const userInitials = getInitials(userName || "U");
 
   const handleLogout = () => {
-    router.push("/api/auth/full-logout");
+    window.location.href =
+      "https://my.orinax.ai/api/auth/logout?callbackUrl=https://my.orinax.ai/login";
   };
 
   return (

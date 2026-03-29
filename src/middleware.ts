@@ -1,7 +1,7 @@
 import { getToken } from "next-auth/jwt";
 import { NextRequest, NextResponse } from "next/server";
 
-const PUBLIC_PATHS = ["/login", "/api/auth", "/api/v1", "/api/admin", "/admin", "/_next", "/favicon.ico"];
+const PUBLIC_PATHS = ["/api/auth", "/api/v1", "/api/admin", "/admin", "/_next", "/favicon.ico"];
 
 function isPublic(pathname: string) {
   return PUBLIC_PATHS.some(
@@ -17,16 +17,16 @@ export async function middleware(req: NextRequest) {
   const token = await getToken({
     req,
     secret: process.env.NEXTAUTH_SECRET,
-    // Use env var instead of req.nextUrl.protocol — behind nginx the request
-    // is always http:// even for HTTPS connections, so protocol detection fails.
     secureCookie: process.env.NEXTAUTH_URL?.startsWith("https://") ?? false,
   });
 
   if (!token) {
-    const loginUrl = req.nextUrl.clone();
-    loginUrl.pathname = "/login";
-    loginUrl.search = "";
-    return NextResponse.redirect(loginUrl);
+    const callbackUrl = encodeURIComponent(
+      `https://crm.orinax.ai${pathname}`
+    );
+    return NextResponse.redirect(
+      `https://my.orinax.ai/login?callbackUrl=${callbackUrl}`
+    );
   }
 
   return NextResponse.next();

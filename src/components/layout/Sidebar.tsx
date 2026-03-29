@@ -17,7 +17,6 @@ import {
   Database,
   ExternalLink,
 } from "lucide-react";
-import { signOut } from "next-auth/react";
 import { useSidebar } from "./SidebarContext";
 import MigrationDashboard from "./MigrationDashboard";
 
@@ -144,7 +143,7 @@ export default function Sidebar() {
         </button>
         <button
           type="button"
-          onClick={async () => { await signOut({ redirect: false }); window.location.href = "https://my.orinax.ai/login"; }}
+          onClick={() => { window.location.href = "https://my.orinax.ai/api/auth/logout?callbackUrl=https://my.orinax.ai/login"; }}
           title="Выйти"
           className={cn(
             "flex items-center w-full rounded-lg text-sm text-gray-500 hover:bg-gray-50 hover:text-gray-800 transition-colors duration-150",

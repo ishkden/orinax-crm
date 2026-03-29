@@ -1,24 +1,29 @@
 import { NextAuthOptions } from "next-auth";
-import CredentialsProvider from "next-auth/providers/credentials";
-import { PrismaAdapter } from "@auth/prisma-adapter";
-import bcrypt from "bcryptjs";
 import { prisma } from "./prisma";
 
 const useSecureCookies = process.env.NEXTAUTH_URL?.startsWith("https://") ?? false;
 const cookiePrefix = useSecureCookies ? "__Secure-" : "";
+const cookieDomain = process.env.COOKIE_DOMAIN || ".orinax.ai";
 
+function slugify(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 60);
+}
+
+// CRM reads the shared NextAuth cookie issued by my.orinax.ai.
+// NEXTAUTH_SECRET must be identical on both services.
+// No local login — signIn always redirects to my.orinax.ai.
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma) as NextAuthOptions["adapter"],
-  session: {
-    strategy: "jwt",
-  },
-  pages: {
-    signIn: "/login",
-  },
+  session: { strategy: "jwt" },
+  pages: { signIn: "https://my.orinax.ai/login" },
   cookies: {
     sessionToken: {
       name: `${cookiePrefix}next-auth.session-token`,
       options: {
+        domain: cookieDomain,
         httpOnly: true,
         sameSite: "lax",
         path: "/",
@@ -28,6 +33,7 @@ export const authOptions: NextAuthOptions = {
     callbackUrl: {
       name: `${cookiePrefix}next-auth.callback-url`,
       options: {
+        domain: cookieDomain,
         httpOnly: true,
         sameSite: "lax",
         path: "/",
@@ -37,6 +43,7 @@ export const authOptions: NextAuthOptions = {
     csrfToken: {
       name: `${cookiePrefix}next-auth.csrf-token`,
       options: {
+        domain: cookieDomain,
         httpOnly: true,
         sameSite: "lax",
         path: "/",
@@ -44,56 +51,80 @@ export const authOptions: NextAuthOptions = {
       },
     },
   },
-  providers: [
-    CredentialsProvider({
-      name: "credentials",
-      credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
-      },
-      async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null;
-
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
-        });
-
-        if (!user || !user.password) return null;
-
-        const isValid = await bcrypt.compare(credentials.password, user.password);
-        if (!isValid) return null;
-
-        const member = await prisma.orgMember.findFirst({
-          where: { userId: user.id },
-          select: { orgId: true },
-        });
-
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-          orgId: member?.orgId ?? null,
-        };
-      },
-    }),
-  ],
+  providers: [],
   callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
-        token.role = (user as { role?: string }).role;
-        token.id = user.id;
-        token.orgId = (user as { orgId?: string | null }).orgId ?? null;
-      }
+    async jwt({ token }) {
+      // Pass through — token already contains all fields from my.orinax.ai JWT.
       return token;
     },
     async session({ session, token }) {
-      if (token && session.user) {
-        const u = session.user as { id?: string; role?: string; orgId?: string | null };
-        u.id = token.id as string;
-        u.role = token.role as string;
-        u.orgId = (token.orgId as string) ?? null;
+      if (!token || !session.user) return session;
+
+      const u = session.user as {
+        id?: string;
+        role?: string;
+        orgId?: string | null;
+        externalOrgId?: string | null;
+        permissions?: unknown;
+      };
+
+      u.id = (token.id as string) ?? token.sub;
+      u.role = token.role as string;
+      u.permissions = (token as any).permissions ?? null;
+
+      // token.orgId = analytics orgId → look up / provision CRM-local org
+      const analyticsOrgId = token.orgId as string | null;
+      u.externalOrgId = analyticsOrgId;
+
+      if (analyticsOrgId) {
+        // Fast path: org already provisioned
+        let crmOrg = await prisma.org.findFirst({
+          where: { externalId: analyticsOrgId },
+          select: { id: true },
+        });
+
+        // First visit: auto-provision org + user + membership
+        if (!crmOrg && token.email) {
+          crmOrg = await prisma.org.upsert({
+            where: { externalId: analyticsOrgId },
+            update: {},
+            create: {
+              externalId: analyticsOrgId,
+              name: "Organization",
+              slug: slugify(`org-${analyticsOrgId}`),
+            },
+            select: { id: true },
+          });
+
+          const crmUser = await prisma.user.upsert({
+            where: { email: token.email as string },
+            update: {},
+            create: {
+              email: token.email as string,
+              name: (token.name as string) ?? (token.email as string),
+            },
+            select: { id: true },
+          });
+
+          const allowedRoles = ["OWNER", "ADMIN", "MANAGER"] as const;
+          const memberRole = allowedRoles.includes(
+            (token.role as (typeof allowedRoles)[number])
+          )
+            ? (token.role as (typeof allowedRoles)[number])
+            : "AGENT";
+
+          await prisma.orgMember.upsert({
+            where: { userId_orgId: { userId: crmUser.id, orgId: crmOrg.id } },
+            update: {},
+            create: { userId: crmUser.id, orgId: crmOrg.id, role: memberRole },
+          });
+        }
+
+        u.orgId = crmOrg?.id ?? null;
+      } else {
+        u.orgId = null;
       }
+
       return session;
     },
   },

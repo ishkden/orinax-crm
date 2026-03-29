@@ -6,7 +6,7 @@ const nextConfig: NextConfig = {
   transpilePackages: ["@orinax/ui"],
   turbopack: {
     resolveAlias: {
-      "@orinax/ui": path.resolve(__dirname, "../orinax-ui"),
+      "@orinax/ui": path.resolve(__dirname, "../orinax-ui/index.ts"),
     },
   },
   async headers() {

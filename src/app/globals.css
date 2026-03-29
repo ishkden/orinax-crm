@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@source "../../../orinax-ui/src";
+@source "../../node_modules/@orinax/ui/src";
 
 @theme {
   /* Fonts */

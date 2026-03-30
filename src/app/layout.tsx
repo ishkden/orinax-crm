@@ -1,9 +1,14 @@
 import type { Metadata } from "next";
-import { GeistSans } from "geist/font/sans";
-import { GeistMono } from "geist/font/mono";
+import { Nunito } from "next/font/google";
 import "./globals.css";
 import Providers from "@/components/layout/Providers";
 import { GlobalHeader } from "@orinax/ui";
+
+const nunito = Nunito({
+  variable: "--font-nunito",
+  subsets: ["latin", "cyrillic"],
+  weight: ["300", "400", "500", "600", "700", "800"],
+});
 
 export const metadata: Metadata = {
   title: "Orinax CRM",
@@ -12,7 +17,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ru" className={`${GeistSans.variable} ${GeistMono.variable}`}>
+    <html lang="ru" className={nunito.variable}>
       <body className="font-sans antialiased">
         <Providers>
           <GlobalHeader />

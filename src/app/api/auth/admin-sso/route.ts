@@ -3,8 +3,8 @@ import { getToken } from "next-auth/jwt";
 import { generateAdminToken, getAdminCookieName } from "@/lib/admin-auth";
 
 // GET /api/auth/admin-sso
-// Grants admin panel access by verifying the shared *.orinax.ai NextAuth cookie.
-// No SSO token needed — role is read directly from the shared session.
+// Grants admin panel access ONLY to the platform super-admin (ADMIN_EMAIL).
+// Regular org owners/admins must NOT get access.
 export async function GET(req: NextRequest) {
   const token = await getToken({
     req,
@@ -16,14 +16,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(new URL("https://my.orinax.ai/login?callbackUrl=https://crm.orinax.ai/api/auth/admin-sso"));
   }
 
-  const role = token.role as string | undefined;
   const adminEmail = process.env.ADMIN_EMAIL;
-  const isAllowed =
-    (adminEmail && token.email === adminEmail) ||
-    role === "OWNER" ||
-    role === "ADMIN";
-
-  if (!isAllowed) {
+  if (!adminEmail || token.email !== adminEmail) {
     return NextResponse.redirect(new URL("/admin/login", req.url));
   }
 

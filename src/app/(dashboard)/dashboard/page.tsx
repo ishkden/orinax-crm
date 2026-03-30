@@ -7,12 +7,25 @@ import AnimatedCounter from "@/components/ui/AnimatedCounter";
 import { formatDate } from "@/lib/utils";
 import { Users, Briefcase, CheckSquare, TrendingUp } from "lucide-react";
 
-async function getStats() {
+async function getOrgId(): Promise<string | null> {
+  const session = await getServerSession(authOptions);
+  const userId = (session?.user as { id?: string } | undefined)?.id;
+  if (!userId) return null;
+
+  const member = await prisma.orgMember.findFirst({
+    where: { userId },
+    select: { orgId: true },
+  });
+  return member?.orgId ?? null;
+}
+
+async function getStats(orgId: string) {
   const [contacts, deals, tasks, recentDeals] = await Promise.all([
-    prisma.contact.count(),
-    prisma.deal.findMany({ where: { stage: { not: "CLOSED_LOST" } } }),
-    prisma.task.count({ where: { status: "TODO" } }),
+    prisma.contact.count({ where: { orgId } }),
+    prisma.deal.findMany({ where: { orgId, stage: { not: "CLOSED_LOST" } } }),
+    prisma.task.count({ where: { orgId, status: "TODO" } }),
     prisma.deal.findMany({
+      where: { orgId },
       take: 5,
       orderBy: { createdAt: "desc" },
       include: { contact: true },
@@ -78,7 +91,10 @@ const statCards = (stats: Awaited<ReturnType<typeof getStats>>) => [
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
-  const stats = await getStats();
+  const orgId = await getOrgId();
+
+  const emptyStats = { contactCount: 0, totalPipeline: 0, wonValue: 0, taskCount: 0, recentDeals: [] as any[] };
+  const stats = orgId ? await getStats(orgId) : emptyStats;
   const cards = statCards(stats);
 
   return (

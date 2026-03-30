@@ -38,13 +38,13 @@ export async function POST(request: NextRequest) {
     const [deals, contacts] = await Promise.all([
       dealSourceIds.length > 0
         ? prisma.deal.findMany({
-            where: { orgId, sourceId: { in: dealSourceIds } },
+            where: { orgId: internalOrgId, sourceId: { in: dealSourceIds } },
             select: { id: true, sourceId: true, contactId: true },
           })
         : Promise.resolve([]),
       contactSourceIds.length > 0
         ? prisma.contact.findMany({
-            where: { orgId, sourceId: { in: contactSourceIds } },
+            where: { orgId: internalOrgId, sourceId: { in: contactSourceIds } },
             select: { id: true, sourceId: true },
           })
         : Promise.resolve([]),
@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
             const externalId = `bitrix24_migration_${contactId}`;
 
             const existing = await tx.conversation.findFirst({
-              where: { orgId, contactId, externalId },
+              where: { orgId: internalOrgId, contactId, externalId },
               select: { id: true },
             });
 

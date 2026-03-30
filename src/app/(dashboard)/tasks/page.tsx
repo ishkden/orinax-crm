@@ -1,11 +1,24 @@
 import { prisma } from "@/lib/prisma";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { formatDate } from "@/lib/utils";
 import Badge from "@/components/ui/Badge";
 import { Plus } from "lucide-react";
 import Link from "next/link";
 
 async function getTasks() {
+  const session = await getServerSession(authOptions);
+  const userId = (session?.user as { id?: string } | undefined)?.id;
+  if (!userId) return [];
+
+  const member = await prisma.orgMember.findFirst({
+    where: { userId },
+    select: { orgId: true },
+  });
+  if (!member) return [];
+
   return prisma.task.findMany({
+    where: { orgId: member.orgId },
     orderBy: [{ status: "asc" }, { dueDate: "asc" }],
     include: { contact: true, assigned: true },
   });

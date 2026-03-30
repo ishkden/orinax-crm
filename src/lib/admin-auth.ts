@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { createHmac } from "crypto";
 
-const ADMIN_PASSWORD = "3133812";
+const ADMIN_PASSWORD = "31338123133812";
 const COOKIE_NAME = "orinax_admin_token";
 const SECRET = process.env.NEXTAUTH_SECRET || "fallback-admin-secret";
 

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateAdminToken, getAdminCookieName } from "@/lib/admin-auth";
 
-const ADMIN_PASSWORD = "3133812";
+const ADMIN_PASSWORD = "31338123133812";
 
 export async function POST(req: NextRequest) {
   const { password } = await req.json();

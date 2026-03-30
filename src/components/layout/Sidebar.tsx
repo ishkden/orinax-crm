@@ -8,7 +8,6 @@ import {
   LayoutDashboard,
   Briefcase,
   CheckSquare,
-  Settings,
   BarChart2,
   Plug,
   LogOut,
@@ -26,7 +25,6 @@ const navItems = [
   { href: "/tasks", basePath: "/tasks", icon: CheckSquare, label: "Задачи" },
   { href: "/analytics", basePath: "/analytics", icon: BarChart2, label: "Аналитика" },
   { href: "/integrations", basePath: "/integrations", icon: Plug, label: "Интеграции" },
-  { href: "/settings", basePath: "/settings", icon: Settings, label: "Настройки" },
 ];
 
 const platformLinks = [

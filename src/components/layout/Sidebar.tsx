@@ -39,22 +39,6 @@ export default function Sidebar() {
         collapsed ? "w-16" : "w-60"
       )}
     >
-      <div
-        className={cn(
-          "flex items-center h-14 border-b border-gray-100 shrink-0",
-          collapsed ? "justify-center px-2" : "gap-2.5 px-5"
-        )}
-      >
-        <div className="w-7 h-7 bg-brand-500 rounded-lg flex items-center justify-center shrink-0">
-          <span className="text-white font-bold text-xs tracking-tight">O</span>
-        </div>
-        {!collapsed && (
-          <span className="font-semibold text-gray-900 text-sm tracking-tight truncate">
-            Orinax CRM
-          </span>
-        )}
-      </div>
-
       <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
         {navItems.map(({ href, basePath, icon: Icon, label }) => {
           const isActive = pathname.startsWith(basePath);

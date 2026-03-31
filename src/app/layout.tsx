@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Nunito } from "next/font/google";
 import "./globals.css";
 import Providers from "@/components/layout/Providers";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { GlobalHeader } from "@orinax/ui";
 
 const nunito = Nunito({
@@ -15,11 +17,13 @@ export const metadata: Metadata = {
   description: "CRM система для управления клиентами и сделками",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const session = await getServerSession(authOptions);
+
   return (
     <html lang="ru" className={nunito.variable}>
       <body className="font-sans antialiased">
-        <Providers>
+        <Providers session={session}>
           <GlobalHeader />
           {children}
         </Providers>

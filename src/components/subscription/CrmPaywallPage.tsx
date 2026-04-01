@@ -83,7 +83,7 @@ function CRMIllustration() {
       viewBox="0 0 640 400"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      className="w-full h-auto"
+      className="w-full h-auto drop-shadow-2xl"
     >
       <rect width="640" height="400" rx="12" fill="#1a1f2e" />
       <rect width="640" height="36" rx="12" fill="#222839" />
@@ -94,7 +94,7 @@ function CRMIllustration() {
 
       <rect x="0" y="36" width="130" height="364" fill="#141928" />
       {[58, 88, 118, 148, 178, 208].map((y, i) => (
-        <rect key={i} x="16" y={y} width={i === 2 ? 98 : 72} height="7" rx="3.5" fill={i === 2 ? "#6366f1" : "#252d42"} />
+        <rect key={i} x="16" y={y} width={i === 2 ? 98 : 72} height="7" rx="3.5" fill={i === 2 ? "#10b981" : "#252d42"} />
       ))}
 
       {PIPELINE_STAGES.map((stage, colIdx) => (
@@ -117,9 +117,9 @@ function CRMIllustration() {
       <rect x="0" y="36" width="640" height="364" fill="url(#crm-fade)" />
       <defs>
         <linearGradient id="crm-fade" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#1a1f2e" stopOpacity="0" />
-          <stop offset="55%" stopColor="#1a1f2e" stopOpacity="0.05" />
-          <stop offset="100%" stopColor="#1a1f2e" stopOpacity="0.6" />
+          <stop offset="0%" stopColor="#0d1117" stopOpacity="0" />
+          <stop offset="55%" stopColor="#0d1117" stopOpacity="0.05" />
+          <stop offset="100%" stopColor="#0d1117" stopOpacity="0.6" />
         </linearGradient>
       </defs>
     </svg>
@@ -128,21 +128,21 @@ function CRMIllustration() {
 
 function NoOrgPage() {
   return (
-    <div className="flex min-h-[calc(100dvh-3.5rem)] flex-col items-center justify-center px-4 py-16 bg-surface">
+    <div className="flex min-h-[calc(100dvh-3.5rem)] flex-col items-center justify-center px-4 py-16 bg-[#09090b]">
       <div className="w-full max-w-lg text-center">
-        <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-50 ring-1 ring-brand-100">
-          <LogIn className="h-8 w-8 text-brand-600" />
+        <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-500/10 ring-1 ring-emerald-500/20">
+          <LogIn className="h-8 w-8 text-emerald-400" />
         </div>
-        <h1 className="text-2xl font-bold text-text-primary">
+        <h1 className="text-2xl font-bold text-white">
           Нужна организация из аналитики
         </h1>
-        <p className="mt-3 max-w-sm mx-auto text-sm leading-relaxed text-text-secondary">
+        <p className="mt-3 max-w-sm mx-auto text-sm leading-relaxed text-zinc-400">
           Войдите через портал аналитики и выберите компанию — это свяжет ваш аккаунт с CRM автоматически.
         </p>
         <div className="mt-8 flex flex-wrap justify-center gap-3">
           <Link
             href={ANALYTICS_HREF}
-            className="inline-flex items-center gap-2 rounded-xl bg-brand-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700"
+            className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-500/30 transition hover:bg-emerald-500"
           >
             Перейти в аналитику
             <ArrowRight className="h-4 w-4" />
@@ -161,47 +161,52 @@ export default function CrmPaywallPage({ variant = "unpaid" }: CrmPaywallPagePro
   if (variant === "no_org") return <NoOrgPage />;
 
   return (
-    <div className="flex min-h-[calc(100dvh-3.5rem)] flex-col bg-surface">
+    <div className="flex min-h-[calc(100dvh-3.5rem)] flex-col bg-[#09090b]">
 
       {/* Hero */}
-      <section className="relative bg-gradient-to-br from-brand-600 via-brand-700 to-indigo-800 px-4 py-20 sm:py-28">
-        <div className="pointer-events-none absolute inset-0 overflow-hidden">
-          <div className="absolute -top-32 left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-white/10 blur-3xl" />
-          <div className="absolute bottom-0 right-0 h-64 w-64 rounded-full bg-indigo-900/30 blur-3xl" />
+      <section className="relative px-4 py-20 sm:py-28">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden flex items-start justify-center">
+          <div className="mt-[-80px] h-[500px] w-[800px] rounded-full bg-emerald-600/15 blur-[120px]" />
         </div>
+
         <div className="relative mx-auto max-w-4xl text-center">
-          <span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-medium text-white/80 backdrop-blur-sm">
+          <span className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-400">
             <FolderKanban className="h-3.5 w-3.5" />
             ORINAX CRM
           </span>
-          <h1 className="mt-6 text-4xl font-bold tracking-tight text-white sm:text-5xl">
-            CRM, которая работает
-            <br />
-            <span className="text-indigo-200">так, как вы привыкли</span>
+
+          <h1 className="mt-6 text-4xl font-bold tracking-tight text-white sm:text-5xl lg:text-6xl">
+            CRM, которая работает{" "}
+            <span className="bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
+              так, как вы привыкли
+            </span>
           </h1>
-          <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-indigo-100/80">
+
+          <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-zinc-400">
             Клиенты, сделки, переписки и задачи в одном интерфейсе.
             Интегрируется с Bitrix24 и мессенджерами за 5 минут.
           </p>
+
           <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
             <Link
               href={BILLING_HREF}
-              className="inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-semibold text-brand-700 shadow-lg shadow-black/20 transition hover:bg-indigo-50"
+              className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-500/30 transition hover:bg-emerald-500 hover:shadow-emerald-500/40"
             >
               Подключить CRM
               <ArrowRight className="h-4 w-4" />
             </Link>
             <Link
               href={BILLING_HREF}
-              className="inline-flex items-center gap-2 rounded-xl border border-white/30 bg-white/10 px-6 py-3 text-sm font-medium text-white backdrop-blur-sm transition hover:bg-white/20"
+              className="inline-flex items-center gap-2 rounded-xl border border-zinc-700 bg-zinc-900 px-6 py-3 text-sm font-medium text-zinc-300 transition hover:border-zinc-600 hover:text-white"
             >
               Профиль и биллинг
             </Link>
           </div>
+
           <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
             {CHECKS.map((c) => (
-              <span key={c} className="flex items-center gap-1.5 text-xs text-indigo-200">
-                <CheckCircle2 className="h-3.5 w-3.5 text-indigo-300" />
+              <span key={c} className="flex items-center gap-1.5 text-xs text-zinc-500">
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
                 {c}
               </span>
             ))}
@@ -210,36 +215,36 @@ export default function CrmPaywallPage({ variant = "unpaid" }: CrmPaywallPagePro
       </section>
 
       {/* CRM Preview */}
-      <section className="px-4 py-12">
+      <section className="px-4 pb-16">
         <div className="mx-auto max-w-5xl">
-          <div className="overflow-hidden rounded-2xl border border-border bg-white shadow-xl shadow-gray-200/80 ring-1 ring-gray-100">
+          <div className="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/50 p-1 ring-1 ring-white/5 shadow-2xl shadow-emerald-500/10">
             <CRMIllustration />
           </div>
         </div>
       </section>
 
       {/* Pipeline preview */}
-      <section className="px-4 pb-12">
+      <section className="px-4 pb-16">
         <div className="mx-auto max-w-5xl">
-          <div className="rounded-2xl border border-border bg-white p-6 shadow-sm">
-            <p className="mb-5 text-xs font-semibold uppercase tracking-wider text-text-tertiary">
+          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6">
+            <p className="mb-5 text-xs font-medium uppercase tracking-wider text-zinc-500">
               Воронка продаж — обзор
             </p>
             <div className="flex gap-3 overflow-x-auto pb-1">
               {PIPELINE_STAGES.map((stage) => (
                 <div
                   key={stage.label}
-                  className="min-w-[130px] flex-1 rounded-xl border border-border bg-surface p-4"
+                  className="min-w-[130px] flex-1 rounded-xl border border-zinc-800 bg-zinc-950/60 p-4"
                 >
                   <div
-                    className="mb-2 h-1 w-full rounded-full"
-                    style={{ backgroundColor: stage.color, opacity: 0.5 }}
+                    className="mb-2 h-1 w-full rounded-full opacity-50"
+                    style={{ backgroundColor: stage.color }}
                   />
-                  <p className="text-xs font-medium text-text-secondary">{stage.label}</p>
+                  <p className="text-xs font-medium text-zinc-400">{stage.label}</p>
                   <p className="mt-1 text-2xl font-bold" style={{ color: stage.color }}>
                     {stage.count}
                   </p>
-                  <p className="text-xs text-text-tertiary">сделок</p>
+                  <p className="text-xs text-zinc-600">сделок</p>
                 </div>
               ))}
             </div>
@@ -248,27 +253,28 @@ export default function CrmPaywallPage({ variant = "unpaid" }: CrmPaywallPagePro
       </section>
 
       {/* Features */}
-      <section className="px-4 py-12 bg-white">
+      <section className="px-4 py-20">
         <div className="mx-auto max-w-5xl">
           <div className="text-center">
-            <h2 className="text-2xl font-bold text-text-primary sm:text-3xl">
+            <h2 className="text-2xl font-bold text-white sm:text-3xl">
               Всё что нужно для продаж
             </h2>
-            <p className="mt-3 text-text-secondary">
+            <p className="mt-3 text-zinc-400">
               От первого касания до закрытой сделки — без лишних инструментов
             </p>
           </div>
-          <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+
+          <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {FEATURES.map(({ icon: Icon, title, description }) => (
               <div
                 key={title}
-                className="group rounded-2xl border border-border bg-surface p-6 transition hover:border-brand-200 hover:bg-brand-50/40"
+                className="group rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6 transition hover:border-emerald-500/40 hover:bg-zinc-900"
               >
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 ring-1 ring-brand-100 transition group-hover:bg-brand-100">
-                  <Icon className="h-5 w-5 text-brand-600" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 ring-1 ring-emerald-500/20 transition group-hover:bg-emerald-500/20">
+                  <Icon className="h-5 w-5 text-emerald-400" />
                 </div>
-                <h3 className="mt-4 text-sm font-semibold text-text-primary">{title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-text-secondary">{description}</p>
+                <h3 className="mt-4 text-sm font-semibold text-white">{title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-zinc-500">{description}</p>
               </div>
             ))}
           </div>
@@ -276,17 +282,17 @@ export default function CrmPaywallPage({ variant = "unpaid" }: CrmPaywallPagePro
       </section>
 
       {/* Channels */}
-      <section className="px-4 py-12">
+      <section className="px-4 pb-16">
         <div className="mx-auto max-w-5xl">
-          <div className="rounded-2xl border border-border bg-white p-8 shadow-sm">
-            <p className="mb-6 text-center text-sm font-medium text-text-secondary">
+          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 px-8 py-6">
+            <p className="mb-6 text-center text-sm font-medium text-zinc-400">
               Работает с вашими каналами коммуникаций
             </p>
             <div className="flex flex-wrap items-center justify-center gap-3">
               {CHANNELS.map(({ name, color }) => (
                 <span
                   key={name}
-                  className="rounded-lg border border-border bg-surface px-4 py-2 text-xs font-medium text-text-primary"
+                  className="rounded-lg border border-zinc-700 bg-zinc-800/80 px-4 py-2 text-xs font-medium text-zinc-300"
                   style={{ borderLeftColor: color, borderLeftWidth: 3 }}
                 >
                   {name}
@@ -297,10 +303,10 @@ export default function CrmPaywallPage({ variant = "unpaid" }: CrmPaywallPagePro
         </div>
       </section>
 
-      {/* Stats */}
-      <section className="px-4 pb-12">
-        <div className="mx-auto max-w-5xl overflow-hidden rounded-2xl bg-gradient-to-r from-brand-600 to-indigo-700 p-px shadow-lg shadow-brand-200/50">
-          <div className="rounded-2xl bg-gradient-to-r from-brand-600/95 to-indigo-700/95 px-8 py-10">
+      {/* Stats banner */}
+      <section className="px-4 pb-16">
+        <div className="mx-auto max-w-5xl overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 p-px">
+          <div className="rounded-2xl bg-gradient-to-r from-emerald-600/90 to-teal-600/90 px-8 py-10">
             <div className="grid gap-8 sm:grid-cols-3 text-center">
               {[
                 { value: "5 мин", label: "до первого лида в системе" },
@@ -309,7 +315,7 @@ export default function CrmPaywallPage({ variant = "unpaid" }: CrmPaywallPagePro
               ].map(({ value, label }) => (
                 <div key={label}>
                   <div className="text-3xl font-bold text-white">{value}</div>
-                  <div className="mt-1 text-sm text-indigo-200">{label}</div>
+                  <div className="mt-1 text-sm text-emerald-200">{label}</div>
                 </div>
               ))}
             </div>
@@ -318,18 +324,18 @@ export default function CrmPaywallPage({ variant = "unpaid" }: CrmPaywallPagePro
       </section>
 
       {/* Bottom CTA */}
-      <section className="px-4 pb-20 bg-white">
-        <div className="mx-auto max-w-2xl pt-12 text-center">
-          <h2 className="text-2xl font-bold text-text-primary">
+      <section className="px-4 pb-24">
+        <div className="mx-auto max-w-2xl text-center">
+          <h2 className="text-2xl font-bold text-white">
             Начните работать в CRM сегодня
           </h2>
-          <p className="mt-3 text-text-secondary">
+          <p className="mt-3 text-zinc-400">
             Оформите подписку и импортируйте данные из Bitrix за несколько минут
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
             <Link
               href={BILLING_HREF}
-              className="inline-flex items-center gap-2 rounded-xl bg-brand-600 px-8 py-3.5 text-sm font-semibold text-white shadow-md shadow-brand-200 transition hover:bg-brand-700"
+              className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-8 py-3.5 text-sm font-semibold text-white shadow-lg shadow-emerald-500/30 transition hover:bg-emerald-500"
             >
               Подключить за 1 минуту
               <ArrowRight className="h-4 w-4" />

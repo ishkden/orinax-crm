@@ -164,8 +164,8 @@ export default function CrmPaywallPage({ variant = "unpaid" }: CrmPaywallPagePro
     <div className="flex min-h-[calc(100dvh-3.5rem)] flex-col bg-surface">
 
       {/* Hero */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-brand-600 via-brand-700 to-indigo-800 px-4 py-20 sm:py-28">
-        <div className="pointer-events-none absolute inset-0">
+      <section className="relative bg-gradient-to-br from-brand-600 via-brand-700 to-indigo-800 px-4 py-20 sm:py-28">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
           <div className="absolute -top-32 left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-white/10 blur-3xl" />
           <div className="absolute bottom-0 right-0 h-64 w-64 rounded-full bg-indigo-900/30 blur-3xl" />
         </div>

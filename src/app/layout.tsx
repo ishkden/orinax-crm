@@ -24,7 +24,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="ru" className={nunito.variable}>
       <body className="font-sans antialiased">
         <Providers session={session}>
-          <GlobalHeader />
+          <div className="relative z-50"><GlobalHeader /></div>
           {children}
         </Providers>
       </body>

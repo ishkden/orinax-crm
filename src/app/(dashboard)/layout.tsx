@@ -21,12 +21,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const orgName = org?.name || "Компания";
 
   if (!analyticsOrgId) {
-    return <CrmPaywallPage orgName={orgName} userName={userName} variant="no_org" />;
+    return <CrmPaywallPage variant="no_org" />;
   }
 
   const crmPaid = await getCrmAccessForAnalyticsOrg(analyticsOrgId);
   if (!crmPaid) {
-    return <CrmPaywallPage orgName={orgName} userName={userName} variant="unpaid" />;
+    return <CrmPaywallPage variant="unpaid" />;
   }
 
   return (

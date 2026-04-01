@@ -2,6 +2,7 @@
 
 import { SessionProvider } from "next-auth/react";
 import type { Session } from "next-auth";
+import TrackerInit from "@/components/tracking/TrackerInit";
 
 interface ProvidersProps {
   children: React.ReactNode;
@@ -9,5 +10,10 @@ interface ProvidersProps {
 }
 
 export default function Providers({ children, session }: ProvidersProps) {
-  return <SessionProvider session={session}>{children}</SessionProvider>;
+  return (
+    <SessionProvider session={session}>
+      <TrackerInit />
+      {children}
+    </SessionProvider>
+  );
 }

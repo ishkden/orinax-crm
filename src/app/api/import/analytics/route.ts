@@ -1,4 +1,3 @@
-import { NextRequest } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -7,19 +6,32 @@ import { queryAnalytics } from "@/lib/analytics-db";
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
-export async function POST(req: NextRequest) {
+export async function POST() {
   const session = await getServerSession(authOptions);
-  const userId = (session?.user as { id?: string } | undefined)?.id;
-  if (!userId) return new Response("Unauthorized", { status: 401 });
+  const user = session?.user as {
+    id?: string;
+    orgId?: string | null;
+    externalOrgId?: string | null;
+  } | undefined;
 
-  const member = await prisma.orgMember.findFirst({
-    where: { userId },
-    select: { orgId: true, org: { select: { id: true, externalId: true } } },
-  });
-  if (!member) return new Response("No org", { status: 403 });
+  if (!user?.id) return new Response("Unauthorized", { status: 401 });
 
-  const crmOrgId = member.org.id;
-  const analyticsOrgId = member.org.externalId;
+  const crmOrgId = user.orgId;
+  const analyticsOrgId = user.externalOrgId;
+
+  if (!crmOrgId || !analyticsOrgId) {
+    const org = await prisma.org.findFirst({
+      where: { members: { some: { user: { email: (session?.user as any)?.email } } } },
+      select: { id: true, externalId: true },
+    });
+    if (!org) return new Response("No org found", { status: 403 });
+    return await startImportStream(org.id, org.externalId);
+  }
+
+  return await startImportStream(crmOrgId, analyticsOrgId);
+}
+
+async function startImportStream(crmOrgId: string, analyticsOrgId: string) {
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream({

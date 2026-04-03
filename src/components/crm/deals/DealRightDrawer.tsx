@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import Link from "next/link";
 import {
   X,
   Banknote,
@@ -10,6 +11,7 @@ import {
   Activity,
   MessageSquare,
   AlignLeft,
+  ExternalLink,
 } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import type { Deal, Stage } from "./types";
@@ -186,13 +188,22 @@ export default function DealRightDrawer({ deal, stages, onClose }: DealRightDraw
                 <h2 className="text-lg font-semibold text-gray-900 leading-tight line-clamp-2">
                   {deal.title}
                 </h2>
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors shrink-0 mt-0.5"
-                >
-                  <X size={18} />
-                </button>
+                <div className="flex items-center gap-1 shrink-0 mt-0.5">
+                  <Link
+                    href={`/crm/deals/${deal.id}`}
+                    className="p-1.5 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-gray-100 transition-colors"
+                    title="Открыть полностью"
+                  >
+                    <ExternalLink size={16} />
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
               </div>
 
               <div className="flex items-center gap-2.5 flex-wrap">

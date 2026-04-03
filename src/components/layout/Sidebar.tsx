@@ -24,7 +24,6 @@ interface NavItem {
   basePath: string;
   icon: React.ComponentType<{ size?: number; className?: string }>;
   label: string;
-  external?: boolean;
 }
 
 interface NavSection {
@@ -44,8 +43,8 @@ const navSections: NavSection[] = [
   {
     title: "Автоматизация с ИИ",
     items: [
-      { href: "https://analytics.orinax.ai/dashboard/ai-automation", basePath: "___ext_ai_auto___", icon: Zap, label: "ИИ Автоматизация", external: true },
-      { href: "https://analytics.orinax.ai/dashboard/ai-calls", basePath: "___ext_ai_calls___", icon: PhoneCall, label: "ИИ Звонки", external: true },
+      { href: "/ai-automation", basePath: "/ai-automation", icon: Zap, label: "ИИ Автоматизация" },
+      { href: "/ai-calls", basePath: "/ai-calls", icon: PhoneCall, label: "ИИ Звонки" },
     ],
   },
 ];
@@ -73,16 +72,13 @@ export default function Sidebar() {
               </div>
             )}
             <div className="space-y-0.5">
-              {section.items.map(({ href, basePath, icon: Icon, label, external }) => {
-                const isActive = !external && pathname.startsWith(basePath);
-                const Tag = external ? "a" : Link;
-                const extraProps = external ? { target: "_self" as const } : {};
+              {section.items.map(({ href, basePath, icon: Icon, label }) => {
+                const isActive = pathname.startsWith(basePath);
                 return (
-                  <Tag
+                  <Link
                     key={href}
                     href={href}
                     title={label}
-                    {...extraProps}
                     className={cn(
                       "flex items-center rounded-lg text-sm transition-colors duration-150",
                       collapsed ? "justify-center px-2 py-2.5" : "gap-2.5 px-3 py-2",
@@ -99,7 +95,7 @@ export default function Sidebar() {
                       )}
                     />
                     {!collapsed && label}
-                  </Tag>
+                  </Link>
                 );
               })}
             </div>

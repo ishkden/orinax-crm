@@ -1,7 +1,7 @@
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "ИИ Автоматизация — ORINAX CRM",
+  title: "ИИ Агенты — ORINAX CRM",
 };
 
 export default function AiAutomationPage() {

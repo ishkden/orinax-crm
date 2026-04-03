@@ -43,7 +43,7 @@ const navSections: NavSection[] = [
   {
     title: "Автоматизация с ИИ",
     items: [
-      { href: "/ai-automation", basePath: "/ai-automation", icon: Zap, label: "ИИ Автоматизация" },
+      { href: "/ai-agents", basePath: "/ai-agents", icon: Zap, label: "ИИ Агенты" },
       { href: "/ai-calls", basePath: "/ai-calls", icon: PhoneCall, label: "ИИ Звонки" },
     ],
   },

@@ -121,7 +121,7 @@ export default function IntegrationsPage() {
                 <h3 className="text-lg font-semibold text-gray-900">Импорт из Orinax Analytics</h3>
                 {isRunning && <Badge variant="info">Выполняется</Badge>}
                 {isDone && <Badge variant="success">Завершён</Badge>}
-                {isError && <Badge variant="error">Ошибка</Badge>}
+                {isError && <Badge variant="danger">Ошибка</Badge>}
                 {!hasData && <Badge variant="default">Готов к запуску</Badge>}
               </div>
               <p className="text-sm text-gray-500">

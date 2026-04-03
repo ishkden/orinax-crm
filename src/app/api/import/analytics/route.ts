@@ -32,12 +32,18 @@ export async function POST() {
 }
 
 async function startImportStream(crmOrgId: string, analyticsOrgId: string) {
+  let clientConnected = true;
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
       function send(data: Record<string, unknown>) {
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+        if (!clientConnected) return;
+        try {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+        } catch {
+          clientConnected = false;
+        }
       }
 
       try {
@@ -47,8 +53,11 @@ async function startImportStream(crmOrgId: string, analyticsOrgId: string) {
         const msg = err instanceof Error ? err.message : String(err);
         send({ stage: "ERROR", message: msg });
       } finally {
-        controller.close();
+        try { controller.close(); } catch { /* already closed */ }
       }
+    },
+    cancel() {
+      clientConnected = false;
     },
   });
 

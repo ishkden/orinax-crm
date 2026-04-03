@@ -8,22 +8,46 @@ import {
   LayoutDashboard,
   Briefcase,
   CheckSquare,
-  BarChart2,
   Plug,
   LogOut,
   PanelLeftClose,
   PanelLeft,
   Database,
+  Zap,
+  PhoneCall,
 } from "lucide-react";
 import { useSidebar } from "./SidebarContext";
 import MigrationDashboard from "./MigrationDashboard";
 
-const navItems = [
-  { href: "/crm/deals", basePath: "/crm", icon: Briefcase, label: "CRM" },
-  { href: "/dashboard", basePath: "/dashboard", icon: LayoutDashboard, label: "Дашборд" },
-  { href: "/tasks", basePath: "/tasks", icon: CheckSquare, label: "Задачи" },
-  { href: "/analytics", basePath: "/analytics", icon: BarChart2, label: "Аналитика" },
-  { href: "/integrations", basePath: "/integrations", icon: Plug, label: "Интеграции" },
+interface NavItem {
+  href: string;
+  basePath: string;
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+  label: string;
+  external?: boolean;
+}
+
+interface NavSection {
+  title?: string;
+  items: NavItem[];
+}
+
+const navSections: NavSection[] = [
+  {
+    items: [
+      { href: "/crm/deals", basePath: "/crm", icon: Briefcase, label: "CRM" },
+      { href: "/dashboard", basePath: "/dashboard", icon: LayoutDashboard, label: "Дашборд" },
+      { href: "/tasks", basePath: "/tasks", icon: CheckSquare, label: "Задачи" },
+      { href: "/integrations", basePath: "/integrations", icon: Plug, label: "Интеграции" },
+    ],
+  },
+  {
+    title: "Автоматизация с ИИ",
+    items: [
+      { href: "https://analytics.orinax.ai/dashboard/ai-automation", basePath: "___ext_ai_auto___", icon: Zap, label: "ИИ Автоматизация", external: true },
+      { href: "https://analytics.orinax.ai/dashboard/ai-calls", basePath: "___ext_ai_calls___", icon: PhoneCall, label: "ИИ Звонки", external: true },
+    ],
+  },
 ];
 
 export default function Sidebar() {
@@ -39,33 +63,48 @@ export default function Sidebar() {
         collapsed ? "w-16" : "w-60"
       )}
     >
-      <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
-        {navItems.map(({ href, basePath, icon: Icon, label }) => {
-          const isActive = pathname.startsWith(basePath);
-          return (
-            <Link
-              key={href}
-              href={href}
-              title={label}
-              className={cn(
-                "flex items-center rounded-lg text-sm transition-colors duration-150",
-                collapsed ? "justify-center px-2 py-2.5" : "gap-2.5 px-3 py-2",
-                isActive
-                  ? "bg-brand-50 text-brand-600 font-medium"
-                  : "text-gray-500 hover:bg-gray-50 hover:text-gray-800 font-normal"
-              )}
-            >
-              <Icon
-                size={18}
-                className={cn(
-                  "shrink-0 transition-colors",
-                  isActive ? "text-brand-500" : "text-gray-400"
-                )}
-              />
-              {!collapsed && label}
-            </Link>
-          );
-        })}
+      <nav className="flex-1 px-2 py-3 overflow-y-auto">
+        {navSections.map((section, si) => (
+          <div key={si}>
+            {si > 0 && <div className="h-px bg-gray-100 my-2" />}
+            {section.title && !collapsed && (
+              <div className="px-3 pt-1 pb-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                {section.title}
+              </div>
+            )}
+            <div className="space-y-0.5">
+              {section.items.map(({ href, basePath, icon: Icon, label, external }) => {
+                const isActive = !external && pathname.startsWith(basePath);
+                const Tag = external ? "a" : Link;
+                const extraProps = external ? { target: "_self" as const } : {};
+                return (
+                  <Tag
+                    key={href}
+                    href={href}
+                    title={label}
+                    {...extraProps}
+                    className={cn(
+                      "flex items-center rounded-lg text-sm transition-colors duration-150",
+                      collapsed ? "justify-center px-2 py-2.5" : "gap-2.5 px-3 py-2",
+                      isActive
+                        ? "bg-brand-50 text-brand-600 font-medium"
+                        : "text-gray-500 hover:bg-gray-50 hover:text-gray-800 font-normal"
+                    )}
+                  >
+                    <Icon
+                      size={18}
+                      className={cn(
+                        "shrink-0 transition-colors",
+                        isActive ? "text-brand-500" : "text-gray-400"
+                      )}
+                    />
+                    {!collapsed && label}
+                  </Tag>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
 
       <div className="px-2 py-2 border-t border-gray-100 space-y-0.5">

@@ -18,6 +18,7 @@ export default function TrackerInit() {
       orgId: user.orgId,
       source: "orinax-crm",
       collectorUrl: "https://my.orinax.ai/api/tracking/batch",
+      flushSignalUrl: "https://my.orinax.ai/api/tracking/flush-signal",
     });
     Tracker.enableAutoTrack();
 

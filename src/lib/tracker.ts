@@ -50,11 +50,13 @@ interface TrackerConfig {
   orgId: string;
   source: "crm-app" | "orinax-crm" | "connector";
   collectorUrl: string;
+  flushSignalUrl?: string;
 }
 
 const FLUSH_INTERVAL = 30_000;
 const IDLE_THRESHOLD = 60_000;
 const HEARTBEAT_INTERVAL = 5 * 60_000;
+const FLUSH_SIGNAL_INTERVAL = 15_000;
 
 let config: TrackerConfig | null = null;
 let sessionId = "";
@@ -62,6 +64,7 @@ let buffer: TrackingEvent[] = [];
 let flushTimer: ReturnType<typeof setInterval> | null = null;
 let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
 let idleTimer: ReturnType<typeof setTimeout> | null = null;
+let flushSignalTimer: ReturnType<typeof setInterval> | null = null;
 let isIdle = false;
 let autoTrackEnabled = false;
 let lastPath = "";
@@ -99,6 +102,19 @@ function createEvent(type: string, properties: Record<string, unknown> = {}): Tr
     path: typeof window !== "undefined" ? window.location.pathname : "",
     properties,
   };
+}
+
+async function checkFlushSignal() {
+  if (!config?.flushSignalUrl) return;
+  try {
+    const res = await fetch(config.flushSignalUrl, { method: "GET" });
+    if (res.ok) {
+      const data = await res.json() as { flush?: boolean };
+      if (data.flush) await flush();
+    }
+  } catch {
+    // silent
+  }
 }
 
 async function flush() {
@@ -197,6 +213,9 @@ export const Tracker = {
         if (config) buffer.push(createEvent(EVENT_TYPES.SESSION_HEARTBEAT));
       }, HEARTBEAT_INTERVAL);
     }
+    if (cfg.flushSignalUrl && !flushSignalTimer) {
+      flushSignalTimer = setInterval(checkFlushSignal, FLUSH_SIGNAL_INTERVAL);
+    }
   },
 
   enableAutoTrack() {
@@ -226,6 +245,7 @@ export const Tracker = {
     if (flushTimer) { clearInterval(flushTimer); flushTimer = null; }
     if (heartbeatTimer) { clearInterval(heartbeatTimer); heartbeatTimer = null; }
     if (idleTimer) { clearTimeout(idleTimer); idleTimer = null; }
+    if (flushSignalTimer) { clearInterval(flushSignalTimer); flushSignalTimer = null; }
     if (autoTrackEnabled) {
       document.removeEventListener("visibilitychange", onVisibilityChange);
       document.removeEventListener("click", onClick);

@@ -68,61 +68,72 @@ export const authOptions: NextAuthOptions = {
         permissions?: unknown;
       };
 
-      u.id = (token.id as string) ?? token.sub;
       u.role = token.role as string;
       u.permissions = (token as any).permissions ?? null;
 
-      // token.orgId = analytics orgId → look up / provision CRM-local org
       const analyticsOrgId = token.orgId as string | null;
       u.externalOrgId = analyticsOrgId;
 
+      const allowedRoles = ["OWNER", "ADMIN", "MANAGER"] as const;
+      const memberRole = allowedRoles.includes(
+        (token.role as (typeof allowedRoles)[number])
+      )
+        ? (token.role as (typeof allowedRoles)[number])
+        : "AGENT";
+
       if (analyticsOrgId) {
-        // Fast path: org already provisioned
+        // Use analyticsOrgId as CRM org id — single ID across all services
         let crmOrg = await prisma.org.findFirst({
           where: { externalId: analyticsOrgId },
           select: { id: true },
         });
 
-        // First visit: auto-provision org + user + membership
         if (!crmOrg && token.email) {
           crmOrg = await prisma.org.upsert({
             where: { externalId: analyticsOrgId },
             update: {},
             create: {
+              id: analyticsOrgId,
               externalId: analyticsOrgId,
               name: "Organization",
               slug: slugify(`org-${analyticsOrgId}`),
             },
             select: { id: true },
           });
+        }
 
-          const crmUser = await prisma.user.upsert({
+        u.orgId = crmOrg?.id ?? null;
+
+        // Resolve CRM-local user by email (JWT id is analytics-side)
+        if (crmOrg && token.email) {
+          let crmUser = await prisma.user.findUnique({
             where: { email: token.email as string },
-            update: {},
-            create: {
-              email: token.email as string,
-              name: (token.name as string) ?? (token.email as string),
-            },
             select: { id: true },
           });
 
-          const allowedRoles = ["OWNER", "ADMIN", "MANAGER"] as const;
-          const memberRole = allowedRoles.includes(
-            (token.role as (typeof allowedRoles)[number])
-          )
-            ? (token.role as (typeof allowedRoles)[number])
-            : "AGENT";
+          if (!crmUser) {
+            crmUser = await prisma.user.create({
+              data: {
+                email: token.email as string,
+                name: (token.name as string) ?? (token.email as string),
+              },
+              select: { id: true },
+            });
+          }
 
           await prisma.orgMember.upsert({
             where: { userId_orgId: { userId: crmUser.id, orgId: crmOrg.id } },
             update: {},
             create: { userId: crmUser.id, orgId: crmOrg.id, role: memberRole },
           });
-        }
 
-        u.orgId = crmOrg?.id ?? null;
+          u.id = crmUser.id;
+        } else {
+          u.id = (token.id as string) ?? token.sub;
+        }
       } else {
         u.orgId = null;
+        u.id = (token.id as string) ?? token.sub;
       }
 
       return session;

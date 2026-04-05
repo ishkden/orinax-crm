@@ -190,7 +190,7 @@ export default function KanbanColumnHeader({
             <span
               className="absolute font-medium tabular-nums rounded-full"
               style={{
-                left: "1.75rem",
+                left: `${s.columnHeader.countBadgeLeft}px`,
                 top: "50%",
                 transform: "translateY(-50%)",
                 fontSize: s.columnHeader.countBadgeFontSize,

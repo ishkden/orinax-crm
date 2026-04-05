@@ -29,6 +29,7 @@ export interface KanbanStyles {
     countBadgeFontSize: number;
     countBadgePaddingX: number;
     countBadgePaddingY: number;
+    countBadgeLeft: number;
   };
   stageTotal: {
     fontSize: number;
@@ -149,6 +150,7 @@ export const defaultKanbanStyles: KanbanStyles = {
     countBadgeFontSize: 10,
     countBadgePaddingX: 6,
     countBadgePaddingY: 2,
+    countBadgeLeft: 28,
   },
   stageTotal: {
     fontSize: 16,

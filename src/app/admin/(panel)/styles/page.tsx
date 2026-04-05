@@ -122,6 +122,7 @@ const sections: {
       { key: "countBadgeFontSize", label: "Размер бейджа кол-ва", type: "number", min: 6, max: 16, step: 1, unit: "px" },
       { key: "countBadgePaddingX", label: "Отступ X бейджа", type: "number", min: 0, max: 16, step: 1, unit: "px" },
       { key: "countBadgePaddingY", label: "Отступ Y бейджа", type: "number", min: 0, max: 8, step: 1, unit: "px" },
+      { key: "countBadgeLeft", label: "Отступ бейджа от левого края", type: "number", min: 0, max: 80, step: 1, unit: "px" },
     ],
   },
   {

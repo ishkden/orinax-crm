@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { Briefcase, Users, Building2, UserCheck, ChevronDown } from "lucide-react";
+import { Briefcase, Users, Building2, UserCheck, Settings, ChevronDown } from "lucide-react";
 import {
   DndContext,
   closestCenter,
@@ -28,9 +28,10 @@ const DEFAULT_TABS = [
   { id: "contacts", href: "/crm/contacts", label: "Контакты", icon: "Users" },
   { id: "companies", href: "/crm/companies", label: "Компании", icon: "Building2" },
   { id: "leads", href: "/crm/leads", label: "Лиды", icon: "UserCheck" },
+  { id: "settings", href: "/crm/settings", label: "Настройки", icon: "Settings" },
 ];
 
-const ICON_MAP = { Briefcase, Users, Building2, UserCheck };
+const ICON_MAP = { Briefcase, Users, Building2, UserCheck, Settings };
 const STORAGE_KEY = "crm-tabs-order";
 
 type Tab = (typeof DEFAULT_TABS)[number];

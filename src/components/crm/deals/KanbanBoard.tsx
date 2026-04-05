@@ -361,6 +361,7 @@ export default function KanbanBoard({
                   onLoadMore={onLoadMore ? () => onLoadMore(stage.id) : undefined}
                   onContactClick={onContactClick}
                   onDealClick={onDealClick}
+                  onAddDeal={onAddDeal}
                 />
               );
             })}

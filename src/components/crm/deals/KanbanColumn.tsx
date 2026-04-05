@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { Loader2 } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
 import DealCard from "./DealCard";
 import { useKanbanStyles } from "./KanbanStyleContext";
 import type { Deal, Stage } from "./types";
@@ -16,6 +16,7 @@ interface KanbanColumnProps {
   onLoadMore?: () => void;
   onContactClick?: (deal: Deal) => void;
   onDealClick?: (deal: Deal) => void;
+  onAddDeal?: (stageId: string) => void;
 }
 
 export default function KanbanColumn({
@@ -26,6 +27,7 @@ export default function KanbanColumn({
   onLoadMore,
   onContactClick,
   onDealClick,
+  onAddDeal,
 }: KanbanColumnProps) {
   const s = useKanbanStyles();
   const { setNodeRef, isOver } = useDroppable({ id: stage.id });
@@ -100,6 +102,24 @@ export default function KanbanColumn({
           {isLoadingMore && (
             <div className="flex items-center justify-center py-3">
               <Loader2 size={16} className="animate-spin" style={{ color: stage.color }} />
+            </div>
+          )}
+
+          {s.addButton.show && (
+            <div className="flex justify-center pt-1 pb-1">
+              <button
+                type="button"
+                onClick={() => onAddDeal?.(stage.id)}
+                className="flex items-center justify-center text-gray-400 transition-colors hover:bg-brand-50/80 hover:text-brand-600"
+                style={{
+                  width: s.addButton.size,
+                  height: s.addButton.size,
+                  borderRadius: s.addButton.borderRadius,
+                }}
+                title="Добавить сделку"
+              >
+                <Plus size={s.addButton.iconSize} strokeWidth={2} />
+              </button>
             </div>
           )}
         </div>

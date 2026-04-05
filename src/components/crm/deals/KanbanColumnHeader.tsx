@@ -271,31 +271,6 @@ export default function KanbanColumnHeader({
         </div>
       )}
 
-      {/* Add deal button */}
-      {s.addButton.show && (
-        <div
-          className="flex justify-center px-3 pb-2"
-          style={{
-            backgroundColor: s.column.backgroundColor,
-            opacity: s.column.backgroundOpacity / 100,
-          }}
-        >
-          <button
-            type="button"
-            onClick={() => onAddDeal?.(stage.id)}
-            className="flex items-center justify-center text-gray-500 transition-colors hover:bg-brand-50/80 hover:text-brand-600"
-            style={{
-              width: s.addButton.size,
-              height: s.addButton.size,
-              borderRadius: s.addButton.borderRadius,
-            }}
-            title="Добавить сделку"
-          >
-            <Plus size={s.addButton.iconSize} strokeWidth={2} />
-          </button>
-        </div>
-      )}
-
       {/* Edit panel */}
       {editing &&
         panelPos &&

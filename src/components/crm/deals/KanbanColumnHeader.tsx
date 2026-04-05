@@ -244,14 +244,25 @@ export default function KanbanColumnHeader({
             >
               {stage.label}
             </h3>
-            {showTip && isTruncated && (
-              <div
-                className="absolute left-1/2 -translate-x-1/2 z-50 px-2.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap shadow-lg pointer-events-none"
-                style={{ top: "calc(100% + 4px)", backgroundColor: "rgba(0,0,0,0.85)", color: "#fff" }}
-              >
-                {stage.label}
-              </div>
-            )}
+            {showTip && isTruncated && typeof document !== "undefined" && (() => {
+              const rect = headerRef.current?.getBoundingClientRect();
+              if (!rect) return null;
+              return createPortal(
+                <div
+                  className="fixed z-[300] px-2.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap shadow-lg pointer-events-none"
+                  style={{
+                    top: rect.bottom + 4,
+                    left: rect.left + rect.width / 2,
+                    transform: "translateX(-50%)",
+                    backgroundColor: "rgba(0,0,0,0.85)",
+                    color: "#fff",
+                  }}
+                >
+                  {stage.label}
+                </div>,
+                document.body
+              );
+            })()}
 
             {/* Add stage after — appears on hover, left of pencil */}
             <button

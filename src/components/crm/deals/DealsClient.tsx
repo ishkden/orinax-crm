@@ -106,11 +106,13 @@ export default function DealsClient({
     return () => ro.disconnect();
   }, [toolbarIsSticky]);
 
-  // How far from the top the kanban column headers should stick
-  // = how much of the nav block stays + toolbar height (if toolbar is also sticky)
+  // How far from the top the kanban column headers should stick.
+  // Clamp nav contribution to [0, CRM_NAV_HEIGHT]: negative values mean nav is pre-hidden,
+  // so no offset is needed for the nav portion.
+  const navVisibleAtTop = Math.max(0, Math.min(navStickyHeight, CRM_NAV_HEIGHT));
   const kanbanStickyTop = toolbarIsSticky
-    ? Math.min(navStickyHeight, CRM_NAV_HEIGHT) + toolbarHeight
-    : Math.min(navStickyHeight, CRM_NAV_HEIGHT);
+    ? navVisibleAtTop + toolbarHeight
+    : navVisibleAtTop;
 
   const openCreateDeal = useCallback(() => {
     setModalStage(null);

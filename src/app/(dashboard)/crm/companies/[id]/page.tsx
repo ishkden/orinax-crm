@@ -185,7 +185,7 @@ export default async function CompanyDetailPage({ params }: Props) {
             {company.deals.length > 0 ? (
               <div className="space-y-2">
                 {company.deals.map((deal) => (
-                  <Link key={deal.id} href={`/crm/deals/${deal.id}`} className="block p-3 bg-zinc-800/50 rounded-lg border border-zinc-700/50 hover:border-zinc-600 transition-colors">
+                  <Link key={deal.id} href={`/crm/deals/${deal.serialNumber}`} className="block p-3 bg-zinc-800/50 rounded-lg border border-zinc-700/50 hover:border-zinc-600 transition-colors">
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium text-zinc-200">{deal.title}</span>
                       {deal.stageRel && (

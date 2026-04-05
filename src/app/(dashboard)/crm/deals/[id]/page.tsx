@@ -8,7 +8,9 @@ interface Props {
 
 export default async function DealDetailPage({ params }: Props) {
   const { id } = await params;
-  const deal = await getDealById(id);
+  const serialNumber = parseInt(id, 10);
+  if (isNaN(serialNumber)) notFound();
+  const deal = await getDealById(serialNumber);
   if (!deal) notFound();
   return <DealDetailView deal={deal} />;
 }

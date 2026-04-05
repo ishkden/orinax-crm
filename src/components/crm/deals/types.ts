@@ -4,6 +4,7 @@
 
 export interface Deal {
   id: string;
+  serialNumber: number;
   title: string;
   value: number;
   currency: string;

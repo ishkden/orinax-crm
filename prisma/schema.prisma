@@ -240,9 +240,10 @@ model Stage {
 }
 
 model Deal {
-  id          String    @id @default(cuid())
-  orgId       String
-  title       String
+  id           String @id @default(cuid())
+  serialNumber Int    @unique @default(autoincrement())
+  orgId        String
+  title        String
   value       Float     @default(0)
   currency    String    @default("RUB")
   stage       DealStage @default(LEAD)

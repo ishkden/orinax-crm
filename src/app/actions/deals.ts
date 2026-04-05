@@ -62,6 +62,7 @@ export type TaskItem = {
 
 type PrismaDeaWithRelations = {
   id: string;
+  serialNumber: number;
   title: string;
   value: number;
   currency: string;
@@ -93,6 +94,7 @@ type PrismaDeaWithRelations = {
 function mapDeal(d: PrismaDeaWithRelations): Deal {
   return {
     id: d.id,
+    serialNumber: d.serialNumber,
     title: d.title,
     value: d.value,
     currency: d.currency,
@@ -393,6 +395,7 @@ export type CommentItem = {
 
 export type FullDeal = {
   id: string;
+  serialNumber: number;
   title: string;
   value: number;
   currency: string;
@@ -437,11 +440,11 @@ export type FullDeal = {
   stageHistory: StageHistoryItem[];
 };
 
-export async function getDealById(dealId: string): Promise<FullDeal | null> {
+export async function getDealById(serialNumber: number): Promise<FullDeal | null> {
   const orgId = await getOrgId();
 
-  const deal = await prisma.deal.findUnique({
-    where: { id: dealId, orgId },
+  const deal = await prisma.deal.findFirst({
+    where: { serialNumber, orgId },
     include: {
       contact: {
         select: { id: true, firstName: true, lastName: true, phone: true, email: true, company: true, position: true },
@@ -497,6 +500,7 @@ export async function getDealById(dealId: string): Promise<FullDeal | null> {
 
   return {
     id: deal.id,
+    serialNumber: deal.serialNumber,
     title: deal.title,
     value: deal.value,
     currency: deal.currency,

@@ -190,7 +190,7 @@ export default function DealRightDrawer({ deal, stages, onClose }: DealRightDraw
                 </h2>
                 <div className="flex items-center gap-1 shrink-0 mt-0.5">
                   <Link
-                    href={`/crm/deals/${deal.id}`}
+                    href={`/crm/deals/${deal.serialNumber}`}
                     className="p-1.5 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-gray-100 transition-colors"
                     title="Открыть полностью"
                   >

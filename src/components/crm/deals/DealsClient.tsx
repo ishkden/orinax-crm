@@ -299,7 +299,7 @@ export default function DealsClient({
   return (
     <>
       <div className="flex w-full min-w-0 flex-col">
-        <div className={viewMode === "kanban" ? "border-b border-gray-200 bg-white" : ""}>
+        <div className={viewMode === "kanban" ? "bg-white" : ""}>
           <DealsToolbar
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}

@@ -196,7 +196,7 @@ export default function CrmSubNav() {
 
   if (!mounted) {
     return (
-      <div className="bg-white border-b border-gray-100 shrink-0">
+      <div className="bg-white shrink-0">
         <div className="flex items-stretch" style={{ minHeight: navHeight }}>
           <div className="flex items-center gap-1 px-6 shrink-0">
             {DEFAULT_TABS.map((tab) => {
@@ -234,7 +234,7 @@ export default function CrmSubNav() {
   }
 
   return (
-    <div className="bg-white border-b border-gray-100 shrink-0">
+    <div className="bg-white shrink-0">
       <div className="flex items-stretch" style={{ minHeight: navHeight }}>
         <div className="flex items-center px-6 shrink-0">
           <DndContext

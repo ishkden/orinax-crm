@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, useCallback, useTransition } from "react";
+import { useState, useMemo, useEffect, useLayoutEffect, useCallback, useTransition, useRef } from "react";
 import DealsToolbar, { type ViewMode } from "./DealsToolbar";
 import KanbanBoard from "./KanbanBoard";
 import DealsListView from "./DealsListView";
@@ -79,6 +79,22 @@ export default function DealsClient({
   const [contactDeal, setContactDeal] = useState<Deal | null>(null);
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
   const [, startTransition] = useTransition();
+
+  // Measure toolbar height so kanban column headers can sticky just below it
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  const [toolbarHeight, setToolbarHeight] = useState(58);
+
+  useLayoutEffect(() => {
+    if (viewMode !== "kanban") return;
+    const el = toolbarRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver((entries) => {
+      const h = entries[0]?.borderBoxSize?.[0]?.blockSize ?? entries[0]?.contentRect?.height;
+      if (h) setToolbarHeight(h);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [viewMode]);
 
   const openCreateDeal = useCallback(() => {
     setModalStage(null);
@@ -299,18 +315,24 @@ export default function DealsClient({
   return (
     <>
       <div className="flex w-full min-w-0 flex-col">
-        <DealsToolbar
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          viewMode={viewMode}
-          onViewModeChange={setViewMode}
-          filterAssignee={filterAssignee}
-          onFilterAssignee={setFilterAssignee}
-          filterPriority={filterPriority}
-          onFilterPriority={setFilterPriority}
-          totalDeals={filteredDeals.length}
-          assignees={assignees}
-        />
+        {/* In kanban mode the toolbar is sticky so it stays visible while column headers also stick */}
+        <div
+          ref={toolbarRef}
+          className={viewMode === "kanban" ? "sticky top-0 z-10 bg-[#f9f9f9]" : ""}
+        >
+          <DealsToolbar
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            filterAssignee={filterAssignee}
+            onFilterAssignee={setFilterAssignee}
+            filterPriority={filterPriority}
+            onFilterPriority={setFilterPriority}
+            totalDeals={filteredDeals.length}
+            assignees={assignees}
+          />
+        </div>
 
         {viewMode === "kanban" ? (
           <KanbanBoard
@@ -326,6 +348,7 @@ export default function DealsClient({
             onStageDelete={handleStageDelete}
             onContactClick={setContactDeal}
             onDealClick={setSelectedDeal}
+            toolbarStickyOffset={toolbarHeight}
           />
         ) : (
           <div className="flex min-w-0 flex-col">

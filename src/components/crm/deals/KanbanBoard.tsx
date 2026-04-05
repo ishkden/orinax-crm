@@ -32,6 +32,8 @@ interface KanbanBoardProps {
   onStageDelete?: (stageId: string) => void;
   onContactClick?: (deal: Deal) => void;
   onDealClick?: (deal: Deal) => void;
+  /** Height of the sticky toolbar above — used to offset column headers' sticky top */
+  toolbarStickyOffset?: number;
 }
 
 function buildStageTotals(stages: Stage[], source: Deal[]) {
@@ -61,6 +63,7 @@ export default function KanbanBoard({
   onStageDelete,
   onContactClick,
   onDealClick,
+  toolbarStickyOffset = 0,
 }: KanbanBoardProps) {
   const ks = useKanbanStyles();
   const [activeDeal, setActiveDeal] = useState<Deal | null>(null);
@@ -180,9 +183,8 @@ export default function KanbanBoard({
     );
   }
 
-  // When the sticky header row is at top (after page has scrolled past the nav),
-  // cards should fill exactly the remaining viewport below the sticky headers.
-  const cardsHeight = `calc(100dvh - ${GLOBAL_HEADER_HEIGHT}px - ${headerHeight}px)`;
+  // Cards fill remaining viewport below: GlobalHeader + sticky toolbar + sticky column headers
+  const cardsHeight = `calc(100dvh - ${GLOBAL_HEADER_HEIGHT}px - ${toolbarStickyOffset}px - ${headerHeight}px)`;
 
   const rowStyle = {
     gap: ks.board.columnGap,
@@ -200,8 +202,8 @@ export default function KanbanBoard({
       {/* Sticky header row — sticks to the top of #crm-scroll when page is scrolled */}
       <div
         ref={headerRowRef}
-        className="sticky top-0 z-20 flex bg-[#f9f9f9]"
-        style={{ ...rowStyle, paddingTop: ks.board.paddingTop }}
+        className="sticky z-20 flex bg-[#f9f9f9]"
+        style={{ ...rowStyle, paddingTop: 0, top: toolbarStickyOffset }}
       >
         {stages.map((stage) => {
           const pagination = stagePagination?.[stage.id];

@@ -101,7 +101,6 @@ function StagePill({
         isDragging && "shadow-xl ring-2 ring-brand-400"
       )}
       style={{ ...style, minWidth: 0, overflow: "hidden" }}
-      title={`${stage.name}${stage._count.deals > 0 ? ` (${stage._count.deals} сделок)` : ""}`}
       {...(isDraggable ? { ...listeners, ...attributes } : {})}
     >
       {systemIcon === "won" && <Trophy size={10} className="shrink-0" />}
@@ -269,7 +268,7 @@ function PipelineRowInner({
   const [pName, setPName] = useState(pipeline.name);
   const [editingStage, setEditingStage] = useState<SettingsStage | null>(null);
   const [editAnchor, setEditAnchor] = useState<{ top: number; left: number } | null>(null);
-  const [addAnchor, setAddAnchor] = useState<{ top: number; left: number } | null>(null);
+  const [addAnchor, setAddAnchor] = useState<{ top: number; left: number; insertAt?: number } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [isPending, startTransition] = useTransition();
   const renameRef = useRef<HTMLInputElement>(null);
@@ -318,7 +317,7 @@ function PipelineRowInner({
   }
 
   function handleAddStage(name: string, color: string) {
-    const insertAt = workStages.length;
+    const insertAt = addAnchor?.insertAt ?? workStages.length;
     startTransition(async () => { try { await addStageToP(pipeline.id, name, color, insertAt); setAddAnchor(null); onRefresh(); } catch {} });
   }
 
@@ -373,10 +372,34 @@ function PipelineRowInner({
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={workStages.map((s) => s.id)} strategy={horizontalListSortingStrategy}>
             <div className="flex-1 flex items-center min-w-0" style={{ gap: 5 }}>
-              {workStages.map((s) => (<div key={s.id} data-stage-id={s.id} style={{ flex: "1 1 0%", minWidth: 0, overflow: "hidden" }}><StagePill stage={s} onEdit={handleEditStage} isDraggable /></div>))}
+              {workStages.map((s, idx) => (
+                <div key={s.id} data-stage-id={s.id} className="group/stage relative" style={{ flex: "1 1 0%", minWidth: 0 }}>
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 bg-gray-900 text-white text-[11px] rounded-md whitespace-nowrap opacity-0 group-hover/stage:opacity-100 pointer-events-none transition-opacity z-50 shadow-lg">{s.name}</div>
+                  <button type="button" onClick={(e) => { e.stopPropagation(); const r = (e.currentTarget as HTMLElement).getBoundingClientRect(); setAddAnchor({ top: r.bottom + 4, left: r.left - 4, insertAt: idx }); }} className="absolute -left-[9px] top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-brand-500 text-white items-center justify-center opacity-0 group-hover/stage:opacity-100 pointer-events-none group-hover/stage:pointer-events-auto transition-all z-40 hover:scale-125 hidden group-hover/stage:flex"><Plus size={8} strokeWidth={3} /></button>
+                  <StagePill stage={s} onEdit={handleEditStage} isDraggable />
+                </div>
+              ))}
               <button type="button" onClick={handleAddStageClick} className="inline-flex items-center justify-center shrink-0" style={{ width: 28, height: 28, borderRadius: 8, border: "2px dashed #e5e7eb" }} title="Добавить стадию"><Plus size={14} className="text-gray-400" /></button>
-              {wonStages.length > 0 && (<div className="flex items-center shrink-0 pl-2 border-l-2 border-green-200" style={{ gap: 5 }}>{wonStages.map((s) => (<div key={s.id} data-stage-id={s.id}><StagePill stage={s} onEdit={handleEditStage} systemIcon="won" /></div>))}</div>)}
-              {loseStages.length > 0 && (<div className="flex items-center shrink-0 pl-2 border-l-2 border-red-200" style={{ gap: 5 }}>{loseStages.map((s) => (<div key={s.id} data-stage-id={s.id}><StagePill stage={s} onEdit={handleEditStage} systemIcon="lose" /></div>))}</div>)}
+              {wonStages.length > 0 && (
+                <div className="flex items-center shrink-0 pl-2 border-l-2 border-green-200" style={{ gap: 5 }}>
+                  {wonStages.map((s) => (
+                    <div key={s.id} data-stage-id={s.id} className="group/sys relative" style={{ width: 60, minWidth: 60, maxWidth: 60 }}>
+                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 bg-gray-900 text-white text-[11px] rounded-md whitespace-nowrap opacity-0 group-hover/sys:opacity-100 pointer-events-none transition-opacity z-50 shadow-lg">{s.name}</div>
+                      <StagePill stage={s} onEdit={handleEditStage} systemIcon="won" />
+                    </div>
+                  ))}
+                </div>
+              )}
+              {loseStages.length > 0 && (
+                <div className="flex items-center shrink-0 pl-2 border-l-2 border-red-200" style={{ gap: 5 }}>
+                  {loseStages.map((s) => (
+                    <div key={s.id} data-stage-id={s.id} className="group/sys relative" style={{ width: 60, minWidth: 60, maxWidth: 60 }}>
+                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 bg-gray-900 text-white text-[11px] rounded-md whitespace-nowrap opacity-0 group-hover/sys:opacity-100 pointer-events-none transition-opacity z-50 shadow-lg">{s.name}</div>
+                      <StagePill stage={s} onEdit={handleEditStage} systemIcon="lose" />
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </SortableContext>
         </DndContext>

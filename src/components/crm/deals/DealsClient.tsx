@@ -315,20 +315,25 @@ export default function DealsClient({
         </div>
 
         {viewMode === "kanban" ? (
-          <KanbanBoard
-            stages={activeStages}
-            deals={filteredDeals}
-            stagePagination={stagePagination}
-            serverStageTotals={stageTotals}
-            onLoadMore={handleLoadMore}
-            onMoveDeal={handleMoveDeal}
-            onStageCommit={handleStageCommit}
-            onAddDeal={handleAddDeal}
-            onStageUpdate={handleStageUpdate}
-            onStageDelete={handleStageDelete}
-            onContactClick={setContactDeal}
-            onDealClick={setSelectedDeal}
-          />
+          // sticky wrapper — стикается к верху #crm-scroll когда верхний блок уходит вверх.
+          // КанбанБорд внутри заполняет 100dvh минус GlobalHeader (48px).
+          // position:sticky здесь (снаружи overflow-x:auto) работает корректно.
+          <div className="sticky z-10" style={{ top: 0, height: "calc(100dvh - 48px)" }}>
+            <KanbanBoard
+              stages={activeStages}
+              deals={filteredDeals}
+              stagePagination={stagePagination}
+              serverStageTotals={stageTotals}
+              onLoadMore={handleLoadMore}
+              onMoveDeal={handleMoveDeal}
+              onStageCommit={handleStageCommit}
+              onAddDeal={handleAddDeal}
+              onStageUpdate={handleStageUpdate}
+              onStageDelete={handleStageDelete}
+              onContactClick={setContactDeal}
+              onDealClick={setSelectedDeal}
+            />
+          </div>
         ) : (
           <div className="flex min-w-0 flex-col">
             <DealsListView

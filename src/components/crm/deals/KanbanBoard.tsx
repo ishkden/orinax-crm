@@ -45,8 +45,8 @@ function buildStageTotals(stages: Stage[], source: Deal[]) {
   return map;
 }
 
-// GlobalHeader is 48px (h-12). Cards fill viewport below sticky column headers.
-const GLOBAL_HEADER_HEIGHT = 48;
+// KanbanBoard fills 100% of its sticky wrapper (100dvh - 48px).
+// Cards height = 100% minus the header row height.
 
 export default function KanbanBoard({
   stages,
@@ -180,8 +180,8 @@ export default function KanbanBoard({
     );
   }
 
-  // Cards fill remaining viewport below: GlobalHeader + sticky column headers
-  const cardsHeight = `calc(100dvh - ${GLOBAL_HEADER_HEIGHT}px - ${headerHeight}px)`;
+  // Cards fill the remaining space inside the sticky wrapper (100% - header row)
+  const cardsHeight = `calc(100% - ${headerHeight}px)`;
 
   const rowStyle = {
     gap: ks.board.columnGap,
@@ -197,12 +197,12 @@ export default function KanbanBoard({
      * marginTop: scrollPad — adds configurable white space above the board, increasing the
      *                        scroll distance before column headers stick to the top
      */
-    <div style={{ overflowX: "auto", overflowY: "clip" }}>
-      {/* Sticky header row — sticks to the top of #crm-scroll when page is scrolled */}
+    <div style={{ height: "100%", overflowX: "auto", overflowY: "hidden" }}>
+      {/* Column header row — sits at the top of the board (no sticky needed, board itself is sticky) */}
       <div
         ref={headerRowRef}
-        className="sticky z-20 flex bg-[#f9f9f9]"
-        style={{ ...rowStyle, paddingTop: 0, top: 0 }}
+        className="flex bg-[#f9f9f9]"
+        style={{ ...rowStyle, paddingTop: 0 }}
       >
         {stages.map((stage) => {
           const pagination = stagePagination?.[stage.id];

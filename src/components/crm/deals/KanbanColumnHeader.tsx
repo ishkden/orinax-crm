@@ -202,7 +202,7 @@ export default function KanbanColumnHeader({
             </span>
             <h3
               className="flex-1 min-w-0 text-center truncate px-1 leading-tight"
-              style={{ fontSize: s.columnHeader.fontSize, fontWeight: s.columnHeader.fontWeight }}
+              style={{ fontSize: s.columnHeader.fontSize, fontWeight: s.columnHeader.fontWeight, marginLeft: `${s.columnHeader.countBadgeGap}px` }}
             >
               {stage.label}
             </h3>

@@ -123,6 +123,7 @@ const sections: {
       { key: "countBadgePaddingX", label: "Отступ X бейджа", type: "number", min: 0, max: 16, step: 1, unit: "px" },
       { key: "countBadgePaddingY", label: "Отступ Y бейджа", type: "number", min: 0, max: 8, step: 1, unit: "px" },
       { key: "countBadgeLeft", label: "Отступ бейджа от левого края", type: "number", min: 0, max: 80, step: 1, unit: "px" },
+      { key: "countBadgeGap", label: "Расстояние от бейджа до названия", type: "number", min: 0, max: 40, step: 1, unit: "px" },
     ],
   },
   {

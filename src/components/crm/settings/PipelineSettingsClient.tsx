@@ -24,6 +24,7 @@ import {
 import {
   SortableContext,
   horizontalListSortingStrategy,
+  verticalListSortingStrategy,
   useSortable,
   arrayMove,
 } from "@dnd-kit/sortable";
@@ -38,7 +39,19 @@ import {
   updateStageSettings,
   deleteStageSettings,
   reorderPipelineStages,
+  reorderPipelines,
 } from "@/app/actions/pipeline-settings";
+
+const STAGE_COLORS = [
+  "#3B82F6", "#8B5CF6", "#EC4899", "#F59E0B", "#10B981",
+  "#06B6D4", "#6366F1", "#F97316", "#14B8A6", "#A855F7",
+  "#EF4444", "#84CC16", "#0EA5E9", "#D946EF", "#F43F5E",
+  "#22D3EE", "#FBBF24", "#34D399", "#818CF8", "#FB923C",
+];
+
+function randomColor() {
+  return STAGE_COLORS[Math.floor(Math.random() * STAGE_COLORS.length)];
+}
 
 function isWonStage(s: SettingsStage) { return s.semantics === "WON" || (s.isFinal && s.isWon); }
 function isLoseStage(s: SettingsStage) { return s.semantics === "LOSE" || (s.isFinal && !s.isWon && s.semantics !== "WON"); }
@@ -124,42 +137,23 @@ function StageEditPopover({
   const canDelete = !sys && stage._count.deals === 0;
 
   useEffect(() => { inputRef.current?.focus(); }, []);
-
   useEffect(() => {
-    function handler(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
-    }
+    function handler(e: MouseEvent) { if (ref.current && !ref.current.contains(e.target as Node)) onClose(); }
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [onClose]);
 
   function handleSave() {
     const n = name.trim();
-    if (n && (n !== stage.name || color !== (stage.color ?? "#6B7280"))) {
-      onSave(stage.id, { name: n, color });
-    }
+    if (n && (n !== stage.name || color !== (stage.color ?? "#6B7280"))) onSave(stage.id, { name: n, color });
     onClose();
   }
-
-  function markAsWon() {
-    onSave(stage.id, { isFinal: true, isWon: true, semantics: "WON", color: stage.color ?? "#22C55E" });
-    onClose();
-  }
-
-  function markAsLose() {
-    onSave(stage.id, { isFinal: true, isWon: false, semantics: "LOSE", color: stage.color ?? "#EF4444" });
-    onClose();
-  }
-
-  function markAsWork() {
-    onSave(stage.id, { isFinal: false, isWon: false, semantics: null });
-    onClose();
-  }
+  function markAsWon() { onSave(stage.id, { isFinal: true, isWon: true, semantics: "WON", color: stage.color ?? "#22C55E" }); onClose(); }
+  function markAsLose() { onSave(stage.id, { isFinal: true, isWon: false, semantics: "LOSE", color: stage.color ?? "#EF4444" }); onClose(); }
+  function markAsWork() { onSave(stage.id, { isFinal: false, isWon: false, semantics: null }); onClose(); }
 
   if (!anchorRect) return null;
-
-  let top = anchorRect.top + 8;
-  let left = anchorRect.left;
+  let top = anchorRect.top + 8, left = anchorRect.left;
   if (typeof window !== "undefined") {
     if (left + 240 > window.innerWidth - 16) left = window.innerWidth - 256;
     if (left < 16) left = 16;
@@ -167,20 +161,10 @@ function StageEditPopover({
   }
 
   return (
-    <div
-      ref={ref}
-      className="fixed z-[100] w-60 rounded-xl border border-gray-200 bg-white shadow-2xl p-3 space-y-3"
-      style={{ top, left }}
-    >
+    <div ref={ref} className="fixed z-[100] w-60 rounded-xl border border-gray-200 bg-white shadow-2xl p-3 space-y-3" style={{ top, left }}>
       <div className="space-y-1.5">
         <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Название</label>
-        <input
-          ref={inputRef}
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") handleSave(); if (e.key === "Escape") onClose(); }}
-          className="w-full text-sm px-2.5 py-1.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-400"
-        />
+        <input ref={inputRef} value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") handleSave(); if (e.key === "Escape") onClose(); }} className="w-full text-sm px-2.5 py-1.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-400" />
       </div>
       <div className="space-y-1.5">
         <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Цвет</label>
@@ -189,8 +173,6 @@ function StageEditPopover({
           <div className="flex-1 h-6 rounded-md" style={{ backgroundColor: color }} />
         </div>
       </div>
-
-      {/* System status */}
       <div className="space-y-1.5 pt-1 border-t border-gray-100">
         <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Тип стадии</label>
         <div className="flex gap-1.5">
@@ -199,12 +181,9 @@ function StageEditPopover({
           <button type="button" onClick={markAsLose} className={cn("flex-1 text-[10px] font-medium py-1.5 rounded-lg border transition-colors", isLoseStage(stage) ? "border-red-400 bg-red-50 text-red-700" : "border-gray-200 text-gray-500 hover:bg-gray-50")}>&#10005; Провал</button>
         </div>
       </div>
-
       <div className="flex items-center gap-2 pt-1 border-t border-gray-100">
         <button type="button" onClick={handleSave} disabled={isPending} className="flex-1 inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-brand-500 text-white hover:bg-brand-600 disabled:opacity-50 transition-colors"><Check size={12} /> Сохранить</button>
-        {canDelete && (
-          <button type="button" onClick={() => { onDelete(stage.id); onClose(); }} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={13} /></button>
-        )}
+        {canDelete && (<button type="button" onClick={() => { onDelete(stage.id); onClose(); }} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={13} /></button>)}
       </div>
     </div>
   );
@@ -212,61 +191,28 @@ function StageEditPopover({
 
 /* ─── Add Stage Popover ──────────────────────────────────────────────────── */
 
-function AddStagePopover({
-  anchorRect,
-  onAdd,
-  onClose,
-  isPending,
-}: {
-  anchorRect: { top: number; left: number };
-  onAdd: (name: string, color: string) => void;
-  onClose: () => void;
-  isPending: boolean;
-}) {
+function AddStagePopover({ anchorRect, onAdd, onClose, isPending }: { anchorRect: { top: number; left: number }; onAdd: (name: string, color: string) => void; onClose: () => void; isPending: boolean; }) {
   const [name, setName] = useState("");
-  const [color, setColor] = useState("#6B7280");
+  const [color, setColor] = useState(() => randomColor());
   const ref = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-
   useEffect(() => { inputRef.current?.focus(); }, []);
-
   useEffect(() => {
-    function handler(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
-    }
+    function handler(e: MouseEvent) { if (ref.current && !ref.current.contains(e.target as Node)) onClose(); }
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [onClose]);
-
-  function handleAdd() {
-    const n = name.trim();
-    if (!n) return;
-    onAdd(n, color);
-  }
-
-  let top = anchorRect.top + 8;
-  let left = anchorRect.left;
+  function handleAdd() { const n = name.trim(); if (!n) return; onAdd(n, color); }
+  let top = anchorRect.top + 8, left = anchorRect.left;
   if (typeof window !== "undefined") {
     if (left + 240 > window.innerWidth - 16) left = window.innerWidth - 256;
     if (top + 180 > window.innerHeight - 16) top = anchorRect.top - 180;
   }
-
   return (
-    <div
-      ref={ref}
-      className="fixed z-[100] w-60 rounded-xl border border-gray-200 bg-white shadow-2xl p-3 space-y-3"
-      style={{ top, left }}
-    >
+    <div ref={ref} className="fixed z-[100] w-60 rounded-xl border border-gray-200 bg-white shadow-2xl p-3 space-y-3" style={{ top, left }}>
       <div className="space-y-1.5">
         <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Новая стадия</label>
-        <input
-          ref={inputRef}
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") handleAdd(); if (e.key === "Escape") onClose(); }}
-          placeholder="Название..."
-          className="w-full text-sm px-2.5 py-1.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-400"
-        />
+        <input ref={inputRef} value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") handleAdd(); if (e.key === "Escape") onClose(); }} placeholder="Название..." className="w-full text-sm px-2.5 py-1.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-400" />
       </div>
       <div className="space-y-1.5">
         <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Цвет</label>
@@ -280,14 +226,44 @@ function AddStagePopover({
   );
 }
 
-/* ─── Pipeline Row ────────────────────────────────────────────────────────── */
+/* ─── Sortable Pipeline Row ───────────────────────────────────────────────── */
 
-function PipelineRow({
+function SortablePipelineRow({ pipeline, onRefresh }: { pipeline: SettingsPipeline; onRefresh: () => void }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: pipeline.id });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.6 : 1,
+    zIndex: isDragging ? 50 : undefined,
+    position: "relative",
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} className={cn("border-b border-gray-100 last:border-b-0", isDragging && "shadow-lg bg-white rounded-lg")}>
+      <PipelineRowInner pipeline={pipeline} onRefresh={onRefresh} dragHandleListeners={listeners} dragHandleAttributes={attributes} />
+    </div>
+  );
+}
+
+function PipelineRowInner({
   pipeline,
   onRefresh,
+  dragHandleListeners,
+  dragHandleAttributes,
 }: {
   pipeline: SettingsPipeline;
   onRefresh: () => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  dragHandleListeners?: any;
+  dragHandleAttributes?: any;
 }) {
   const [stages, setStages] = useState(pipeline.stages);
   const [renaming, setRenaming] = useState(false);
@@ -302,9 +278,7 @@ function PipelineRow({
   useEffect(() => { setStages(pipeline.stages); }, [pipeline.stages]);
   useEffect(() => { if (renaming) renameRef.current?.focus(); }, [renaming]);
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
-  );
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   const workStages = stages.filter((s) => !isSystemStage(s));
   const wonStages = stages.filter(isWonStage);
@@ -320,32 +294,23 @@ function PipelineRow({
     const reordered = arrayMove(workStages, oldIdx, newIdx);
     const full = [...reordered, ...wonStages, ...loseStages];
     setStages(full);
-    startTransition(() => {
-      reorderPipelineStages(full.map((s) => s.id)).catch(() => setStages(pipeline.stages));
-    });
+    startTransition(() => { reorderPipelineStages(full.map((s) => s.id)).catch(() => setStages(pipeline.stages)); });
   }
 
   function handleEditStage(stage: SettingsStage) {
     const el = document.querySelector(`[data-stage-id="${stage.id}"]`);
-    if (el) {
-      const rect = el.getBoundingClientRect();
-      setEditAnchor({ top: rect.bottom, left: rect.left });
-    }
+    if (el) { const rect = el.getBoundingClientRect(); setEditAnchor({ top: rect.bottom, left: rect.left }); }
     setEditingStage(stage);
   }
 
   function handleStageUpdate(stageId: string, updates: { name?: string; color?: string; isFinal?: boolean; isWon?: boolean; semantics?: string | null }) {
     setStages((prev) => prev.map((s) => s.id === stageId ? { ...s, ...updates } as SettingsStage : s));
-    startTransition(() => {
-      updateStageSettings(stageId, updates).then(onRefresh).catch(() => setStages(pipeline.stages));
-    });
+    startTransition(() => { updateStageSettings(stageId, updates).then(onRefresh).catch(() => setStages(pipeline.stages)); });
   }
 
   function handleStageDelete(stageId: string) {
     setStages((prev) => prev.filter((s) => s.id !== stageId));
-    startTransition(() => {
-      deleteStageSettings(stageId).then(onRefresh).catch(() => setStages(pipeline.stages));
-    });
+    startTransition(() => { deleteStageSettings(stageId).then(onRefresh).catch(() => setStages(pipeline.stages)); });
   }
 
   function handleAddStageClick(e: React.MouseEvent) {
@@ -355,47 +320,38 @@ function PipelineRow({
 
   function handleAddStage(name: string, color: string) {
     const insertAt = workStages.length;
-    startTransition(async () => {
-      try {
-        await addStageToP(pipeline.id, name, color, insertAt);
-        setAddAnchor(null);
-        onRefresh();
-      } catch { /* error */ }
-    });
+    startTransition(async () => { try { await addStageToP(pipeline.id, name, color, insertAt); setAddAnchor(null); onRefresh(); } catch {} });
   }
 
   function handleRename() {
     const n = pName.trim();
     if (!n || n === pipeline.name) { setRenaming(false); return; }
-    startTransition(() => {
-      renamePipeline(pipeline.id, n).then(onRefresh).catch(() => setPName(pipeline.name));
-    });
+    startTransition(() => { renamePipeline(pipeline.id, n).then(onRefresh).catch(() => setPName(pipeline.name)); });
     setRenaming(false);
   }
 
   function handleDelete() {
-    startTransition(async () => {
-      try { await deletePipeline(pipeline.id); onRefresh(); } catch { /* can't */ }
-    });
+    startTransition(async () => { try { await deletePipeline(pipeline.id); onRefresh(); } catch {} });
     setConfirmDelete(false);
   }
 
   return (
-    <div className="border-b border-gray-100 last:border-b-0">
+    <>
       <div className="flex items-center gap-0 py-5 px-5">
-        {/* Left: pipeline name + link */}
+        {/* Left: drag handle + pipeline name */}
         <div className="w-44 shrink-0">
           <div className="flex items-center gap-1.5">
-            <GripVertical size={13} className="text-gray-300 shrink-0" />
+            <button
+              type="button"
+              className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 transition-colors shrink-0"
+              {...dragHandleListeners}
+              {...dragHandleAttributes}
+            >
+              <GripVertical size={13} />
+            </button>
             {renaming ? (
               <div className="flex items-center gap-1 flex-1 min-w-0">
-                <input
-                  ref={renameRef}
-                  value={pName}
-                  onChange={(e) => setPName(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") handleRename(); if (e.key === "Escape") { setPName(pipeline.name); setRenaming(false); } }}
-                  className="flex-1 min-w-0 text-sm font-semibold px-1.5 py-0.5 rounded border border-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-400"
-                />
+                <input ref={renameRef} value={pName} onChange={(e) => setPName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") handleRename(); if (e.key === "Escape") { setPName(pipeline.name); setRenaming(false); } }} className="flex-1 min-w-0 text-sm font-semibold px-1.5 py-0.5 rounded border border-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-400" />
                 <button type="button" onClick={handleRename} className="p-0.5 text-green-600 hover:bg-green-50 rounded"><Check size={12} /></button>
                 <button type="button" onClick={() => { setPName(pipeline.name); setRenaming(false); }} className="p-0.5 text-gray-400 hover:bg-gray-100 rounded"><X size={12} /></button>
               </div>
@@ -405,9 +361,7 @@ function PipelineRow({
             {!renaming && (
               <div className="flex items-center gap-0.5 ml-0.5 shrink-0">
                 <button type="button" onClick={() => setRenaming(true)} className="p-0.5 text-gray-300 hover:text-gray-600 rounded transition-colors" title="Переименовать"><Pencil size={11} /></button>
-                {totalDeals === 0 && (
-                  <button type="button" onClick={() => setConfirmDelete(true)} className="p-0.5 text-gray-300 hover:text-red-500 rounded transition-colors" title="Удалить"><X size={12} /></button>
-                )}
+                {totalDeals === 0 && (<button type="button" onClick={() => setConfirmDelete(true)} className="p-0.5 text-gray-300 hover:text-red-500 rounded transition-colors" title="Удалить"><X size={12} /></button>)}
               </div>
             )}
           </div>
@@ -416,58 +370,25 @@ function PipelineRow({
           </button>
         </div>
 
-        {/* Center: stages — single row with 5px gap */}
+        {/* Center: stages */}
         <div className="flex-1 min-w-0 overflow-hidden">
           <div className="flex items-center min-w-0" style={{ gap: 5 }}>
-            {/* Work stages — draggable */}
             <div className="flex-1 min-w-0 overflow-x-auto">
               <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                 <SortableContext items={workStages.map((s) => s.id)} strategy={horizontalListSortingStrategy}>
                   <div className="flex items-center" style={{ gap: 5 }}>
-                    {workStages.map((s) => (
-                      <div key={s.id} data-stage-id={s.id} className="shrink min-w-0">
-                        <StagePill stage={s} onEdit={handleEditStage} isDraggable />
-                      </div>
-                    ))}
-                    <button
-                      type="button"
-                      onClick={handleAddStageClick}
-                      className="inline-flex items-center justify-center w-7 h-7 rounded-lg border-2 border-dashed border-gray-200 text-gray-400 hover:border-brand-400 hover:text-brand-500 hover:bg-brand-50/40 transition-all shrink-0"
-                      title="Добавить стадию"
-                    >
-                      <Plus size={14} />
-                    </button>
+                    {workStages.map((s) => (<div key={s.id} data-stage-id={s.id} className="shrink min-w-0"><StagePill stage={s} onEdit={handleEditStage} isDraggable /></div>))}
+                    <button type="button" onClick={handleAddStageClick} className="inline-flex items-center justify-center w-7 h-7 rounded-lg border-2 border-dashed border-gray-200 text-gray-400 hover:border-brand-400 hover:text-brand-500 hover:bg-brand-50/40 transition-all shrink-0" title="Добавить стадию"><Plus size={14} /></button>
                   </div>
                 </SortableContext>
               </DndContext>
             </div>
-
-            {/* Won stages */}
-            {wonStages.length > 0 && (
-              <div className="flex items-center shrink-0 ml-2 pl-2 border-l-2 border-green-200" style={{ gap: 5 }}>
-                {wonStages.map((s) => (
-                  <div key={s.id} data-stage-id={s.id}>
-                    <StagePill stage={s} onEdit={handleEditStage} systemIcon="won" />
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Lose stages */}
-            {loseStages.length > 0 && (
-              <div className="flex items-center shrink-0 ml-2 pl-2 border-l-2 border-red-200" style={{ gap: 5 }}>
-                {loseStages.map((s) => (
-                  <div key={s.id} data-stage-id={s.id}>
-                    <StagePill stage={s} onEdit={handleEditStage} systemIcon="lose" />
-                  </div>
-                ))}
-              </div>
-            )}
+            {wonStages.length > 0 && (<div className="flex items-center shrink-0 ml-2 pl-2 border-l-2 border-green-200" style={{ gap: 5 }}>{wonStages.map((s) => (<div key={s.id} data-stage-id={s.id}><StagePill stage={s} onEdit={handleEditStage} systemIcon="won" /></div>))}</div>)}
+            {loseStages.length > 0 && (<div className="flex items-center shrink-0 ml-2 pl-2 border-l-2 border-red-200" style={{ gap: 5 }}>{loseStages.map((s) => (<div key={s.id} data-stage-id={s.id}><StagePill stage={s} onEdit={handleEditStage} systemIcon="lose" /></div>))}</div>)}
           </div>
         </div>
       </div>
 
-      {/* Delete confirm */}
       {confirmDelete && (
         <div className="flex items-center justify-between gap-3 mx-5 mb-4 px-4 py-3 bg-red-50 rounded-xl border border-red-100">
           <span className="text-sm text-red-700">Удалить воронку &laquo;{pipeline.name}&raquo;?</span>
@@ -478,38 +399,19 @@ function PipelineRow({
         </div>
       )}
 
-      {/* Stage edit popover */}
       {editingStage && editAnchor && typeof document !== "undefined" && (
-        <StageEditPopover
-          stage={editingStage}
-          anchorRect={editAnchor}
-          onSave={handleStageUpdate}
-          onDelete={handleStageDelete}
-          onClose={() => { setEditingStage(null); setEditAnchor(null); }}
-          isPending={isPending}
-        />
+        <StageEditPopover stage={editingStage} anchorRect={editAnchor} onSave={handleStageUpdate} onDelete={handleStageDelete} onClose={() => { setEditingStage(null); setEditAnchor(null); }} isPending={isPending} />
       )}
-
-      {/* Add stage popover */}
       {addAnchor && typeof document !== "undefined" && (
-        <AddStagePopover
-          anchorRect={addAnchor}
-          onAdd={handleAddStage}
-          onClose={() => setAddAnchor(null)}
-          isPending={isPending}
-        />
+        <AddStagePopover anchorRect={addAnchor} onAdd={handleAddStage} onClose={() => setAddAnchor(null)} isPending={isPending} />
       )}
-    </div>
+    </>
   );
 }
 
 /* ─── Main ────────────────────────────────────────────────────────────────── */
 
-export default function PipelineSettingsClient({
-  initialPipelines,
-}: {
-  initialPipelines: SettingsPipeline[];
-}) {
+export default function PipelineSettingsClient({ initialPipelines }: { initialPipelines: SettingsPipeline[] }) {
   const [pipelines, setPipelines] = useState(initialPipelines);
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
@@ -520,6 +422,21 @@ export default function PipelineSettingsClient({
 
   const refresh = useCallback(() => { window.location.reload(); }, []);
 
+  const pipelineSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
+
+  function handlePipelineDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIdx = pipelines.findIndex((p) => p.id === active.id);
+    const newIdx = pipelines.findIndex((p) => p.id === over.id);
+    if (oldIdx === -1 || newIdx === -1) return;
+    const reordered = arrayMove(pipelines, oldIdx, newIdx);
+    setPipelines(reordered);
+    startTransition(() => {
+      reorderPipelines(reordered.map((p) => p.id)).catch(() => setPipelines(initialPipelines));
+    });
+  }
+
   function handleCreate() {
     const n = newName.trim();
     if (!n) return;
@@ -529,7 +446,7 @@ export default function PipelineSettingsClient({
         setPipelines((prev) => [...prev, created]);
         setNewName("");
         setCreating(false);
-      } catch { /* error */ }
+      } catch {}
     });
   }
 
@@ -561,11 +478,15 @@ export default function PipelineSettingsClient({
       )}
 
       {pipelines.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-          {pipelines.map((p) => (
-            <PipelineRow key={p.id} pipeline={p} onRefresh={refresh} />
-          ))}
-        </div>
+        <DndContext sensors={pipelineSensors} collisionDetection={closestCenter} onDragEnd={handlePipelineDragEnd}>
+          <SortableContext items={pipelines.map((p) => p.id)} strategy={verticalListSortingStrategy}>
+            <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+              {pipelines.map((p) => (
+                <SortablePipelineRow key={p.id} pipeline={p} onRefresh={refresh} />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
       )}
     </div>
   );

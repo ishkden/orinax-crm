@@ -183,3 +183,15 @@ export async function reorderPipelineStages(stageIds: string[]): Promise<void> {
     )
   );
 }
+
+export async function reorderPipelines(pipelineIds: string[]): Promise<void> {
+  const orgId = await getOrgId();
+  await Promise.all(
+    pipelineIds.map((id, index) =>
+      prisma.pipeline.updateMany({
+        where: { id, orgId },
+        data: { sortOrder: index },
+      })
+    )
+  );
+}

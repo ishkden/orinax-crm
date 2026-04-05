@@ -94,14 +94,13 @@ function StagePill({
   return (
     <button
       ref={setNodeRef}
-      style={style}
       type="button"
       onClick={() => onEdit(stage)}
       className={cn(
-        "inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium whitespace-nowrap transition-all shrink",
-        "hover:shadow-md hover:brightness-110 cursor-pointer select-none min-w-0",
-        isDragging && "shadow-xl"
+        "flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium w-full cursor-pointer select-none",
+        isDragging && "shadow-xl ring-2 ring-brand-400"
       )}
+      style={{ ...style, minWidth: 0, overflow: "hidden" }}
       title={`${stage.name}${stage._count.deals > 0 ? ` (${stage._count.deals} сделок)` : ""}`}
       {...(isDraggable ? { ...listeners, ...attributes } : {})}
     >
@@ -370,23 +369,17 @@ function PipelineRowInner({
           </button>
         </div>
 
-        {/* Center: stages */}
-        <div className="flex-1 min-w-0 overflow-hidden">
-          <div className="flex items-center min-w-0" style={{ gap: 5 }}>
-            <div className="flex-1 min-w-0 overflow-x-auto">
-              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                <SortableContext items={workStages.map((s) => s.id)} strategy={horizontalListSortingStrategy}>
-                  <div className="flex items-center" style={{ gap: 5 }}>
-                    {workStages.map((s) => (<div key={s.id} data-stage-id={s.id} className="shrink min-w-0"><StagePill stage={s} onEdit={handleEditStage} isDraggable /></div>))}
-                    <button type="button" onClick={handleAddStageClick} className="inline-flex items-center justify-center w-7 h-7 rounded-lg border-2 border-dashed border-gray-200 text-gray-400 hover:border-brand-400 hover:text-brand-500 hover:bg-brand-50/40 transition-all shrink-0" title="Добавить стадию"><Plus size={14} /></button>
-                  </div>
-                </SortableContext>
-              </DndContext>
+        {/* Center: stages — single flat flex row */}
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={workStages.map((s) => s.id)} strategy={horizontalListSortingStrategy}>
+            <div className="flex-1 flex items-center min-w-0" style={{ gap: 5 }}>
+              {workStages.map((s) => (<div key={s.id} data-stage-id={s.id} style={{ flex: "1 1 0%", minWidth: 0, overflow: "hidden" }}><StagePill stage={s} onEdit={handleEditStage} isDraggable /></div>))}
+              <button type="button" onClick={handleAddStageClick} className="inline-flex items-center justify-center shrink-0" style={{ width: 28, height: 28, borderRadius: 8, border: "2px dashed #e5e7eb" }} title="Добавить стадию"><Plus size={14} className="text-gray-400" /></button>
+              {wonStages.length > 0 && (<div className="flex items-center shrink-0 pl-2 border-l-2 border-green-200" style={{ gap: 5 }}>{wonStages.map((s) => (<div key={s.id} data-stage-id={s.id}><StagePill stage={s} onEdit={handleEditStage} systemIcon="won" /></div>))}</div>)}
+              {loseStages.length > 0 && (<div className="flex items-center shrink-0 pl-2 border-l-2 border-red-200" style={{ gap: 5 }}>{loseStages.map((s) => (<div key={s.id} data-stage-id={s.id}><StagePill stage={s} onEdit={handleEditStage} systemIcon="lose" /></div>))}</div>)}
             </div>
-            {wonStages.length > 0 && (<div className="flex items-center shrink-0 ml-2 pl-2 border-l-2 border-green-200" style={{ gap: 5 }}>{wonStages.map((s) => (<div key={s.id} data-stage-id={s.id}><StagePill stage={s} onEdit={handleEditStage} systemIcon="won" /></div>))}</div>)}
-            {loseStages.length > 0 && (<div className="flex items-center shrink-0 ml-2 pl-2 border-l-2 border-red-200" style={{ gap: 5 }}>{loseStages.map((s) => (<div key={s.id} data-stage-id={s.id}><StagePill stage={s} onEdit={handleEditStage} systemIcon="lose" /></div>))}</div>)}
-          </div>
-        </div>
+          </SortableContext>
+        </DndContext>
       </div>
 
       {confirmDelete && (

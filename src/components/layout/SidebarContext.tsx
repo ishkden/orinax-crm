@@ -4,13 +4,21 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
   useState,
   type ReactNode,
 } from "react";
 
 const STORAGE_KEY = "orinax-sidebar-collapsed";
+
+function readCollapsed(): boolean {
+  try {
+    return typeof window !== "undefined" &&
+      localStorage.getItem(STORAGE_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
 
 type SidebarContextValue = {
   collapsed: boolean;
@@ -25,15 +33,7 @@ const EXPANDED_PX = 240;
 const COLLAPSED_PX = 64;
 
 export function SidebarProvider({ children }: { children: ReactNode }) {
-  const [collapsed, setCollapsed] = useState(false);
-
-  useEffect(() => {
-    try {
-      if (localStorage.getItem(STORAGE_KEY) === "1") setCollapsed(true);
-    } catch {
-      // ignore
-    }
-  }, []);
+  const [collapsed, setCollapsed] = useState(readCollapsed);
 
   const toggleSidebar = useCallback(() => {
     setCollapsed((c) => {

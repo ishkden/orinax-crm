@@ -184,7 +184,6 @@ export default function KanbanBoard({
   const cardsHeight = `calc(100% - ${headerHeight}px)`;
 
   const rowStyle = {
-    gap: ks.board.columnGap,
     paddingLeft: ks.board.paddingX,
     paddingRight: ks.board.paddingX,
   };
@@ -202,7 +201,7 @@ export default function KanbanBoard({
       <div
         ref={headerRowRef}
         className="flex bg-[#f9f9f9]"
-        style={{ ...rowStyle, paddingTop: ks.board.paddingTop }}
+        style={{ ...rowStyle, paddingTop: ks.board.paddingTop, gap: ks.board.columnGap }}
       >
         {stages.map((stage) => {
           const pagination = stagePagination?.[stage.id];
@@ -251,6 +250,17 @@ export default function KanbanBoard({
             height: cardsHeight,
           }}
         >
+          <div
+            style={{
+              display: "flex",
+              flex: "1 0 auto",
+              alignItems: "stretch",
+              gap: ks.board.columnGap,
+              backgroundColor: ks.column.backgroundColor,
+              borderRadius: ks.column.borderRadius,
+              opacity: ks.column.backgroundOpacity / 100,
+            }}
+          >
           {stages.map((stage) => {
             const pagination = stagePagination?.[stage.id];
             const stageDeals = deals.filter((d) => d.stage === stage.id);
@@ -269,6 +279,7 @@ export default function KanbanBoard({
               />
             );
           })}
+          </div>
         </div>
 
         <DragOverlay>

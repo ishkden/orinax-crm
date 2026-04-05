@@ -69,7 +69,9 @@ export default function KanbanColumnHeader({
   );
 
   const titleRef = useRef<HTMLHeadingElement>(null);
+  const badgeRef = useRef<HTMLSpanElement>(null);
   const [isTruncated, setIsTruncated] = useState(false);
+  const [titlePadLeft, setTitlePadLeft] = useState(24);
   const headerRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const [panelPos, setPanelPos] = useState<{ top: number; left: number } | null>(null);
@@ -162,6 +164,17 @@ export default function KanbanColumnHeader({
     return () => ro.disconnect();
   }, []);
 
+  useEffect(() => {
+    const el = badgeRef.current;
+    if (!el) return;
+    const gap = s.columnHeader.countBadgeGap;
+    const update = () => setTitlePadLeft(Math.max(24, el.offsetLeft + el.offsetWidth + gap));
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [s.columnHeader.countBadgeGap]);
+
   const formatStageTotal = useCallback(
     (n: number) => formatCurrency(n, currencyForTotal),
     [currencyForTotal]
@@ -206,9 +219,12 @@ export default function KanbanColumnHeader({
         {!editing && (
           <>
             <span
-              className="shrink-0 font-medium tabular-nums rounded-full"
+              ref={badgeRef}
+              className="absolute font-medium tabular-nums rounded-full"
               style={{
-                marginLeft: `${s.columnHeader.countBadgeLeft}px`,
+                left: `${s.columnHeader.countBadgeLeft}px`,
+                top: "50%",
+                transform: "translateY(-50%)",
                 fontSize: s.columnHeader.countBadgeFontSize,
                 padding: `${s.columnHeader.countBadgePaddingY}px ${s.columnHeader.countBadgePaddingX}px`,
                 backgroundColor:
@@ -220,8 +236,8 @@ export default function KanbanColumnHeader({
             </span>
             <h3
               ref={titleRef}
-              className="flex-1 min-w-0 text-center truncate leading-tight"
-              style={{ fontSize: s.columnHeader.fontSize, fontWeight: s.columnHeader.fontWeight, marginLeft: `${s.columnHeader.countBadgeGap}px`, paddingRight: 24 }}
+              className="w-full text-center truncate leading-tight"
+              style={{ fontSize: s.columnHeader.fontSize, fontWeight: s.columnHeader.fontWeight, paddingLeft: titlePadLeft, paddingRight: 24 }}
               title={isTruncated ? stage.label : undefined}
             >
               {stage.label}

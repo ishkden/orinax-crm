@@ -263,7 +263,7 @@ function SortablePipelineRow({ pipeline, onRefresh }: { pipeline: SettingsPipeli
   };
 
   return (
-    <div ref={setNodeRef} style={style} className={cn("border-b border-gray-100 last:border-b-0", isDragging && "shadow-lg bg-white rounded-lg")}>
+    <div ref={setNodeRef} style={style} className={cn("bg-white rounded-xl border border-gray-100 shadow-sm", isDragging && "shadow-lg ring-2 ring-brand-200")}>
       <PipelineRowInner pipeline={pipeline} onRefresh={onRefresh} dragHandleListeners={listeners} dragHandleAttributes={attributes} />
     </div>
   );
@@ -353,7 +353,7 @@ function PipelineRowInner({
 
   return (
     <>
-      <div className="flex items-center gap-0 py-5 px-5">
+      <div className="flex items-center gap-0 py-5 px-6">
         {/* Left: drag handle + pipeline name */}
         <div className="w-44 shrink-0">
           <div className="flex items-center gap-1.5">
@@ -511,7 +511,7 @@ export default function PipelineSettingsClient({ initialPipelines }: { initialPi
       {pipelines.length > 0 && (
         <DndContext sensors={pipelineSensors} collisionDetection={closestCenter} onDragEnd={handlePipelineDragEnd}>
           <SortableContext items={pipelines.map((p) => p.id)} strategy={verticalListSortingStrategy}>
-            <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+            <div className="space-y-3">
               {pipelines.map((p) => (
                 <SortablePipelineRow key={p.id} pipeline={p} onRefresh={refresh} />
               ))}

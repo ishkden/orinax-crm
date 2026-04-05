@@ -69,6 +69,14 @@ export interface KanbanStyles {
     marginTop: number;
     show: boolean;
   };
+  cardCreatedAt: {
+    show: boolean;
+    fontSize: number;
+    fontWeight: number;
+    textColor: string;
+    marginTop: number;
+    textAlign: "left" | "center" | "right";
+  };
   cardFooter: {
     borderColor: string;
     paddingTop: number;
@@ -180,6 +188,14 @@ export const defaultKanbanStyles: KanbanStyles = {
     hoverTextColor: "#4338CA",
     marginTop: 6,
     show: true,
+  },
+  cardCreatedAt: {
+    show: true,
+    fontSize: 10,
+    fontWeight: 400,
+    textColor: "#9CA3AF",
+    marginTop: 4,
+    textAlign: "left",
   },
   cardFooter: {
     borderColor: "#F3F4F6",

@@ -189,6 +189,23 @@ const sections: {
     ],
   },
   {
+    key: "cardCreatedAt",
+    label: "Дата создания сделки",
+    icon: Calendar,
+    fields: [
+      { key: "show", label: "Показывать", type: "toggle" },
+      { key: "fontSize", label: "Размер текста", type: "number", min: 8, max: 18, step: 1, unit: "px" },
+      { key: "fontWeight", label: "Жирность шрифта", type: "select", options: fontWeightOptions },
+      { key: "textColor", label: "Цвет текста", type: "color" },
+      { key: "marginTop", label: "Отступ сверху", type: "number", min: 0, max: 20, step: 1, unit: "px" },
+      { key: "textAlign", label: "Выравнивание", type: "select", options: [
+        { value: "left", label: "По левому краю" },
+        { value: "center", label: "По центру" },
+        { value: "right", label: "По правому краю" },
+      ]},
+    ],
+  },
+  {
     key: "cardFooter",
     label: "Подвал карточки",
     icon: Footprints,

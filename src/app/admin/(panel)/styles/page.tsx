@@ -140,7 +140,7 @@ const sections: {
     label: "Карточка сделки",
     icon: CreditCard,
     fields: [
-      { key: "width", label: "Ширина карточки (0 = авто)", type: "number", min: 0, max: 400, step: 4, unit: "px" },
+      { key: "width", label: "Ширина карточки (0 = на всю ширину)", type: "number", min: 0, max: 400, step: 4, unit: "px" },
       { key: "minHeight", label: "Мин. высота", type: "number", min: 80, max: 400, step: 4, unit: "px" },
       { key: "borderRadius", label: "Скругление углов", type: "number", min: 0, max: 24, step: 1, unit: "px" },
       { key: "backgroundColor", label: "Фон карточки", type: "color" },

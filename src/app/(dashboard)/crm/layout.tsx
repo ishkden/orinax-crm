@@ -16,10 +16,8 @@ export default function CrmLayout({ children }: { children: React.ReactNode }) {
             <div id="crm-scroll" className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overflow-x-hidden overscroll-y-contain [scrollbar-gutter:stable]">
               <CrmHeader />
               <CrmSubNav />
-              {/* Контент длиннее окна: явный min-height + хвост, иначе flex схлопывает скролл */}
-              <div className="flex min-h-[calc(100dvh+8rem)] min-w-0 flex-col pb-16">
+              <div className="flex min-w-0 flex-col">
                 {children}
-                <div className="h-40 min-h-40 shrink-0" aria-hidden />
               </div>
             </div>
             <CrmRightBar />

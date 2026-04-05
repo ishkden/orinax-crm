@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, useLayoutEffect, useCallback, useTransition } from "react";
+import { useState, useMemo, useEffect, useCallback, useTransition } from "react";
 import DealsToolbar, { type ViewMode } from "./DealsToolbar";
 import KanbanBoard from "./KanbanBoard";
 import DealsListView from "./DealsListView";
@@ -90,19 +90,6 @@ export default function DealsClient({
     return () => setHeaderAction(null);
   }, [setHeaderAction, openCreateDeal]);
 
-  // Prevent outer page scroll in kanban mode so the board fills the viewport
-  useLayoutEffect(() => {
-    const el = document.getElementById("crm-scroll");
-    if (!el) return;
-    if (viewMode === "kanban") {
-      el.style.overflowY = "hidden";
-    } else {
-      el.style.overflowY = "";
-    }
-    return () => {
-      el.style.overflowY = "";
-    };
-  }, [viewMode]);
 
   useEffect(() => {
     if (pipelines.length > 0) {

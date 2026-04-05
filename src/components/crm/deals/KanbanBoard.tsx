@@ -11,8 +11,9 @@ import {
   type DragEndEvent,
   type DragOverEvent,
 } from "@dnd-kit/core";
-import { useMemo, useRef, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import KanbanColumn from "./KanbanColumn";
+import KanbanColumnHeader from "./KanbanColumnHeader";
 import DealCardStatic from "./DealCardStatic";
 import { useKanbanStyles } from "./KanbanStyleContext";
 import type { Deal, Stage } from "./types";
@@ -44,6 +45,9 @@ function buildStageTotals(stages: Stage[], source: Deal[]) {
   return map;
 }
 
+// GlobalHeader is 48px (h-12). Cards fill viewport below sticky column headers.
+const GLOBAL_HEADER_HEIGHT = 48;
+
 export default function KanbanBoard({
   stages,
   deals,
@@ -63,11 +67,26 @@ export default function KanbanBoard({
   const [totalsFrozen, setTotalsFrozen] = useState(false);
   const snapshotRef = useRef<Deal[] | null>(null);
 
+  // Measure sticky header row height to compute cards area height
+  const headerRowRef = useRef<HTMLDivElement>(null);
+  const [headerHeight, setHeaderHeight] = useState(130);
+
+  useLayoutEffect(() => {
+    const el = headerRowRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver((entries) => {
+      const h =
+        entries[0]?.borderBoxSize?.[0]?.blockSize ?? entries[0]?.contentRect?.height;
+      if (h) setHeaderHeight(h);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   );
 
-  // Totals from loaded deals — used during drag for accurate delta
   const loadedStageTotals = useMemo(() => {
     const src = totalsFrozen && snapshotRef.current ? snapshotRef.current : deals;
     return buildStageTotals(stages, src);
@@ -87,7 +106,6 @@ export default function KanbanBoard({
     if (!over) return;
     const activeDealObj = deals.find((d) => d.id === active.id);
     if (!activeDealObj) return;
-
     const overId = String(over.id);
     const isOverColumn = stages.some((s) => s.id === overId);
     if (isOverColumn && activeDealObj.stage !== overId) {
@@ -103,20 +121,16 @@ export default function KanbanBoard({
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     setActiveDeal(null);
-
     const originalStage = snapshotRef.current?.find(
       (d) => d.id === String(active.id)
     )?.stage;
-
     if (!over || !originalStage) {
       setTotalsFrozen(false);
       snapshotRef.current = null;
       return;
     }
-
     const overId = String(over.id);
     const isOverColumn = stages.some((s) => s.id === overId);
-
     let finalStage: string | null = null;
     if (isOverColumn) {
       finalStage = overId;
@@ -124,14 +138,12 @@ export default function KanbanBoard({
       const overDeal = deals.find((d) => d.id === overId);
       if (overDeal) finalStage = overDeal.stage;
     }
-
     if (finalStage) {
       onMoveDeal(String(active.id), finalStage);
       if (finalStage !== originalStage) {
         onStageCommit?.(String(active.id), finalStage, originalStage);
       }
     }
-
     setTotalsFrozen(false);
     snapshotRef.current = null;
   }
@@ -168,16 +180,61 @@ export default function KanbanBoard({
     );
   }
 
+  // When the sticky header row is at top (after page has scrolled past the nav),
+  // cards should fill exactly the remaining viewport below the sticky headers.
+  const cardsHeight = `calc(100dvh - ${GLOBAL_HEADER_HEIGHT}px - ${headerHeight}px)`;
+
+  const rowStyle = {
+    gap: ks.board.columnGap,
+    paddingLeft: ks.board.paddingX,
+    paddingRight: ks.board.paddingX,
+  };
+
   return (
-    <div
-      className="flex w-full min-w-0 flex-col overflow-hidden"
-      style={{
-        // Fill remaining viewport height:
-        // 100dvh − GlobalHeader(48px) − CrmHeader(48px) − CrmSubNav(48px) − Toolbar(56px) = 200px
-        height: "calc(100dvh - 200px)",
-        minHeight: ks.board.minHeight,
-      }}
-    >
+    /*
+     * overflow-x: auto  — single horizontal scroll context for both rows
+     * overflow-y: clip   — clips vertical overflow without becoming a scroll container,
+     *                      so position:sticky inside still sticks to #crm-scroll (page scroll)
+     */
+    <div style={{ overflowX: "auto", overflowY: "clip" }}>
+      {/* Sticky header row — sticks to the top of #crm-scroll when page is scrolled */}
+      <div
+        ref={headerRowRef}
+        className="sticky top-0 z-20 flex bg-[#f9f9f9]"
+        style={{ ...rowStyle, paddingTop: ks.board.paddingTop }}
+      >
+        {stages.map((stage) => {
+          const pagination = stagePagination?.[stage.id];
+          const stageDeals = deals.filter((d) => d.stage === stage.id);
+          const loadedMeta = loadedStageTotals.get(stage.id) ?? { total: 0, currency: "RUB" };
+          const serverMeta = serverStageTotals?.[stage.id];
+          const committedTotal = totalsFrozen
+            ? loadedMeta.total
+            : (serverMeta?.amount ?? loadedMeta.total);
+          const committedCurrency = totalsFrozen
+            ? loadedMeta.currency
+            : (serverMeta?.currency ?? loadedMeta.currency);
+
+          return (
+            <div
+              key={stage.id}
+              style={{ width: ks.column.width, minWidth: ks.column.width, flexShrink: 0 }}
+            >
+              <KanbanColumnHeader
+                stage={stage}
+                totalCount={pagination?.total ?? stageDeals.length}
+                committedStageTotal={committedTotal}
+                currencyForTotal={committedCurrency}
+                onAddDeal={onAddDeal}
+                onStageUpdate={onStageUpdate}
+                onStageDelete={onStageDelete}
+              />
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Cards row — only the scrollable card area of each column */}
       <DndContext
         sensors={sensors}
         collisionDetection={closestCorners}
@@ -186,47 +243,26 @@ export default function KanbanBoard({
         onDragEnd={handleDragEnd}
       >
         <div
-          className="flex min-h-0 min-w-0 flex-1 items-stretch overflow-x-auto overflow-y-hidden"
+          className="flex items-stretch"
           style={{
-            gap: ks.board.columnGap,
-            paddingLeft: ks.board.paddingX,
-            paddingRight: ks.board.paddingX,
-            paddingTop: ks.board.paddingTop,
+            ...rowStyle,
             paddingBottom: ks.board.paddingBottom,
+            height: cardsHeight,
           }}
         >
           {stages.map((stage) => {
             const pagination = stagePagination?.[stage.id];
             const stageDeals = deals.filter((d) => d.stage === stage.id);
-            const hasMore = pagination
-              ? stageDeals.length < pagination.total
-              : false;
-
-            // During drag: use loaded-deals totals (snapshot-based) for real-time feedback
-            // Otherwise: use server totals which include ALL deals
-            const loadedMeta = loadedStageTotals.get(stage.id) ?? { total: 0, currency: "RUB" };
-            const serverMeta = serverStageTotals?.[stage.id];
-            const committedTotal = totalsFrozen
-              ? loadedMeta.total
-              : (serverMeta?.amount ?? loadedMeta.total);
-            const committedCurrency = totalsFrozen
-              ? loadedMeta.currency
-              : (serverMeta?.currency ?? loadedMeta.currency);
+            const hasMore = pagination ? stageDeals.length < pagination.total : false;
 
             return (
               <KanbanColumn
                 key={stage.id}
                 stage={stage}
                 deals={stageDeals}
-                committedStageTotal={committedTotal}
-                currencyForTotal={committedCurrency}
-                totalCount={pagination?.total ?? stageDeals.length}
                 hasMore={hasMore}
                 isLoadingMore={pagination?.loading ?? false}
                 onLoadMore={onLoadMore ? () => onLoadMore(stage.id) : undefined}
-                onAddDeal={onAddDeal}
-                onStageUpdate={onStageUpdate}
-                onStageDelete={onStageDelete}
                 onContactClick={onContactClick}
                 onDealClick={onDealClick}
               />

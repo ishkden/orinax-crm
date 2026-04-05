@@ -32,8 +32,6 @@ interface KanbanBoardProps {
   onStageDelete?: (stageId: string) => void;
   onContactClick?: (deal: Deal) => void;
   onDealClick?: (deal: Deal) => void;
-  /** Distance from viewport top where kanban column headers stick (from navStickyHeight) */
-  stickyHeaderTop?: number;
 }
 
 function buildStageTotals(stages: Stage[], source: Deal[]) {
@@ -63,7 +61,6 @@ export default function KanbanBoard({
   onStageDelete,
   onContactClick,
   onDealClick,
-  stickyHeaderTop = 0,
 }: KanbanBoardProps) {
   const ks = useKanbanStyles();
   const [activeDeal, setActiveDeal] = useState<Deal | null>(null);
@@ -183,8 +180,8 @@ export default function KanbanBoard({
     );
   }
 
-  // Cards fill remaining viewport below: GlobalHeader + sticky nav/toolbar + sticky column headers
-  const cardsHeight = `calc(100dvh - ${GLOBAL_HEADER_HEIGHT}px - ${stickyHeaderTop}px - ${headerHeight}px)`;
+  // Cards fill remaining viewport below: GlobalHeader + sticky column headers
+  const cardsHeight = `calc(100dvh - ${GLOBAL_HEADER_HEIGHT}px - ${headerHeight}px)`;
 
   const rowStyle = {
     gap: ks.board.columnGap,
@@ -205,7 +202,7 @@ export default function KanbanBoard({
       <div
         ref={headerRowRef}
         className="sticky z-20 flex bg-[#f9f9f9]"
-        style={{ ...rowStyle, paddingTop: 0, top: stickyHeaderTop }}
+        style={{ ...rowStyle, paddingTop: 0, top: 0 }}
       >
         {stages.map((stage) => {
           const pagination = stagePagination?.[stage.id];

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, useCallback, useTransition, useRef, useLayoutEffect } from "react";
+import { useState, useMemo, useEffect, useCallback, useTransition } from "react";
 import DealsToolbar, { type ViewMode } from "./DealsToolbar";
 import KanbanBoard from "./KanbanBoard";
 import DealsListView from "./DealsListView";
@@ -9,7 +9,6 @@ import ContactDrawer from "./ContactDrawer";
 import DealRightDrawer from "./DealRightDrawer";
 import { useCrmHeaderAction } from "@/components/crm/CrmHeaderActionContext";
 import { useCrmDealPipeline } from "@/components/crm/CrmDealPipelineContext";
-import { useKanbanStyles } from "./KanbanStyleContext";
 import type { DbPipeline } from "@/app/actions/deals";
 import type { Deal, CreateDealInput, Stage, Pipeline } from "./types";
 import { updateDealStage, createDeal, deleteStage, getDealsPage } from "@/app/actions/deals";
@@ -80,39 +79,6 @@ export default function DealsClient({
   const [contactDeal, setContactDeal] = useState<Deal | null>(null);
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
   const [, startTransition] = useTransition();
-
-  // CrmHeader(48) + CrmSubNav(48) = 96px of navigation
-  const CRM_NAV_HEIGHT = 96;
-  const ks = useKanbanStyles();
-  const navStickyHeight = ks.board.navStickyHeight ?? 0;
-
-  // Toolbar becomes sticky only when navStickyHeight covers the full nav (> 96px)
-  const toolbarIsSticky = viewMode === "kanban" && navStickyHeight > CRM_NAV_HEIGHT;
-  const toolbarStickyTop = CRM_NAV_HEIGHT; // toolbar sits right below the sticky nav
-
-  // Measure toolbar height so kanban column headers can sticky just below it
-  const toolbarRef = useRef<HTMLDivElement>(null);
-  const [toolbarHeight, setToolbarHeight] = useState(58);
-
-  useLayoutEffect(() => {
-    if (!toolbarIsSticky) return;
-    const el = toolbarRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver((entries) => {
-      const h = entries[0]?.borderBoxSize?.[0]?.blockSize ?? entries[0]?.contentRect?.height;
-      if (h) setToolbarHeight(h);
-    });
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [toolbarIsSticky]);
-
-  // How far from the top the kanban column headers should stick.
-  // Clamp nav contribution to [0, CRM_NAV_HEIGHT]: negative values mean nav is pre-hidden,
-  // so no offset is needed for the nav portion.
-  const navVisibleAtTop = Math.max(0, Math.min(navStickyHeight, CRM_NAV_HEIGHT));
-  const kanbanStickyTop = toolbarIsSticky
-    ? navVisibleAtTop + toolbarHeight
-    : navVisibleAtTop;
 
   const openCreateDeal = useCallback(() => {
     setModalStage(null);
@@ -333,15 +299,7 @@ export default function DealsClient({
   return (
     <>
       <div className="flex w-full min-w-0 flex-col">
-        {/* Toolbar — sticky when navStickyHeight > 96 (nav + toolbar all stay visible) */}
-        <div
-          ref={toolbarRef}
-          className={[
-            viewMode === "kanban" ? "border-b border-gray-200 bg-white" : "",
-            toolbarIsSticky ? "sticky z-10" : "",
-          ].join(" ")}
-          style={toolbarIsSticky ? { top: toolbarStickyTop } : {}}
-        >
+        <div className={viewMode === "kanban" ? "border-b border-gray-200 bg-white" : ""}>
           <DealsToolbar
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
@@ -370,7 +328,6 @@ export default function DealsClient({
             onStageDelete={handleStageDelete}
             onContactClick={setContactDeal}
             onDealClick={setSelectedDeal}
-            stickyHeaderTop={kanbanStickyTop}
           />
         ) : (
           <div className="flex min-w-0 flex-col">

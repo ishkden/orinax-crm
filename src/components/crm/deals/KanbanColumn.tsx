@@ -59,9 +59,8 @@ export default function KanbanColumn({
           borderTopRightRadius: 0,
           borderBottomLeftRadius: s.column.borderRadius,
           borderBottomRightRadius: s.column.borderRadius,
-          backgroundColor: isOver ? s.column.dragOverBgColor : s.column.backgroundColor,
+          backgroundColor: isOver ? s.column.dragOverBgColor : "transparent",
           borderColor: isOver ? s.column.dragOverBorderColor : "transparent",
-          opacity: s.column.backgroundOpacity / 100,
         }}
       >
         <div
@@ -69,7 +68,7 @@ export default function KanbanColumn({
             setNodeRef(el);
             scrollContainerRef.current = el;
           }}
-          className={`min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-y-contain pb-2 pt-1 [-webkit-overflow-scrolling:touch] ${s.card.width === 0 ? "px-0" : "px-2"}`}
+          className={`kanban-scroll min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-y-contain pb-2 pt-1 [-webkit-overflow-scrolling:touch] ${s.card.width === 0 ? "px-0" : "px-2"}`}
         >
           <SortableContext
             items={deals.map((d) => d.id)}

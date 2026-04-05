@@ -1,5 +1,6 @@
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getCrmAccessForAnalyticsOrg } from "@/lib/analytics-org-billing";
@@ -8,6 +9,8 @@ import CrmPaywallPage from "@/components/subscription/CrmPaywallPage";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions);
+  const cookieStore = await cookies();
+  const sidebarCollapsed = cookieStore.get("orinax-sidebar-collapsed")?.value === "1";
   if (!session) redirect("/login");
 
   const orgId = (session.user as { orgId?: string | null })?.orgId;
@@ -30,7 +33,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   }
 
   return (
-    <DashboardShell orgName={orgName} userName={userName}>
+    <DashboardShell orgName={orgName} userName={userName} sidebarCollapsed={sidebarCollapsed}>
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-hidden">
         {children}
       </div>

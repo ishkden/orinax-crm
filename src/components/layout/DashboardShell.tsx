@@ -7,11 +7,12 @@ interface DashboardShellProps {
   children: React.ReactNode;
   orgName?: string;
   userName?: string;
+  sidebarCollapsed?: boolean;
 }
 
-export default function DashboardShell({ children, orgName = "Компания", userName = "" }: DashboardShellProps) {
+export default function DashboardShell({ children, orgName = "Компания", userName = "", sidebarCollapsed }: DashboardShellProps) {
   return (
-    <SidebarProvider>
+    <SidebarProvider initialCollapsed={sidebarCollapsed}>
       <div className="flex flex-col h-full min-h-0 overflow-hidden bg-surface">
         <div className="flex flex-1 min-h-0 overflow-hidden">
           <Sidebar />

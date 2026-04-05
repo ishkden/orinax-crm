@@ -21,6 +21,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useCrmDealPipeline } from "./CrmDealPipelineContext";
+import { useKanbanStyles } from "@/components/crm/deals/KanbanStyleContext";
 
 const DEFAULT_TABS = [
   { id: "deals", href: "/crm/deals", label: "Сделки", icon: "Briefcase" },
@@ -146,6 +147,8 @@ export default function CrmSubNav() {
   const pathname = usePathname();
   const [tabs, setTabs] = useState<Tab[]>(DEFAULT_TABS);
   const [mounted, setMounted] = useState(false);
+  const { layout } = useKanbanStyles();
+  const navHeight = layout.subNavHeight;
 
   useEffect(() => {
     try {
@@ -194,7 +197,7 @@ export default function CrmSubNav() {
   if (!mounted) {
     return (
       <div className="bg-white border-b border-gray-100 shrink-0">
-        <div className="flex items-stretch min-h-[48px]">
+        <div className="flex items-stretch" style={{ minHeight: navHeight }}>
           <div className="flex items-center gap-1 px-6 shrink-0">
             {DEFAULT_TABS.map((tab) => {
               const Icon = ICON_MAP[tab.icon as keyof typeof ICON_MAP];
@@ -232,7 +235,7 @@ export default function CrmSubNav() {
 
   return (
     <div className="bg-white border-b border-gray-100 shrink-0">
-      <div className="flex items-stretch min-h-[48px]">
+      <div className="flex items-stretch" style={{ minHeight: navHeight }}>
         <div className="flex items-center px-6 shrink-0">
           <DndContext
             sensors={sensors}

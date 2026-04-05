@@ -22,7 +22,7 @@ export function KanbanStyleProvider({ children }: { children: ReactNode }) {
     fetch(`/api/admin/settings?key=${KANBAN_STYLES_KEY}`)
       .then((r) => r.json())
       .then((data) => {
-        if (data && typeof data === "object" && data.board) {
+        if (data && typeof data === "object" && (data.board || data.layout)) {
           const merged = JSON.parse(
             JSON.stringify(defaultKanbanStyles)
           ) as KanbanStyles;

@@ -22,6 +22,7 @@ import {
   Eye,
   EyeOff,
   Check,
+  Rows3,
 } from "lucide-react";
 import {
   type KanbanStyles,
@@ -72,6 +73,14 @@ const sections: {
   icon: typeof LayoutGrid;
   fields: FieldDef[];
 }[] = [
+  {
+    key: "layout",
+    label: "Макет (навигация)",
+    icon: Rows3,
+    fields: [
+      { key: "subNavHeight", label: "Высота панели вкладок", type: "number", min: 28, max: 80, step: 1, unit: "px" },
+    ],
+  },
   {
     key: "board",
     label: "Доска",

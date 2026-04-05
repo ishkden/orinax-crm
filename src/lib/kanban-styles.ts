@@ -1,4 +1,7 @@
 export interface KanbanStyles {
+  layout: {
+    subNavHeight: number;
+  };
   board: {
     maxHeight: number;
     minHeight: number;
@@ -107,6 +110,9 @@ export interface KanbanStyles {
 }
 
 export const defaultKanbanStyles: KanbanStyles = {
+  layout: {
+    subNavHeight: 48,
+  },
   board: {
     maxHeight: 9999,
     minHeight: 320,

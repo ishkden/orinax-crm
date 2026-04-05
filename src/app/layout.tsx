@@ -22,10 +22,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   return (
     <html lang="ru" className={nunito.variable}>
-      <body className="font-sans antialiased">
+      <body className="font-sans antialiased h-screen overflow-hidden flex flex-col">
         <Providers session={session}>
-          <div className="relative z-50"><GlobalHeader /></div>
-          {children}
+          <div className="shrink-0 z-50"><GlobalHeader /></div>
+          <div className="flex-1 min-h-0 overflow-hidden">
+            {children}
+          </div>
         </Providers>
       </body>
     </html>

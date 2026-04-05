@@ -13,7 +13,7 @@ export default function CrmLayout({ children }: { children: React.ReactNode }) {
         {/* Ровно высота main: внешний скролл отключён, крутится только эта колонка */}
         <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           <div className="flex min-h-0 min-w-0 flex-1 flex-row overflow-hidden">
-            <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overflow-x-hidden overscroll-y-contain [scrollbar-gutter:stable]">
+            <div id="crm-scroll" className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overflow-x-hidden overscroll-y-contain [scrollbar-gutter:stable]">
               <CrmHeader />
               <CrmSubNav />
               {/* Контент длиннее окна: явный min-height + хвост, иначе flex схлопывает скролл */}

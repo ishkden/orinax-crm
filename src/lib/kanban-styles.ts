@@ -108,7 +108,7 @@ export interface KanbanStyles {
 
 export const defaultKanbanStyles: KanbanStyles = {
   board: {
-    maxHeight: 720,
+    maxHeight: 9999,
     minHeight: 320,
     columnGap: 12,
     paddingX: 24,

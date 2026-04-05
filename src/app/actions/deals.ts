@@ -188,6 +188,26 @@ export async function getInitialDealsPerStage(
   return result;
 }
 
+export async function getStageAmountTotals(
+  stageIds: string[]
+): Promise<Record<string, { amount: number; currency: string }>> {
+  const orgId = await getOrgId();
+  const rows = await prisma.deal.groupBy({
+    by: ["stageId", "currency"],
+    where: { orgId, isDeleted: false, stageId: { in: stageIds } },
+    _sum: { value: true },
+  });
+  const result: Record<string, { amount: number; currency: string }> = {};
+  for (const row of rows) {
+    if (!row.stageId) continue;
+    if (!result[row.stageId]) {
+      result[row.stageId] = { amount: 0, currency: row.currency };
+    }
+    result[row.stageId].amount += row._sum.value ?? 0;
+  }
+  return result;
+}
+
 export async function getDealsPage(
   stageId: string,
   page: number,

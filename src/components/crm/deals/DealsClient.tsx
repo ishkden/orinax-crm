@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, useCallback, useTransition } from "react";
+import { useState, useMemo, useEffect, useLayoutEffect, useCallback, useTransition } from "react";
 import DealsToolbar, { type ViewMode } from "./DealsToolbar";
 import KanbanBoard from "./KanbanBoard";
 import DealsListView from "./DealsListView";
@@ -26,6 +26,7 @@ export type StagePaginationState = Record<
 interface DealsClientProps {
   initialDealsByStage: Record<string, { items: Deal[]; total: number }>;
   initialPipelines: DbPipeline[];
+  serverStageTotals?: Record<string, { amount: number; currency: string }>;
 }
 
 function mapDbToUiPipelines(dbPipelines: DbPipeline[]): Pipeline[] {
@@ -40,7 +41,11 @@ function mapDbToUiPipelines(dbPipelines: DbPipeline[]): Pipeline[] {
   }));
 }
 
-export default function DealsClient({ initialDealsByStage, initialPipelines }: DealsClientProps) {
+export default function DealsClient({
+  initialDealsByStage,
+  initialPipelines,
+  serverStageTotals: initialServerStageTotals = {},
+}: DealsClientProps) {
   const { setHeaderAction } = useCrmHeaderAction();
   const { setPipeline } = useCrmDealPipeline();
 
@@ -57,6 +62,10 @@ export default function DealsClient({ initialDealsByStage, initialPipelines }: D
         { page: 1, total, loading: false },
       ])
     )
+  );
+
+  const [stageTotals, setStageTotals] = useState<Record<string, { amount: number; currency: string }>>(
+    initialServerStageTotals
   );
 
   const [activePipelineId, setActivePipelineId] = useState(pipelines[0]?.id ?? "");
@@ -80,6 +89,20 @@ export default function DealsClient({ initialDealsByStage, initialPipelines }: D
     setHeaderAction({ label: "Добавить сделку", onClick: openCreateDeal });
     return () => setHeaderAction(null);
   }, [setHeaderAction, openCreateDeal]);
+
+  // Prevent outer page scroll in kanban mode so the board fills the viewport
+  useLayoutEffect(() => {
+    const el = document.getElementById("crm-scroll");
+    if (!el) return;
+    if (viewMode === "kanban") {
+      el.style.overflowY = "hidden";
+    } else {
+      el.style.overflowY = "";
+    }
+    return () => {
+      el.style.overflowY = "";
+    };
+  }, [viewMode]);
 
   useEffect(() => {
     if (pipelines.length > 0) {
@@ -201,11 +224,40 @@ export default function DealsClient({ initialDealsByStage, initialPipelines }: D
 
   function handleStageCommit(dealId: string, newStage: string, previousStage: string) {
     if (newStage === previousStage) return;
+    const deal = deals.find((d) => d.id === dealId);
+    const dealValue = deal?.value ?? 0;
+    const dealCurrency = deal?.currency ?? "RUB";
+
+    // Update server totals to reflect the move
+    setStageTotals((prev) => {
+      const result = { ...prev };
+      if (result[previousStage]) {
+        result[previousStage] = { ...result[previousStage], amount: result[previousStage].amount - dealValue };
+      }
+      if (result[newStage]) {
+        result[newStage] = { ...result[newStage], amount: result[newStage].amount + dealValue };
+      } else {
+        result[newStage] = { amount: dealValue, currency: dealCurrency };
+      }
+      return result;
+    });
+
     startTransition(() => {
       updateDealStage(dealId, newStage).catch(() => {
         setDeals((prev) =>
           prev.map((d) => (d.id === dealId ? { ...d, stage: previousStage } : d))
         );
+        // Revert totals on error
+        setStageTotals((prev) => {
+          const result = { ...prev };
+          if (result[newStage]) {
+            result[newStage] = { ...result[newStage], amount: result[newStage].amount - dealValue };
+          }
+          if (result[previousStage]) {
+            result[previousStage] = { ...result[previousStage], amount: result[previousStage].amount + dealValue };
+          }
+          return result;
+        });
       });
     });
   }
@@ -236,6 +288,16 @@ export default function DealsClient({ initialDealsByStage, initialPipelines }: D
           const cur = prev[newDeal.stage];
           if (!cur) return prev;
           return { ...prev, [newDeal.stage]: { ...cur, total: cur.total + 1 } };
+        });
+        setStageTotals((prev) => {
+          const cur = prev[newDeal.stage];
+          return {
+            ...prev,
+            [newDeal.stage]: {
+              amount: (cur?.amount ?? 0) + newDeal.value,
+              currency: cur?.currency ?? newDeal.currency ?? "RUB",
+            },
+          };
         });
       }
     } catch (err) {
@@ -268,6 +330,7 @@ export default function DealsClient({ initialDealsByStage, initialPipelines }: D
             stages={activeStages}
             deals={filteredDeals}
             stagePagination={stagePagination}
+            serverStageTotals={stageTotals}
             onLoadMore={handleLoadMore}
             onMoveDeal={handleMoveDeal}
             onStageCommit={handleStageCommit}

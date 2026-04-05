@@ -22,6 +22,7 @@ interface KanbanBoardProps {
   stages: Stage[];
   deals: Deal[];
   stagePagination?: StagePaginationState;
+  serverStageTotals?: Record<string, { amount: number; currency: string }>;
   onLoadMore?: (stageId: string) => void;
   onMoveDeal: (dealId: string, newStage: string) => void;
   onStageCommit?: (dealId: string, newStage: string, previousStage: string) => void;
@@ -47,6 +48,7 @@ export default function KanbanBoard({
   stages,
   deals,
   stagePagination,
+  serverStageTotals,
   onLoadMore,
   onMoveDeal,
   onStageCommit,
@@ -65,7 +67,8 @@ export default function KanbanBoard({
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   );
 
-  const stageTotals = useMemo(() => {
+  // Totals from loaded deals — used during drag for accurate delta
+  const loadedStageTotals = useMemo(() => {
     const src = totalsFrozen && snapshotRef.current ? snapshotRef.current : deals;
     return buildStageTotals(stages, src);
   }, [stages, deals, totalsFrozen]);
@@ -169,7 +172,9 @@ export default function KanbanBoard({
     <div
       className="flex w-full min-w-0 flex-col overflow-hidden"
       style={{
-        height: `min(${ks.board.maxHeight}px, calc(100dvh - 12rem))`,
+        // Fill remaining viewport height:
+        // 100dvh − GlobalHeader(48px) − CrmHeader(48px) − CrmSubNav(48px) − Toolbar(56px) = 200px
+        height: "calc(100dvh - 200px)",
         minHeight: ks.board.minHeight,
       }}
     >
@@ -191,19 +196,30 @@ export default function KanbanBoard({
           }}
         >
           {stages.map((stage) => {
-            const meta = stageTotals.get(stage.id) ?? { total: 0, currency: "RUB" };
             const pagination = stagePagination?.[stage.id];
             const stageDeals = deals.filter((d) => d.stage === stage.id);
             const hasMore = pagination
               ? stageDeals.length < pagination.total
               : false;
+
+            // During drag: use loaded-deals totals (snapshot-based) for real-time feedback
+            // Otherwise: use server totals which include ALL deals
+            const loadedMeta = loadedStageTotals.get(stage.id) ?? { total: 0, currency: "RUB" };
+            const serverMeta = serverStageTotals?.[stage.id];
+            const committedTotal = totalsFrozen
+              ? loadedMeta.total
+              : (serverMeta?.amount ?? loadedMeta.total);
+            const committedCurrency = totalsFrozen
+              ? loadedMeta.currency
+              : (serverMeta?.currency ?? loadedMeta.currency);
+
             return (
               <KanbanColumn
                 key={stage.id}
                 stage={stage}
                 deals={stageDeals}
-                committedStageTotal={meta.total}
-                currencyForTotal={meta.currency}
+                committedStageTotal={committedTotal}
+                currencyForTotal={committedCurrency}
                 totalCount={pagination?.total ?? stageDeals.length}
                 hasMore={hasMore}
                 isLoadingMore={pagination?.loading ?? false}

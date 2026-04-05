@@ -9,12 +9,14 @@ import {
   useTransition,
 } from "react";
 import { createPortal } from "react-dom";
-import { Plus, Pencil, Check, X, Trash2 } from "lucide-react";
+import { Plus, Pencil, Check, X, Trash2, GripVertical } from "lucide-react";
 import { HexColorPicker } from "react-colorful";
 import { cn, formatCurrency, contrastTextOnHex } from "@/lib/utils";
 import AnimatedCounter from "@/components/ui/AnimatedCounter";
 import { useKanbanStyles } from "./KanbanStyleContext";
 import type { Stage } from "./types";
+import type { DraggableAttributes } from "@dnd-kit/core";
+import type { SyntheticListenerMap } from "@dnd-kit/core/dist/hooks/utilities";
 
 interface KanbanColumnHeaderProps {
   stage: Stage;
@@ -24,6 +26,10 @@ interface KanbanColumnHeaderProps {
   onAddDeal?: (stageId: string) => void;
   onStageUpdate?: (stageId: string, updates: { label?: string; color?: string }) => void;
   onStageDelete?: (stageId: string) => void;
+  onAddStageAfter?: (afterStageId: string) => void;
+  dragHandleListeners?: SyntheticListenerMap;
+  dragHandleAttributes?: DraggableAttributes;
+  isDragging?: boolean;
 }
 
 export default function KanbanColumnHeader({
@@ -34,6 +40,10 @@ export default function KanbanColumnHeader({
   onAddDeal,
   onStageUpdate,
   onStageDelete,
+  onAddStageAfter,
+  dragHandleListeners,
+  dragHandleAttributes,
+  isDragging,
 }: KanbanColumnHeaderProps) {
   const s = useKanbanStyles();
 
@@ -150,19 +160,39 @@ export default function KanbanColumnHeader({
       {/* Colored stage name bar */}
       <div
         ref={headerRef}
-        className="relative flex items-center justify-center"
+        className="group relative flex items-center justify-center"
         style={{
           backgroundColor: headerBg,
           color: headerFg,
           minHeight: s.columnHeader.minHeight,
           padding: `${s.columnHeader.paddingY}px ${s.columnHeader.paddingX}px`,
+          cursor: isDragging ? "grabbing" : undefined,
         }}
       >
+        {/* Drag handle — leftmost, always present but subtle */}
+        <button
+          type="button"
+          className={cn(
+            "absolute left-0 top-0 h-full px-1 flex items-center justify-center",
+            "opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity",
+            "cursor-grab active:cursor-grabbing"
+          )}
+          style={{ color: headerFg }}
+          title="Перетащить стадию"
+          {...dragHandleListeners}
+          {...dragHandleAttributes}
+        >
+          <GripVertical size={12} />
+        </button>
+
         {!editing && (
           <>
             <span
-              className="absolute left-1.5 top-1/2 -translate-y-1/2 font-medium tabular-nums rounded-full"
+              className="absolute font-medium tabular-nums rounded-full"
               style={{
+                left: "1.75rem",
+                top: "50%",
+                transform: "translateY(-50%)",
                 fontSize: s.columnHeader.countBadgeFontSize,
                 padding: `${s.columnHeader.countBadgePaddingY}px ${s.columnHeader.countBadgePaddingX}px`,
                 backgroundColor:
@@ -173,11 +203,27 @@ export default function KanbanColumnHeader({
               {totalCount}
             </span>
             <h3
-              className="text-center truncate max-w-[70%] px-1 leading-tight"
+              className="text-center truncate max-w-[60%] px-1 leading-tight"
               style={{ fontSize: s.columnHeader.fontSize, fontWeight: s.columnHeader.fontWeight }}
             >
               {stage.label}
             </h3>
+
+            {/* Add stage after — appears on hover, left of pencil */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onAddStageAfter?.(stage.id);
+              }}
+              className="absolute right-6 top-1/2 -translate-y-1/2 p-1 rounded-md opacity-0 group-hover:opacity-100 hover:bg-black/10 transition-all"
+              style={{ color: headerFg }}
+              title="Добавить стадию после"
+            >
+              <Plus size={11} />
+            </button>
+
+            {/* Edit stage */}
             <button
               type="button"
               onClick={(e) => {
@@ -185,6 +231,7 @@ export default function KanbanColumnHeader({
                 setEditing(true);
               }}
               className="absolute right-1 top-1/2 -translate-y-1/2 p-1 rounded-md hover:bg-black/10 transition-colors"
+              style={{ color: headerFg }}
               title="Редактировать название и цвет"
             >
               <Pencil size={11} />

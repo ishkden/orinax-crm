@@ -11,7 +11,14 @@ import { useCrmHeaderAction } from "@/components/crm/CrmHeaderActionContext";
 import { useCrmDealPipeline } from "@/components/crm/CrmDealPipelineContext";
 import type { DbPipeline } from "@/app/actions/deals";
 import type { Deal, CreateDealInput, Stage, Pipeline } from "./types";
-import { updateDealStage, createDeal, deleteStage, getDealsPage } from "@/app/actions/deals";
+import {
+  updateDealStage,
+  createDeal,
+  deleteStage,
+  getDealsPage,
+  reorderStages,
+  createStage,
+} from "@/app/actions/deals";
 
 const STAGE_OVERRIDES_KEY = "crm-kanban-stage-overrides";
 const DEFAULT_STAGE_COLOR = "#6B7280";
@@ -76,6 +83,8 @@ export default function DealsClient({
   const [modalOpen, setModalOpen] = useState(false);
   const [modalStage, setModalStage] = useState<string | null>(null);
   const [stageOverrides, setStageOverrides] = useState<StageOverrides>({});
+  // Local stage order overrides per pipeline (for optimistic reorder)
+  const [stageOrderMap, setStageOrderMap] = useState<Record<string, string[]>>({});
   const [contactDeal, setContactDeal] = useState<Deal | null>(null);
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
   const [, startTransition] = useTransition();
@@ -111,15 +120,18 @@ export default function DealsClient({
     const p = pipelines.find((x) => x.id === activePipelineId) ?? pipelines[0];
     if (!p) return { id: "", label: "", stages: [] };
     const ov = stageOverrides[p.id] ?? {};
-    return {
-      ...p,
-      stages: p.stages.map((s) => ({
-        ...s,
-        label: ov[s.id]?.label ?? s.label,
-        color: ov[s.id]?.color ?? s.color,
-      })),
-    };
-  }, [pipelines, activePipelineId, stageOverrides]);
+    const localOrder = stageOrderMap[p.id];
+    let stages = p.stages.map((s) => ({
+      ...s,
+      label: ov[s.id]?.label ?? s.label,
+      color: ov[s.id]?.color ?? s.color,
+    }));
+    if (localOrder) {
+      const stageById = Object.fromEntries(stages.map((s) => [s.id, s]));
+      stages = localOrder.map((id) => stageById[id]).filter(Boolean) as Stage[];
+    }
+    return { ...p, stages };
+  }, [pipelines, activePipelineId, stageOverrides, stageOrderMap]);
 
   const assignees = useMemo(() => {
     const seen = new Set<string>();
@@ -215,7 +227,6 @@ export default function DealsClient({
     const dealValue = deal?.value ?? 0;
     const dealCurrency = deal?.currency ?? "RUB";
 
-    // Update server totals to reflect the move
     setStageTotals((prev) => {
       const result = { ...prev };
       if (result[previousStage]) {
@@ -234,7 +245,6 @@ export default function DealsClient({
         setDeals((prev) =>
           prev.map((d) => (d.id === dealId ? { ...d, stage: previousStage } : d))
         );
-        // Revert totals on error
         setStageTotals((prev) => {
           const result = { ...prev };
           if (result[newStage]) {
@@ -256,6 +266,32 @@ export default function DealsClient({
         window.location.reload();
       } catch (err) {
         console.error("Failed to delete stage:", err);
+      }
+    });
+  }
+
+  function handleStageReorder(newStageIds: string[]) {
+    const previousOrder = stageOrderMap[activePipelineId] ??
+      (pipelines.find((p) => p.id === activePipelineId)?.stages.map((s) => s.id) ?? []);
+    setStageOrderMap((prev) => ({ ...prev, [activePipelineId]: newStageIds }));
+    startTransition(() => {
+      reorderStages(newStageIds).catch(() => {
+        setStageOrderMap((prev) => ({ ...prev, [activePipelineId]: previousOrder }));
+      });
+    });
+  }
+
+  function handleAddStageAfter(afterStageId: string) {
+    const pipeline = initialPipelines.find((p) => p.id === activePipelineId);
+    if (!pipeline) return;
+    const afterStage = pipeline.stages.find((s) => s.id === afterStageId);
+    if (!afterStage) return;
+    startTransition(async () => {
+      try {
+        await createStage(pipeline.id, afterStage.sortOrder, "Новая стадия", DEFAULT_STAGE_COLOR);
+        window.location.reload();
+      } catch (err) {
+        console.error("Failed to create stage:", err);
       }
     });
   }
@@ -315,9 +351,6 @@ export default function DealsClient({
         </div>
 
         {viewMode === "kanban" ? (
-          // sticky wrapper — стикается к верху #crm-scroll когда верхний блок уходит вверх.
-          // КанбанБорд внутри заполняет 100dvh минус GlobalHeader (48px).
-          // position:sticky здесь (снаружи overflow-x:auto) работает корректно.
           <div className="sticky z-10" style={{ top: 0, height: "calc(100dvh - 48px)" }}>
             <KanbanBoard
               stages={activeStages}
@@ -330,6 +363,8 @@ export default function DealsClient({
               onAddDeal={handleAddDeal}
               onStageUpdate={handleStageUpdate}
               onStageDelete={handleStageDelete}
+              onStageReorder={handleStageReorder}
+              onAddStageAfter={handleAddStageAfter}
               onContactClick={setContactDeal}
               onDealClick={setSelectedDeal}
             />

@@ -560,3 +560,34 @@ export async function getDealById(serialNumber: number): Promise<FullDeal | null
     })),
   };
 }
+
+// ─── Stage Reorder + Create ───────────────────────────────────────────────────
+
+export async function reorderStages(stageIds: string[]): Promise<void> {
+  const orgId = await getOrgId();
+  await Promise.all(
+    stageIds.map((id, index) =>
+      prisma.stage.updateMany({
+        where: { id, orgId },
+        data: { sortOrder: index },
+      })
+    )
+  );
+}
+
+export async function createStage(
+  pipelineId: string,
+  afterSortOrder: number,
+  name: string,
+  color: string
+): Promise<DbStage> {
+  const orgId = await getOrgId();
+  await prisma.stage.updateMany({
+    where: { pipelineId, orgId, sortOrder: { gt: afterSortOrder } },
+    data: { sortOrder: { increment: 1 } },
+  });
+  const stage = await prisma.stage.create({
+    data: { orgId, pipelineId, name, color, sortOrder: afterSortOrder + 1 },
+  });
+  return { id: stage.id, name: stage.name, color: stage.color, sortOrder: stage.sortOrder };
+}

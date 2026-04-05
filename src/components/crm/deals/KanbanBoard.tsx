@@ -11,6 +11,13 @@ import {
   type DragEndEvent,
   type DragOverEvent,
 } from "@dnd-kit/core";
+import {
+  SortableContext,
+  horizontalListSortingStrategy,
+  useSortable,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import KanbanColumn from "./KanbanColumn";
 import KanbanColumnHeader from "./KanbanColumnHeader";
@@ -30,6 +37,8 @@ interface KanbanBoardProps {
   onAddDeal?: (stageId: string) => void;
   onStageUpdate?: (stageId: string, updates: { label?: string; color?: string }) => void;
   onStageDelete?: (stageId: string) => void;
+  onStageReorder?: (newStageIds: string[]) => void;
+  onAddStageAfter?: (afterStageId: string) => void;
   onContactClick?: (deal: Deal) => void;
   onDealClick?: (deal: Deal) => void;
 }
@@ -45,8 +54,69 @@ function buildStageTotals(stages: Stage[], source: Deal[]) {
   return map;
 }
 
-// KanbanBoard fills 100% of its sticky wrapper (100dvh - 48px).
-// Cards height = 100% minus the header row height.
+// Sortable wrapper for each stage column header
+interface SortableStageHeaderProps {
+  stage: Stage;
+  totalCount: number;
+  committedStageTotal: number;
+  currencyForTotal: string;
+  columnWidth: number;
+  columnGap: number;
+  onAddDeal?: (stageId: string) => void;
+  onStageUpdate?: (stageId: string, updates: { label?: string; color?: string }) => void;
+  onStageDelete?: (stageId: string) => void;
+  onAddStageAfter?: (afterStageId: string) => void;
+}
+
+function SortableStageHeader({
+  stage,
+  totalCount,
+  committedStageTotal,
+  currencyForTotal,
+  columnWidth,
+  columnGap,
+  onAddDeal,
+  onStageUpdate,
+  onStageDelete,
+  onAddStageAfter,
+}: SortableStageHeaderProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: stage.id });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    width: columnWidth,
+    minWidth: columnWidth,
+    flexShrink: 0,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 10 : undefined,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      <KanbanColumnHeader
+        stage={stage}
+        totalCount={totalCount}
+        committedStageTotal={committedStageTotal}
+        currencyForTotal={currencyForTotal}
+        onAddDeal={onAddDeal}
+        onStageUpdate={onStageUpdate}
+        onStageDelete={onStageDelete}
+        onAddStageAfter={onAddStageAfter}
+        dragHandleListeners={listeners}
+        dragHandleAttributes={attributes}
+        isDragging={isDragging}
+      />
+    </div>
+  );
+}
 
 export default function KanbanBoard({
   stages,
@@ -59,6 +129,8 @@ export default function KanbanBoard({
   onAddDeal,
   onStageUpdate,
   onStageDelete,
+  onStageReorder,
+  onAddStageAfter,
   onContactClick,
   onDealClick,
 }: KanbanBoardProps) {
@@ -67,7 +139,6 @@ export default function KanbanBoard({
   const [totalsFrozen, setTotalsFrozen] = useState(false);
   const snapshotRef = useRef<Deal[] | null>(null);
 
-  // Measure sticky header row height to compute cards area height
   const headerRowRef = useRef<HTMLDivElement>(null);
   const [headerHeight, setHeaderHeight] = useState(130);
 
@@ -83,8 +154,12 @@ export default function KanbanBoard({
     return () => ro.disconnect();
   }, []);
 
-  const sensors = useSensors(
+  const dealSensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+  );
+
+  const stageSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   );
 
   const loadedStageTotals = useMemo(() => {
@@ -92,7 +167,7 @@ export default function KanbanBoard({
     return buildStageTotals(stages, src);
   }, [stages, deals, totalsFrozen]);
 
-  function handleDragStart(event: DragStartEvent) {
+  function handleDealDragStart(event: DragStartEvent) {
     const deal = deals.find((d) => d.id === event.active.id);
     if (deal) {
       snapshotRef.current = deals.map((d) => ({ ...d }));
@@ -101,7 +176,7 @@ export default function KanbanBoard({
     }
   }
 
-  function handleDragOver(event: DragOverEvent) {
+  function handleDealDragOver(event: DragOverEvent) {
     const { active, over } = event;
     if (!over) return;
     const activeDealObj = deals.find((d) => d.id === active.id);
@@ -118,7 +193,7 @@ export default function KanbanBoard({
     }
   }
 
-  function handleDragEnd(event: DragEndEvent) {
+  function handleDealDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     setActiveDeal(null);
     const originalStage = snapshotRef.current?.find(
@@ -146,6 +221,16 @@ export default function KanbanBoard({
     }
     setTotalsFrozen(false);
     snapshotRef.current = null;
+  }
+
+  function handleStageDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = stages.findIndex((s) => s.id === active.id);
+    const newIndex = stages.findIndex((s) => s.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const reordered = arrayMove(stages, oldIndex, newIndex);
+    onStageReorder?.(reordered.map((s) => s.id));
   }
 
   if (stages.length === 0) {
@@ -180,7 +265,6 @@ export default function KanbanBoard({
     );
   }
 
-  // Cards fill the remaining space inside the sticky wrapper (100% - header row)
   const cardsHeight = `calc(100% - ${headerHeight}px)`;
 
   const rowStyle = {
@@ -188,59 +272,60 @@ export default function KanbanBoard({
     paddingRight: ks.board.paddingX,
   };
 
+  const stageIds = stages.map((s) => s.id);
+
   return (
-    /*
-     * overflow-x: auto  — single horizontal scroll context for both rows
-     * overflow-y: clip   — clips vertical overflow without becoming a scroll container,
-     *                      so position:sticky inside still sticks to #crm-scroll (page scroll)
-     * marginTop: scrollPad — adds configurable white space above the board, increasing the
-     *                        scroll distance before column headers stick to the top
-     */
     <div style={{ height: "100%", overflowX: "auto", overflowY: "hidden" }}>
-      {/* Column header row — sits at the top of the board (no sticky needed, board itself is sticky) */}
-      <div
-        ref={headerRowRef}
-        className="flex bg-[#f9f9f9]"
-        style={{ ...rowStyle, paddingTop: ks.board.paddingTop, gap: ks.board.columnGap }}
-      >
-        {stages.map((stage) => {
-          const pagination = stagePagination?.[stage.id];
-          const stageDeals = deals.filter((d) => d.stage === stage.id);
-          const loadedMeta = loadedStageTotals.get(stage.id) ?? { total: 0, currency: "RUB" };
-          const serverMeta = serverStageTotals?.[stage.id];
-          const committedTotal = totalsFrozen
-            ? loadedMeta.total
-            : (serverMeta?.amount ?? loadedMeta.total);
-          const committedCurrency = totalsFrozen
-            ? loadedMeta.currency
-            : (serverMeta?.currency ?? loadedMeta.currency);
-
-          return (
-            <div
-              key={stage.id}
-              style={{ width: ks.column.width, minWidth: ks.column.width, flexShrink: 0 }}
-            >
-              <KanbanColumnHeader
-                stage={stage}
-                totalCount={pagination?.total ?? stageDeals.length}
-                committedStageTotal={committedTotal}
-                currencyForTotal={committedCurrency}
-                onAddDeal={onAddDeal}
-                onStageUpdate={onStageUpdate}
-                onStageDelete={onStageDelete}
-              />
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Cards row — only the scrollable card area of each column */}
+      {/* Stage header row — sortable */}
       <DndContext
-        sensors={sensors}
+        sensors={stageSensors}
+        onDragEnd={handleStageDragEnd}
+      >
+        <SortableContext items={stageIds} strategy={horizontalListSortingStrategy}>
+          <div
+            ref={headerRowRef}
+            className="flex bg-[#f9f9f9]"
+            style={{ ...rowStyle, paddingTop: ks.board.paddingTop, gap: ks.board.columnGap }}
+          >
+            {stages.map((stage) => {
+              const pagination = stagePagination?.[stage.id];
+              const stageDeals = deals.filter((d) => d.stage === stage.id);
+              const loadedMeta = loadedStageTotals.get(stage.id) ?? { total: 0, currency: "RUB" };
+              const serverMeta = serverStageTotals?.[stage.id];
+              const committedTotal = totalsFrozen
+                ? loadedMeta.total
+                : (serverMeta?.amount ?? loadedMeta.total);
+              const committedCurrency = totalsFrozen
+                ? loadedMeta.currency
+                : (serverMeta?.currency ?? loadedMeta.currency);
+
+              return (
+                <SortableStageHeader
+                  key={stage.id}
+                  stage={stage}
+                  totalCount={pagination?.total ?? stageDeals.length}
+                  committedStageTotal={committedTotal}
+                  currencyForTotal={committedCurrency}
+                  columnWidth={ks.column.width}
+                  columnGap={ks.board.columnGap}
+                  onAddDeal={onAddDeal}
+                  onStageUpdate={onStageUpdate}
+                  onStageDelete={onStageDelete}
+                  onAddStageAfter={onAddStageAfter}
+                />
+              );
+            })}
+          </div>
+        </SortableContext>
+      </DndContext>
+
+      {/* Cards row */}
+      <DndContext
+        sensors={dealSensors}
         collisionDetection={closestCorners}
-        onDragStart={handleDragStart}
-        onDragOver={handleDragOver}
-        onDragEnd={handleDragEnd}
+        onDragStart={handleDealDragStart}
+        onDragOver={handleDealDragOver}
+        onDragEnd={handleDealDragEnd}
       >
         <div
           className="flex items-stretch"
@@ -261,24 +346,24 @@ export default function KanbanBoard({
               opacity: ks.column.backgroundOpacity / 100,
             }}
           >
-          {stages.map((stage) => {
-            const pagination = stagePagination?.[stage.id];
-            const stageDeals = deals.filter((d) => d.stage === stage.id);
-            const hasMore = pagination ? stageDeals.length < pagination.total : false;
+            {stages.map((stage) => {
+              const pagination = stagePagination?.[stage.id];
+              const stageDeals = deals.filter((d) => d.stage === stage.id);
+              const hasMore = pagination ? stageDeals.length < pagination.total : false;
 
-            return (
-              <KanbanColumn
-                key={stage.id}
-                stage={stage}
-                deals={stageDeals}
-                hasMore={hasMore}
-                isLoadingMore={pagination?.loading ?? false}
-                onLoadMore={onLoadMore ? () => onLoadMore(stage.id) : undefined}
-                onContactClick={onContactClick}
-                onDealClick={onDealClick}
-              />
-            );
-          })}
+              return (
+                <KanbanColumn
+                  key={stage.id}
+                  stage={stage}
+                  deals={stageDeals}
+                  hasMore={hasMore}
+                  isLoadingMore={pagination?.loading ?? false}
+                  onLoadMore={onLoadMore ? () => onLoadMore(stage.id) : undefined}
+                  onContactClick={onContactClick}
+                  onDealClick={onDealClick}
+                />
+              );
+            })}
           </div>
         </div>
 

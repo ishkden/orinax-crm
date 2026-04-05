@@ -69,7 +69,7 @@ export default function KanbanColumn({
             setNodeRef(el);
             scrollContainerRef.current = el;
           }}
-          className="min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-y-contain px-2 pb-2 pt-1 [-webkit-overflow-scrolling:touch]"
+          className={`min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-y-contain pb-2 pt-1 [-webkit-overflow-scrolling:touch] ${s.card.width === 0 ? "px-0" : "px-2"}`}
         >
           <SortableContext
             items={deals.map((d) => d.id)}

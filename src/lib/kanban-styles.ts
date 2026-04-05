@@ -37,6 +37,7 @@ export interface KanbanStyles {
     show: boolean;
   };
   card: {
+    width: number;
     minHeight: number;
     borderRadius: number;
     backgroundColor: string;
@@ -148,6 +149,7 @@ export const defaultKanbanStyles: KanbanStyles = {
     show: true,
   },
   card: {
+    width: 0,
     minHeight: 202,
     borderRadius: 8,
     backgroundColor: "#FFFFFF",

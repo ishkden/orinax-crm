@@ -140,6 +140,7 @@ const sections: {
     label: "Карточка сделки",
     icon: CreditCard,
     fields: [
+      { key: "width", label: "Ширина карточки (0 = авто)", type: "number", min: 0, max: 400, step: 4, unit: "px" },
       { key: "minHeight", label: "Мин. высота", type: "number", min: 80, max: 400, step: 4, unit: "px" },
       { key: "borderRadius", label: "Скругление углов", type: "number", min: 0, max: 24, step: 1, unit: "px" },
       { key: "backgroundColor", label: "Фон карточки", type: "color" },
@@ -556,7 +557,7 @@ export default function AdminStylesPage() {
               Стиль канбан-доски
             </h2>
             <p className="text-xs text-gray-500 mt-0.5">
-              14 секций · {sections.reduce((a, s) => a + s.fields.length, 0)} параметров
+              {sections.length} секций · {sections.reduce((a, s) => a + s.fields.length, 0)} параметров
             </p>
           </div>
           <div className="flex items-center gap-2">

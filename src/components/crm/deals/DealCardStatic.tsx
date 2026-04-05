@@ -26,6 +26,7 @@ export default function DealCardStatic({
   return (
     <div
       style={{
+        ...(s.card.width > 0 ? { width: s.card.width, maxWidth: s.card.width } : {}),
         minHeight: s.card.minHeight,
         borderRadius: s.card.borderRadius,
         backgroundColor: s.card.backgroundColor,

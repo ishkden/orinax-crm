@@ -11,15 +11,20 @@ import { useCrmHeaderAction } from "@/components/crm/CrmHeaderActionContext";
 import { useCrmDealPipeline } from "@/components/crm/CrmDealPipelineContext";
 import type { DbPipeline } from "@/app/actions/deals";
 import type { Deal, CreateDealInput, Stage, Pipeline } from "./types";
-import { updateDealStage, createDeal, deleteStage } from "@/app/actions/deals";
+import { updateDealStage, createDeal, deleteStage, getDealsPage } from "@/app/actions/deals";
 
 const STAGE_OVERRIDES_KEY = "crm-kanban-stage-overrides";
 const DEFAULT_STAGE_COLOR = "#6B7280";
 
 type StageOverrides = Record<string, Record<string, { label?: string; color?: string }>>;
 
+export type StagePaginationState = Record<
+  string,
+  { page: number; total: number; loading: boolean }
+>;
+
 interface DealsClientProps {
-  initialDeals: Deal[];
+  initialDealsByStage: Record<string, { items: Deal[]; total: number }>;
   initialPipelines: DbPipeline[];
 }
 
@@ -35,13 +40,25 @@ function mapDbToUiPipelines(dbPipelines: DbPipeline[]): Pipeline[] {
   }));
 }
 
-export default function DealsClient({ initialDeals, initialPipelines }: DealsClientProps) {
+export default function DealsClient({ initialDealsByStage, initialPipelines }: DealsClientProps) {
   const { setHeaderAction } = useCrmHeaderAction();
   const { setPipeline } = useCrmDealPipeline();
 
   const pipelines = useMemo(() => mapDbToUiPipelines(initialPipelines), [initialPipelines]);
 
-  const [deals, setDeals] = useState<Deal[]>(initialDeals);
+  const [deals, setDeals] = useState<Deal[]>(() =>
+    Object.values(initialDealsByStage).flatMap(({ items }) => items)
+  );
+
+  const [stagePagination, setStagePagination] = useState<StagePaginationState>(() =>
+    Object.fromEntries(
+      Object.entries(initialDealsByStage).map(([stageId, { items, total }]) => [
+        stageId,
+        { page: 1, total, loading: false },
+      ])
+    )
+  );
+
   const [activePipelineId, setActivePipelineId] = useState(pipelines[0]?.id ?? "");
   const [viewMode, setViewMode] = useState<ViewMode>("kanban");
   const [searchQuery, setSearchQuery] = useState("");
@@ -126,6 +143,37 @@ export default function DealsClient({ initialDeals, initialPipelines }: DealsCli
     return result;
   }, [deals, searchQuery, filterAssignee, filterPriority]);
 
+  const handleLoadMore = useCallback(async (stageId: string) => {
+    const p = stagePagination[stageId];
+    if (!p || p.loading) return;
+    const loadedCount = deals.filter((d) => d.stage === stageId).length;
+    if (loadedCount >= p.total) return;
+
+    setStagePagination((prev) => ({
+      ...prev,
+      [stageId]: { ...prev[stageId], loading: true },
+    }));
+
+    try {
+      const nextPage = p.page + 1;
+      const result = await getDealsPage(stageId, nextPage, 20);
+      setDeals((prev) => {
+        const existingIds = new Set(prev.map((d) => d.id));
+        const newItems = result.items.filter((d) => !existingIds.has(d.id));
+        return [...prev, ...newItems];
+      });
+      setStagePagination((prev) => ({
+        ...prev,
+        [stageId]: { page: nextPage, total: result.total, loading: false },
+      }));
+    } catch {
+      setStagePagination((prev) => ({
+        ...prev,
+        [stageId]: { ...prev[stageId], loading: false },
+      }));
+    }
+  }, [stagePagination, deals]);
+
   const handleStageUpdate = useCallback(
     (stageId: string, updates: { label?: string; color?: string }) => {
       setStageOverrides((prev) => {
@@ -166,7 +214,6 @@ export default function DealsClient({ initialDeals, initialPipelines }: DealsCli
     startTransition(async () => {
       try {
         await deleteStage(stageId);
-        // Reload the page to get fresh pipelines from the server
         window.location.reload();
       } catch (err) {
         console.error("Failed to delete stage:", err);
@@ -184,6 +231,13 @@ export default function DealsClient({ initialDeals, initialPipelines }: DealsCli
     try {
       const newDeal = await createDeal({ ...input, stage: stageToUse });
       setDeals((prev) => [newDeal, ...prev]);
+      if (newDeal.stage) {
+        setStagePagination((prev) => {
+          const cur = prev[newDeal.stage];
+          if (!cur) return prev;
+          return { ...prev, [newDeal.stage]: { ...cur, total: cur.total + 1 } };
+        });
+      }
     } catch (err) {
       console.error("Failed to create deal:", err);
     }
@@ -213,6 +267,8 @@ export default function DealsClient({ initialDeals, initialPipelines }: DealsCli
           <KanbanBoard
             stages={activeStages}
             deals={filteredDeals}
+            stagePagination={stagePagination}
+            onLoadMore={handleLoadMore}
             onMoveDeal={handleMoveDeal}
             onStageCommit={handleStageCommit}
             onAddDeal={handleAddDeal}

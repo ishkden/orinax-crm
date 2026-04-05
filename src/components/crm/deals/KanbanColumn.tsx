@@ -7,7 +7,7 @@ import {
   SortableContext,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { Plus, Pencil, Check, X, Trash2 } from "lucide-react";
+import { Plus, Pencil, Check, X, Trash2, Loader2 } from "lucide-react";
 import { HexColorPicker } from "react-colorful";
 import { cn, formatCurrency, contrastTextOnHex } from "@/lib/utils";
 import AnimatedCounter from "@/components/ui/AnimatedCounter";
@@ -20,6 +20,10 @@ interface KanbanColumnProps {
   deals: Deal[];
   committedStageTotal: number;
   currencyForTotal?: string;
+  totalCount?: number;
+  hasMore?: boolean;
+  isLoadingMore?: boolean;
+  onLoadMore?: () => void;
   onAddDeal?: (stageId: string) => void;
   onStageUpdate?: (stageId: string, updates: { label?: string; color?: string }) => void;
   onStageDelete?: (stageId: string) => void;
@@ -32,6 +36,10 @@ export default function KanbanColumn({
   deals,
   committedStageTotal,
   currencyForTotal = "RUB",
+  totalCount,
+  hasMore = false,
+  isLoadingMore = false,
+  onLoadMore,
   onAddDeal,
   onStageUpdate,
   onStageDelete,
@@ -40,6 +48,8 @@ export default function KanbanColumn({
 }: KanbanColumnProps) {
   const s = useKanbanStyles();
   const { setNodeRef, isOver } = useDroppable({ id: stage.id });
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   const [editing, setEditing] = useState(false);
   const [draftLabel, setDraftLabel] = useState(stage.label);
@@ -128,6 +138,23 @@ export default function KanbanColumn({
     }
   }, [stage.label, stage.color, editing]);
 
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    const container = scrollContainerRef.current;
+    if (!sentinel || !container || !hasMore || isLoadingMore) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          onLoadMore?.();
+        }
+      },
+      { root: container, threshold: 0.1 }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasMore, isLoadingMore, onLoadMore]);
+
   const saveEdit = useCallback(() => {
     const label = draftLabel.trim() || stage.label;
     const color = /^#[0-9A-Fa-f]{6}$/.test(draftColor) ? draftColor : stage.color;
@@ -180,7 +207,7 @@ export default function KanbanColumn({
                   color: headerFg,
                 }}
               >
-                {deals.length}
+                {totalCount ?? deals.length}
               </span>
               <h3
                 className="text-center truncate max-w-[70%] px-1 leading-tight"
@@ -252,7 +279,10 @@ export default function KanbanColumn({
         )}
 
         <div
-          ref={setNodeRef}
+          ref={(el) => {
+            setNodeRef(el);
+            scrollContainerRef.current = el;
+          }}
           className="min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-y-contain px-2 pb-2 [-webkit-overflow-scrolling:touch]"
           style={{ gap: s.column.cardGap }}
         >
@@ -281,6 +311,20 @@ export default function KanbanColumn({
               }}
             >
               {s.emptyState.text}
+            </div>
+          )}
+
+          {hasMore && (
+            <div ref={sentinelRef} className="h-2 w-full" />
+          )}
+
+          {isLoadingMore && (
+            <div className="flex items-center justify-center py-3">
+              <Loader2
+                size={16}
+                className="animate-spin"
+                style={{ color: stage.color }}
+              />
             </div>
           )}
         </div>

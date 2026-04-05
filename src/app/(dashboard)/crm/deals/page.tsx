@@ -1,20 +1,24 @@
-import { getDeals, getPipelines } from "@/app/actions/deals";
+import { getPipelines, getInitialDealsPerStage } from "@/app/actions/deals";
 import type { DbPipeline } from "@/app/actions/deals";
-import DealsClient from "@/components/crm/deals/DealsClient";
 import type { Deal } from "@/components/crm/deals/types";
+import DealsClient from "@/components/crm/deals/DealsClient";
 
 export default async function DealsPage() {
-  let initialDeals: Deal[] = [];
   let initialPipelines: DbPipeline[] = [];
+  let initialDealsByStage: Record<string, { items: Deal[]; total: number }> = {};
   try {
-    [initialDeals, initialPipelines] = await Promise.all([
-      getDeals(),
-      getPipelines(),
-    ]);
+    initialPipelines = await getPipelines();
+    const allStageIds = initialPipelines.flatMap((p) => p.stages.map((s) => s.id));
+    if (allStageIds.length > 0) {
+      initialDealsByStage = await getInitialDealsPerStage(allStageIds, 20);
+    }
   } catch {
     // Not logged in or no org yet — DealsClient shows empty state
   }
   return (
-    <DealsClient initialDeals={initialDeals} initialPipelines={initialPipelines} />
+    <DealsClient
+      initialDealsByStage={initialDealsByStage}
+      initialPipelines={initialPipelines}
+    />
   );
 }

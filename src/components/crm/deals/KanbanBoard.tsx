@@ -16,10 +16,13 @@ import KanbanColumn from "./KanbanColumn";
 import DealCardStatic from "./DealCardStatic";
 import { useKanbanStyles } from "./KanbanStyleContext";
 import type { Deal, Stage } from "./types";
+import type { StagePaginationState } from "./DealsClient";
 
 interface KanbanBoardProps {
   stages: Stage[];
   deals: Deal[];
+  stagePagination?: StagePaginationState;
+  onLoadMore?: (stageId: string) => void;
   onMoveDeal: (dealId: string, newStage: string) => void;
   onStageCommit?: (dealId: string, newStage: string, previousStage: string) => void;
   onAddDeal?: (stageId: string) => void;
@@ -43,6 +46,8 @@ function buildStageTotals(stages: Stage[], source: Deal[]) {
 export default function KanbanBoard({
   stages,
   deals,
+  stagePagination,
+  onLoadMore,
   onMoveDeal,
   onStageCommit,
   onAddDeal,
@@ -187,13 +192,22 @@ export default function KanbanBoard({
         >
           {stages.map((stage) => {
             const meta = stageTotals.get(stage.id) ?? { total: 0, currency: "RUB" };
+            const pagination = stagePagination?.[stage.id];
+            const stageDeals = deals.filter((d) => d.stage === stage.id);
+            const hasMore = pagination
+              ? stageDeals.length < pagination.total
+              : false;
             return (
               <KanbanColumn
                 key={stage.id}
                 stage={stage}
-                deals={deals.filter((d) => d.stage === stage.id)}
+                deals={stageDeals}
                 committedStageTotal={meta.total}
                 currencyForTotal={meta.currency}
+                totalCount={pagination?.total ?? stageDeals.length}
+                hasMore={hasMore}
+                isLoadingMore={pagination?.loading ?? false}
+                onLoadMore={onLoadMore ? () => onLoadMore(stage.id) : undefined}
                 onAddDeal={onAddDeal}
                 onStageUpdate={onStageUpdate}
                 onStageDelete={onStageDelete}

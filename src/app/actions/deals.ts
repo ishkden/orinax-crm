@@ -165,6 +165,49 @@ export async function getDeals(): Promise<Deal[]> {
   return rows.map(mapDeal);
 }
 
+export async function getInitialDealsPerStage(
+  stageIds: string[],
+  limit = 20
+): Promise<Record<string, { items: Deal[]; total: number }>> {
+  const orgId = await getOrgId();
+  const result: Record<string, { items: Deal[]; total: number }> = {};
+  await Promise.all(
+    stageIds.map(async (stageId) => {
+      const [rows, total] = await Promise.all([
+        prisma.deal.findMany({
+          where: { orgId, isDeleted: false, stageId },
+          orderBy: { createdAt: "desc" },
+          take: limit,
+          include: DEAL_INCLUDE,
+        }),
+        prisma.deal.count({ where: { orgId, isDeleted: false, stageId } }),
+      ]);
+      result[stageId] = { items: rows.map(mapDeal), total };
+    })
+  );
+  return result;
+}
+
+export async function getDealsPage(
+  stageId: string,
+  page: number,
+  limit = 20
+): Promise<{ items: Deal[]; total: number }> {
+  const orgId = await getOrgId();
+  const skip = (page - 1) * limit;
+  const [rows, total] = await Promise.all([
+    prisma.deal.findMany({
+      where: { orgId, isDeleted: false, stageId },
+      orderBy: { createdAt: "desc" },
+      take: limit,
+      skip,
+      include: DEAL_INCLUDE,
+    }),
+    prisma.deal.count({ where: { orgId, isDeleted: false, stageId } }),
+  ]);
+  return { items: rows.map(mapDeal), total };
+}
+
 export async function updateDealStage(
   dealId: string,
   newStage: string

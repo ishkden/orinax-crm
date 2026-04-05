@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -24,6 +25,15 @@ const navItems = [
 export default function AdminSidebar() {
   const pathname = usePathname();
   const router = useRouter();
+
+  // #region agent log
+  useEffect(() => {
+    const body = document.body;
+    const main = document.querySelector("main");
+    const adminRoot = main?.parentElement;
+    fetch('http://127.0.0.1:7425/ingest/7c901cfb-a630-4609-920a-02b605d84df8',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'387f67'},body:JSON.stringify({sessionId:'387f67',location:'AdminSidebar.tsx:mount',message:'admin-scroll-measurements',data:{bodyOverflow:getComputedStyle(body).overflow,bodyH:body.clientHeight,mainScrollH:main?.scrollHeight,mainClientH:main?.clientHeight,mainOverflow:main?getComputedStyle(main).overflow:null,mainOverflowY:main?getComputedStyle(main).overflowY:null,adminRootClass:adminRoot?.className,adminRootScrollH:adminRoot?.scrollHeight,adminRootClientH:adminRoot?.clientHeight,adminRootOverflow:adminRoot?getComputedStyle(adminRoot).overflow:null,windowH:window.innerHeight},timestamp:Date.now(),hypothesisId:'A-B-C'})}).catch(()=>{});
+  }, []);
+  // #endregion
 
   function handleLogout() {
     window.location.href = "https://my.orinax.ai/api/auth/logout?callbackUrl=https://my.orinax.ai/login";

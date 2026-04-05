@@ -19,11 +19,9 @@ import {
   reorderStages,
   createStage,
 } from "@/app/actions/deals";
+import { updateStageSettings } from "@/app/actions/pipeline-settings";
 
-const STAGE_OVERRIDES_KEY = "crm-kanban-stage-overrides";
 const DEFAULT_STAGE_COLOR = "#6B7280";
-
-type StageOverrides = Record<string, Record<string, { label?: string; color?: string }>>;
 
 export type StagePaginationState = Record<
   string,
@@ -56,7 +54,7 @@ export default function DealsClient({
   const { setHeaderAction } = useCrmHeaderAction();
   const { setPipeline } = useCrmDealPipeline();
 
-  const pipelines = useMemo(() => mapDbToUiPipelines(initialPipelines), [initialPipelines]);
+  const [pipelines, setPipelines] = useState(() => mapDbToUiPipelines(initialPipelines));
 
   const [deals, setDeals] = useState<Deal[]>(() =>
     Object.values(initialDealsByStage).flatMap(({ items }) => items)
@@ -82,8 +80,6 @@ export default function DealsClient({
   const [filterPriority, setFilterPriority] = useState<Deal["priority"] | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalStage, setModalStage] = useState<string | null>(null);
-  const [stageOverrides, setStageOverrides] = useState<StageOverrides>({});
-  // Local stage order overrides per pipeline (for optimistic reorder)
   const [stageOrderMap, setStageOrderMap] = useState<Record<string, string[]>>({});
   const [contactDeal, setContactDeal] = useState<Deal | null>(null);
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
@@ -99,7 +95,6 @@ export default function DealsClient({
     return () => setHeaderAction(null);
   }, [setHeaderAction, openCreateDeal]);
 
-
   useEffect(() => {
     if (pipelines.length > 0) {
       setPipeline({ pipelines, activePipelineId, onPipelineChange: setActivePipelineId });
@@ -107,31 +102,17 @@ export default function DealsClient({
     return () => setPipeline(null);
   }, [setPipeline, pipelines, activePipelineId]);
 
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STAGE_OVERRIDES_KEY);
-      if (raw) setStageOverrides(JSON.parse(raw) as StageOverrides);
-    } catch {
-      // ignore
-    }
-  }, []);
-
-  const activePipelineWithOverrides = useMemo((): Pipeline => {
+  const activePipeline = useMemo((): Pipeline => {
     const p = pipelines.find((x) => x.id === activePipelineId) ?? pipelines[0];
     if (!p) return { id: "", label: "", stages: [] };
-    const ov = stageOverrides[p.id] ?? {};
     const localOrder = stageOrderMap[p.id];
-    let stages = p.stages.map((s) => ({
-      ...s,
-      label: ov[s.id]?.label ?? s.label,
-      color: ov[s.id]?.color ?? s.color,
-    }));
+    let stages = [...p.stages];
     if (localOrder) {
       const stageById = Object.fromEntries(stages.map((s) => [s.id, s]));
       stages = localOrder.map((id) => stageById[id]).filter(Boolean) as Stage[];
     }
     return { ...p, stages };
-  }, [pipelines, activePipelineId, stageOverrides, stageOrderMap]);
+  }, [pipelines, activePipelineId, stageOrderMap]);
 
   const assignees = useMemo(() => {
     const seen = new Set<string>();
@@ -198,21 +179,26 @@ export default function DealsClient({
 
   const handleStageUpdate = useCallback(
     (stageId: string, updates: { label?: string; color?: string }) => {
-      setStageOverrides((prev) => {
-        const pid = activePipelineId;
-        const next: StageOverrides = {
-          ...prev,
-          [pid]: { ...prev[pid], [stageId]: { ...prev[pid]?.[stageId], ...updates } },
-        };
-        try {
-          localStorage.setItem(STAGE_OVERRIDES_KEY, JSON.stringify(next));
-        } catch {
-          // ignore
-        }
-        return next;
+      setPipelines((prev) =>
+        prev.map((p) => ({
+          ...p,
+          stages: p.stages.map((s) =>
+            s.id === stageId
+              ? { ...s, label: updates.label ?? s.label, color: updates.color ?? s.color }
+              : s
+          ),
+        }))
+      );
+      startTransition(() => {
+        const dbUpdates: { name?: string; color?: string } = {};
+        if (updates.label) dbUpdates.name = updates.label;
+        if (updates.color) dbUpdates.color = updates.color;
+        updateStageSettings(stageId, dbUpdates).catch(() => {
+          setPipelines(mapDbToUiPipelines(initialPipelines));
+        });
       });
     },
-    [activePipelineId]
+    [initialPipelines]
   );
 
   function handleMoveDeal(dealId: string, newStage: string) {
@@ -330,7 +316,7 @@ export default function DealsClient({
     setModalStage(null);
   }
 
-  const activeStages: Stage[] = activePipelineWithOverrides.stages;
+  const activeStages: Stage[] = activePipeline.stages;
 
   return (
     <>
@@ -386,7 +372,7 @@ export default function DealsClient({
           setModalOpen(false);
           setModalStage(null);
         }}
-        pipeline={activePipelineWithOverrides}
+        pipeline={activePipeline}
         initialStage={modalStage ?? activeStages[0]?.id ?? ""}
         onSave={handleCreateDeal}
       />

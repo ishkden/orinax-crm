@@ -37,7 +37,7 @@ import {
   reorderPipelineStages,
 } from "@/app/actions/pipeline-settings";
 
-/* ─── Stage Pill (sortable) ────────────────────────────────────────────────── */
+/* ─── Stage Pill (sortable, auto-width) ────────────────────────────────────── */
 
 function StagePill({
   stage,
@@ -65,6 +65,8 @@ function StagePill({
     transition,
     opacity: isDragging ? 0.5 : 1,
     zIndex: isDragging ? 50 : undefined,
+    backgroundColor: bg,
+    color: fg,
   };
 
   return (
@@ -74,19 +76,14 @@ function StagePill({
       type="button"
       onClick={() => onEdit(stage)}
       className={cn(
-        "relative inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium whitespace-nowrap transition-all",
-        "hover:shadow-md hover:scale-105 cursor-pointer select-none",
-        "max-w-[120px]",
+        "inline-flex items-center rounded-lg px-2.5 py-1.5 text-xs font-medium whitespace-nowrap transition-all shrink",
+        "hover:shadow-md hover:brightness-110 cursor-pointer select-none min-w-0",
         isDragging && "shadow-xl"
       )}
       title={`${stage.name}${stage._count.deals > 0 ? ` (${stage._count.deals} сделок)` : ""}`}
       {...(isDraggable ? { ...listeners, ...attributes } : {})}
     >
-      <span
-        className="absolute inset-0 rounded-lg"
-        style={{ backgroundColor: bg }}
-      />
-      <span className="relative truncate" style={{ color: fg }}>{stage.name}</span>
+      <span className="truncate">{stage.name}</span>
     </button>
   );
 }
@@ -357,8 +354,8 @@ function PipelineRow({
   return (
     <div className="border-b border-gray-100 last:border-b-0">
       <div className="flex items-start gap-0 py-5 px-5">
-        {/* Left: pipeline name + actions */}
-        <div className="w-48 shrink-0 pt-0.5">
+        {/* Left: pipeline name */}
+        <div className="w-44 shrink-0 pt-0.5">
           <div className="flex items-center gap-1.5 mb-1">
             <GripVertical size={13} className="text-gray-300 shrink-0" />
             {renaming ? (
@@ -377,7 +374,7 @@ function PipelineRow({
               <span className="text-sm font-semibold text-gray-900 truncate">{pipeline.name}</span>
             )}
             {!renaming && (
-              <div className="flex items-center gap-0.5 ml-1">
+              <div className="flex items-center gap-0.5 ml-0.5 shrink-0">
                 <button type="button" onClick={() => setRenaming(true)} className="p-0.5 text-gray-300 hover:text-gray-600 rounded transition-colors" title="Переименовать"><Pencil size={11} /></button>
                 {totalDeals === 0 && (
                   <button type="button" onClick={() => setConfirmDelete(true)} className="p-0.5 text-gray-300 hover:text-red-500 rounded transition-colors" title="Удалить"><X size={12} /></button>
@@ -387,34 +384,33 @@ function PipelineRow({
           </div>
         </div>
 
-        {/* Center: stages as pills */}
-        <div className="flex-1 min-w-0">
+        {/* Center: stages as pills — single row, auto-shrink */}
+        <div className="flex-1 min-w-0 overflow-hidden">
           {/* Section labels */}
           <div className="flex items-center gap-0 mb-2 text-[9px] font-bold uppercase tracking-wider text-gray-400">
-            <div className="flex-1">В работе</div>
-            {wonStages.length > 0 && <div className="w-[130px] text-center text-green-600 shrink-0">&#10003; Успешные</div>}
-            {loseStages.length > 0 && <div className="w-[160px] text-center text-red-500 shrink-0">&#10005; Неуспешные</div>}
+            <div className="flex-1 min-w-0">В работе</div>
+            {wonStages.length > 0 && <div className="shrink-0 text-center text-green-600 px-3">&#10003; Успешные</div>}
+            {loseStages.length > 0 && <div className="shrink-0 text-center text-red-500 px-3">&#10005; Неуспешные</div>}
           </div>
 
-          <div className="flex items-center gap-0">
-            {/* Work stages — draggable */}
-            <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-0 min-w-0">
+            {/* Work stages — draggable, single row */}
+            <div className="flex-1 min-w-0 overflow-x-auto">
               <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                 <SortableContext items={workStages.map((s) => s.id)} strategy={horizontalListSortingStrategy}>
-                  <div className="flex items-center gap-1.5 flex-wrap">
+                  <div className="flex items-center gap-1.5">
                     {workStages.map((s) => (
-                      <div key={s.id} data-stage-id={s.id}>
+                      <div key={s.id} data-stage-id={s.id} className="shrink min-w-0">
                         <StagePill stage={s} onEdit={handleEditStage} isDraggable />
                       </div>
                     ))}
-                    {/* Add stage button */}
                     <button
                       type="button"
                       onClick={handleAddStageClick}
-                      className="inline-flex items-center justify-center w-8 h-8 rounded-lg border-2 border-dashed border-gray-200 text-gray-400 hover:border-brand-400 hover:text-brand-500 hover:bg-brand-50/40 transition-all"
+                      className="inline-flex items-center justify-center w-7 h-7 rounded-lg border-2 border-dashed border-gray-200 text-gray-400 hover:border-brand-400 hover:text-brand-500 hover:bg-brand-50/40 transition-all shrink-0"
                       title="Добавить стадию"
                     >
-                      <Plus size={16} />
+                      <Plus size={14} />
                     </button>
                   </div>
                 </SortableContext>
@@ -482,7 +478,7 @@ function PipelineRow({
   );
 }
 
-/* ─── Main Component ──────────────────────────────────────────────────────── */
+/* ─── Main ────────────────────────────────────────────────────────────────── */
 
 export default function PipelineSettingsClient({
   initialPipelines,
@@ -497,9 +493,7 @@ export default function PipelineSettingsClient({
 
   useEffect(() => { if (creating) inputRef.current?.focus(); }, [creating]);
 
-  const refresh = useCallback(() => {
-    window.location.reload();
-  }, []);
+  const refresh = useCallback(() => { window.location.reload(); }, []);
 
   function handleCreate() {
     const n = newName.trim();
@@ -510,60 +504,34 @@ export default function PipelineSettingsClient({
         setPipelines((prev) => [...prev, created]);
         setNewName("");
         setCreating(false);
-      } catch {
-        // error
-      }
+      } catch { /* error */ }
     });
   }
 
   return (
     <div>
-      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-lg font-semibold text-gray-900">Воронки и туннели продаж</h2>
           <p className="text-xs text-gray-500 mt-0.5">{pipelines.length} воронок</p>
         </div>
-        <button
-          type="button"
-          onClick={() => setCreating(true)}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-brand-500 text-white hover:bg-brand-600 transition-colors shadow-sm"
-        >
-          <Plus size={15} /> Добавить воронку
-        </button>
+        <button type="button" onClick={() => setCreating(true)} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-brand-500 text-white hover:bg-brand-600 transition-colors shadow-sm"><Plus size={15} /> Добавить воронку</button>
       </div>
 
-      {/* Create new pipeline inline */}
       {creating && (
         <div className="flex items-center gap-3 mb-4 rounded-xl border border-dashed border-brand-300 bg-brand-50/30 px-5 py-3.5">
-          <input
-            ref={inputRef}
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") handleCreate(); if (e.key === "Escape") { setNewName(""); setCreating(false); } }}
-            placeholder="Название новой воронки..."
-            className="flex-1 text-sm px-3 py-2 rounded-lg border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-brand-400"
-          />
+          <input ref={inputRef} value={newName} onChange={(e) => setNewName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") handleCreate(); if (e.key === "Escape") { setNewName(""); setCreating(false); } }} placeholder="Название новой воронки..." className="flex-1 text-sm px-3 py-2 rounded-lg border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-brand-400" />
           <button type="button" onClick={handleCreate} disabled={isPending || !newName.trim()} className="px-4 py-2 rounded-lg text-sm font-medium bg-brand-500 text-white hover:bg-brand-600 disabled:opacity-50 transition-colors">Создать</button>
           <button type="button" onClick={() => { setNewName(""); setCreating(false); }} className="px-3 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100 transition-colors">Отмена</button>
         </div>
       )}
 
-      {/* Pipeline list */}
       {pipelines.length === 0 && !creating && (
         <div className="text-center py-20 bg-white rounded-xl border border-gray-100">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gray-100 mb-4">
-            <CirclePlus size={24} className="text-gray-400" />
-          </div>
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gray-100 mb-4"><CirclePlus size={24} className="text-gray-400" /></div>
           <h3 className="text-sm font-semibold text-gray-700 mb-1">Нет воронок</h3>
           <p className="text-sm text-gray-500 mb-4">Создайте первую воронку для работы со сделками</p>
-          <button
-            type="button"
-            onClick={() => setCreating(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-brand-500 text-white hover:bg-brand-600 transition-colors"
-          >
-            <Plus size={15} /> Добавить воронку
-          </button>
+          <button type="button" onClick={() => setCreating(true)} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-brand-500 text-white hover:bg-brand-600 transition-colors"><Plus size={15} /> Добавить воронку</button>
         </div>
       )}
 

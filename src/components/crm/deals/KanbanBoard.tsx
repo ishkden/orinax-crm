@@ -194,8 +194,10 @@ export default function KanbanBoard({
      * overflow-x: auto  — single horizontal scroll context for both rows
      * overflow-y: clip   — clips vertical overflow without becoming a scroll container,
      *                      so position:sticky inside still sticks to #crm-scroll (page scroll)
+     * marginTop: scrollPad — adds configurable white space above the board, increasing the
+     *                        scroll distance before column headers stick to the top
      */
-    <div style={{ overflowX: "auto", overflowY: "clip" }}>
+    <div style={{ overflowX: "auto", overflowY: "clip", marginTop: ks.board.scrollPad }}>
       {/* Sticky header row — sticks to the top of #crm-scroll when page is scrolled */}
       <div
         ref={headerRowRef}

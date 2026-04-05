@@ -6,6 +6,8 @@ export interface KanbanStyles {
     paddingX: number;
     paddingTop: number;
     paddingBottom: number;
+    /** Extra space above the kanban board — increases scroll distance before column headers stick */
+    scrollPad: number;
   };
   column: {
     width: number;
@@ -114,6 +116,7 @@ export const defaultKanbanStyles: KanbanStyles = {
     paddingX: 24,
     paddingTop: 8,
     paddingBottom: 16,
+    scrollPad: 0,
   },
   column: {
     width: 228,

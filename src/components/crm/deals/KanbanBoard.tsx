@@ -32,6 +32,8 @@ interface KanbanBoardProps {
   onStageDelete?: (stageId: string) => void;
   onContactClick?: (deal: Deal) => void;
   onDealClick?: (deal: Deal) => void;
+  /** Distance from viewport top where kanban column headers stick (from navStickyHeight) */
+  stickyHeaderTop?: number;
 }
 
 function buildStageTotals(stages: Stage[], source: Deal[]) {
@@ -61,6 +63,7 @@ export default function KanbanBoard({
   onStageDelete,
   onContactClick,
   onDealClick,
+  stickyHeaderTop = 0,
 }: KanbanBoardProps) {
   const ks = useKanbanStyles();
   const [activeDeal, setActiveDeal] = useState<Deal | null>(null);
@@ -180,8 +183,8 @@ export default function KanbanBoard({
     );
   }
 
-  // Cards fill remaining viewport below: GlobalHeader + sticky column headers
-  const cardsHeight = `calc(100dvh - ${GLOBAL_HEADER_HEIGHT}px - ${headerHeight}px)`;
+  // Cards fill remaining viewport below: GlobalHeader + sticky nav/toolbar + sticky column headers
+  const cardsHeight = `calc(100dvh - ${GLOBAL_HEADER_HEIGHT}px - ${stickyHeaderTop}px - ${headerHeight}px)`;
 
   const rowStyle = {
     gap: ks.board.columnGap,
@@ -197,12 +200,12 @@ export default function KanbanBoard({
      * marginTop: scrollPad — adds configurable white space above the board, increasing the
      *                        scroll distance before column headers stick to the top
      */
-    <div style={{ overflowX: "auto", overflowY: "clip", marginTop: ks.board.scrollPad }}>
+    <div style={{ overflowX: "auto", overflowY: "clip" }}>
       {/* Sticky header row — sticks to the top of #crm-scroll when page is scrolled */}
       <div
         ref={headerRowRef}
-        className="sticky top-0 z-20 flex bg-[#f9f9f9]"
-        style={{ ...rowStyle, paddingTop: 0 }}
+        className="sticky z-20 flex bg-[#f9f9f9]"
+        style={{ ...rowStyle, paddingTop: 0, top: stickyHeaderTop }}
       >
         {stages.map((stage) => {
           const pagination = stagePagination?.[stage.id];

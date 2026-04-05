@@ -6,8 +6,12 @@ export interface KanbanStyles {
     paddingX: number;
     paddingTop: number;
     paddingBottom: number;
-    /** Extra space above the kanban board — increases scroll distance before column headers stick */
-    scrollPad: number;
+    /**
+     * How many px of the top navigation block (CrmHeader=48 + CrmSubNav=48) stays
+     * visible when scrolling. 0 = top block fully scrolls away (default).
+     * 48 = only CrmSubNav stays. 96 = full nav stays. 154 = nav + toolbar stay.
+     */
+    navStickyHeight: number;
   };
   column: {
     width: number;
@@ -116,7 +120,7 @@ export const defaultKanbanStyles: KanbanStyles = {
     paddingX: 24,
     paddingTop: 8,
     paddingBottom: 16,
-    scrollPad: 0,
+    navStickyHeight: 0,
   },
   column: {
     width: 228,

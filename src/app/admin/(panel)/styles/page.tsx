@@ -83,7 +83,7 @@ const sections: {
       { key: "paddingX", label: "Отступ слева/справа", type: "number", min: 0, max: 60, step: 2, unit: "px" },
       { key: "paddingTop", label: "Отступ сверху", type: "number", min: 0, max: 40, step: 2, unit: "px" },
       { key: "paddingBottom", label: "Отступ снизу", type: "number", min: 0, max: 40, step: 2, unit: "px" },
-      { key: "scrollPad", label: "Расстояние скрола до фиксации шапок", type: "number", min: 0, max: 300, step: 8, unit: "px" },
+      { key: "navStickyHeight", label: "Сколько px шапки навигации остаётся видимым при прокрутке (0 = уходит полностью, 48 = только вкладки, 96 = + заголовок, 154 = + строка фильтров)", type: "number", min: 0, max: 200, step: 8, unit: "px" },
     ],
   },
   {

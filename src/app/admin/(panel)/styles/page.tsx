@@ -90,7 +90,7 @@ const sections: {
       { key: "minHeight", label: "Мин. высота", type: "number", min: 200, max: 600, step: 10, unit: "px" },
       { key: "columnGap", label: "Отступ между колонками", type: "number", min: 0, max: 40, step: 1, unit: "px" },
       { key: "paddingX", label: "Отступ слева/справа", type: "number", min: 0, max: 60, step: 2, unit: "px" },
-      { key: "paddingTop", label: "Отступ сверху", type: "number", min: 0, max: 40, step: 2, unit: "px" },
+      { key: "paddingTop", label: "Отступ контента сверху", type: "number", min: 0, max: 80, step: 2, unit: "px" },
       { key: "paddingBottom", label: "Отступ снизу", type: "number", min: 0, max: 40, step: 2, unit: "px" },
     ],
   },

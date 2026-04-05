@@ -202,7 +202,7 @@ export default function KanbanBoard({
       <div
         ref={headerRowRef}
         className="flex bg-[#f9f9f9]"
-        style={{ ...rowStyle, paddingTop: 0 }}
+        style={{ ...rowStyle, paddingTop: ks.board.paddingTop }}
       >
         {stages.map((stage) => {
           const pagination = stagePagination?.[stage.id];

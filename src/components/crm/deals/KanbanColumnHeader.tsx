@@ -160,7 +160,7 @@ export default function KanbanColumnHeader({
       {/* Colored stage name bar */}
       <div
         ref={headerRef}
-        className="group relative flex items-center justify-center"
+        className="group relative flex items-center"
         style={{
           backgroundColor: headerBg,
           color: headerFg,
@@ -188,11 +188,9 @@ export default function KanbanColumnHeader({
         {!editing && (
           <>
             <span
-              className="absolute font-medium tabular-nums rounded-full"
+              className="shrink-0 font-medium tabular-nums rounded-full"
               style={{
-                left: `${s.columnHeader.countBadgeLeft}px`,
-                top: "50%",
-                transform: "translateY(-50%)",
+                marginLeft: `${s.columnHeader.countBadgeLeft}px`,
                 fontSize: s.columnHeader.countBadgeFontSize,
                 padding: `${s.columnHeader.countBadgePaddingY}px ${s.columnHeader.countBadgePaddingX}px`,
                 backgroundColor:
@@ -203,7 +201,7 @@ export default function KanbanColumnHeader({
               {totalCount}
             </span>
             <h3
-              className="text-center truncate max-w-[60%] px-1 leading-tight"
+              className="flex-1 min-w-0 text-center truncate px-1 leading-tight"
               style={{ fontSize: s.columnHeader.fontSize, fontWeight: s.columnHeader.fontWeight }}
             >
               {stage.label}

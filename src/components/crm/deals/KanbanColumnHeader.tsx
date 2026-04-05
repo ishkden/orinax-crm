@@ -71,6 +71,7 @@ export default function KanbanColumnHeader({
   const titleRef = useRef<HTMLHeadingElement>(null);
   const badgeRef = useRef<HTMLSpanElement>(null);
   const [isTruncated, setIsTruncated] = useState(false);
+  const [showTip, setShowTip] = useState(false);
   const [titlePadLeft, setTitlePadLeft] = useState(24);
   const headerRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -238,10 +239,19 @@ export default function KanbanColumnHeader({
               ref={titleRef}
               className="w-full text-center truncate leading-tight"
               style={{ fontSize: s.columnHeader.fontSize, fontWeight: s.columnHeader.fontWeight, paddingLeft: titlePadLeft, paddingRight: 24 }}
-              title={isTruncated ? stage.label : undefined}
+              onMouseEnter={() => isTruncated && setShowTip(true)}
+              onMouseLeave={() => setShowTip(false)}
             >
               {stage.label}
             </h3>
+            {showTip && isTruncated && (
+              <div
+                className="absolute left-1/2 -translate-x-1/2 z-50 px-2.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap shadow-lg pointer-events-none"
+                style={{ top: "calc(100% + 4px)", backgroundColor: "rgba(0,0,0,0.85)", color: "#fff" }}
+              >
+                {stage.label}
+              </div>
+            )}
 
             {/* Add stage after — appears on hover, left of pencil */}
             <button

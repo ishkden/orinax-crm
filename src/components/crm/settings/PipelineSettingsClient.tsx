@@ -79,34 +79,52 @@ function StagePill({
     isDragging,
   } = useSortable({ id: stage.id, disabled: !isDraggable });
 
+  const textRef = useRef<HTMLSpanElement>(null);
+  const [isTruncated, setIsTruncated] = useState(false);
+
+  useEffect(() => {
+    const el = textRef.current;
+    if (!el) return;
+    const check = () => setIsTruncated(el.scrollWidth > el.clientWidth);
+    check();
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [stage.name]);
+
   const bg = stage.color ?? "#6B7280";
   const fg = contrastTextOnHex(bg);
 
-  const style: React.CSSProperties = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-    zIndex: isDragging ? 50 : undefined,
-    backgroundColor: bg,
-    color: fg,
-  };
-
   return (
-    <button
+    <div
       ref={setNodeRef}
-      type="button"
-      onClick={() => onEdit(stage)}
-      className={cn(
-        "flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium w-full cursor-pointer select-none",
-        isDragging && "shadow-xl ring-2 ring-brand-400"
-      )}
-      style={{ ...style, minWidth: 0, overflow: "hidden" }}
-      {...(isDraggable ? { ...listeners, ...attributes } : {})}
+      className="relative group/pill w-full"
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        zIndex: isDragging ? 50 : undefined,
+      }}
     >
-      {systemIcon === "won" && <Trophy size={10} className="shrink-0" />}
-      {systemIcon === "lose" && <Ban size={10} className="shrink-0" />}
-      <span className="truncate">{stage.name}</span>
-    </button>
+      {isTruncated && (
+        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 bg-gray-900 text-white text-[11px] rounded-md whitespace-nowrap opacity-0 group-hover/pill:opacity-100 pointer-events-none transition-opacity z-50 shadow-lg">
+          {stage.name}
+        </div>
+      )}
+      <button
+        type="button"
+        onClick={() => onEdit(stage)}
+        className={cn(
+          "flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium w-full cursor-pointer select-none",
+          isDragging && "shadow-xl ring-2 ring-brand-400"
+        )}
+        style={{ backgroundColor: bg, color: fg, opacity: isDragging ? 0.5 : 1, minWidth: 0, overflow: "hidden" }}
+        {...(isDraggable ? { ...listeners, ...attributes } : {})}
+      >
+        {systemIcon === "won" && <Trophy size={10} className="shrink-0" />}
+        {systemIcon === "lose" && <Ban size={10} className="shrink-0" />}
+        <span ref={textRef} className="truncate">{stage.name}</span>
+      </button>
+    </div>
   );
 }
 
@@ -374,7 +392,6 @@ function PipelineRowInner({
             <div className="flex-1 flex items-center min-w-0" style={{ gap: 5 }}>
               {workStages.map((s, idx) => (
                 <div key={s.id} data-stage-id={s.id} className="group/stage relative" style={{ flex: "1 1 0%", minWidth: 0 }}>
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 bg-gray-900 text-white text-[11px] rounded-md whitespace-nowrap opacity-0 group-hover/stage:opacity-100 pointer-events-none transition-opacity z-50 shadow-lg">{s.name}</div>
                   <button type="button" onClick={(e) => { e.stopPropagation(); const r = (e.currentTarget as HTMLElement).getBoundingClientRect(); setAddAnchor({ top: r.bottom + 4, left: r.left - 4, insertAt: idx }); }} className="absolute -left-[9px] top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-brand-500 text-white items-center justify-center opacity-0 group-hover/stage:opacity-100 pointer-events-none group-hover/stage:pointer-events-auto transition-all z-40 hover:scale-125 hidden group-hover/stage:flex"><Plus size={8} strokeWidth={3} /></button>
                   <StagePill stage={s} onEdit={handleEditStage} isDraggable />
                 </div>
@@ -383,8 +400,7 @@ function PipelineRowInner({
               {wonStages.length > 0 && (
                 <div className="flex items-center shrink-0 pl-2 border-l-2 border-green-200" style={{ gap: 5 }}>
                   {wonStages.map((s) => (
-                    <div key={s.id} data-stage-id={s.id} className="group/sys relative" style={{ width: 60, minWidth: 60, maxWidth: 60 }}>
-                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 bg-gray-900 text-white text-[11px] rounded-md whitespace-nowrap opacity-0 group-hover/sys:opacity-100 pointer-events-none transition-opacity z-50 shadow-lg">{s.name}</div>
+                    <div key={s.id} data-stage-id={s.id} style={{ width: 60, minWidth: 60, maxWidth: 60 }}>
                       <StagePill stage={s} onEdit={handleEditStage} systemIcon="won" />
                     </div>
                   ))}
@@ -393,8 +409,7 @@ function PipelineRowInner({
               {loseStages.length > 0 && (
                 <div className="flex items-center shrink-0 pl-2 border-l-2 border-red-200" style={{ gap: 5 }}>
                   {loseStages.map((s) => (
-                    <div key={s.id} data-stage-id={s.id} className="group/sys relative" style={{ width: 60, minWidth: 60, maxWidth: 60 }}>
-                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 bg-gray-900 text-white text-[11px] rounded-md whitespace-nowrap opacity-0 group-hover/sys:opacity-100 pointer-events-none transition-opacity z-50 shadow-lg">{s.name}</div>
+                    <div key={s.id} data-stage-id={s.id} style={{ width: 60, minWidth: 60, maxWidth: 60 }}>
                       <StagePill stage={s} onEdit={handleEditStage} systemIcon="lose" />
                     </div>
                   ))}

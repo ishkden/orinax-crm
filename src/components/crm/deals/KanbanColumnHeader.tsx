@@ -68,6 +68,8 @@ export default function KanbanColumnHeader({
     []
   );
 
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  const [isTruncated, setIsTruncated] = useState(false);
   const headerRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const [panelPos, setPanelPos] = useState<{ top: number; left: number } | null>(null);
@@ -144,6 +146,22 @@ export default function KanbanColumnHeader({
 
   const pickerColor = /^#[0-9A-Fa-f]{6}$/.test(draftColor) ? draftColor : stage.color;
 
+  useEffect(() => {
+    const el = titleRef.current;
+    if (!el) { setIsTruncated(false); return; }
+    setIsTruncated(el.scrollWidth > el.clientWidth);
+  }, [stage.label, editing]);
+
+  useEffect(() => {
+    const el = titleRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => {
+      setIsTruncated(el.scrollWidth > el.clientWidth);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   const formatStageTotal = useCallback(
     (n: number) => formatCurrency(n, currencyForTotal),
     [currencyForTotal]
@@ -201,8 +219,10 @@ export default function KanbanColumnHeader({
               {totalCount}
             </span>
             <h3
-              className="flex-1 min-w-0 text-center truncate px-1 leading-tight"
-              style={{ fontSize: s.columnHeader.fontSize, fontWeight: s.columnHeader.fontWeight, marginLeft: `${s.columnHeader.countBadgeGap}px` }}
+              ref={titleRef}
+              className="flex-1 min-w-0 text-center truncate leading-tight"
+              style={{ fontSize: s.columnHeader.fontSize, fontWeight: s.columnHeader.fontWeight, marginLeft: `${s.columnHeader.countBadgeGap}px`, paddingRight: 24 }}
+              title={isTruncated ? stage.label : undefined}
             >
               {stage.label}
             </h3>

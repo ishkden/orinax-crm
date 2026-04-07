@@ -648,63 +648,57 @@ function StageKanban({ stages, currentStageId, onStageChange, loading }: {
   const currentIdx = stages.findIndex(s => s.id === currentStageId);
 
   return (
-    <div className="flex w-full overflow-x-auto rounded-lg border border-gray-200 gap-px bg-gray-200">
+    <div
+      className="flex w-full rounded-lg overflow-hidden border border-gray-200"
+      onMouseLeave={() => setHoveredIdx(null)}
+    >
       {stages.map((stage, idx) => {
         const isPast = currentIdx >= 0 && idx < currentIdx;
         const isCurrent = idx === currentIdx;
         const isHovered = hoveredIdx === idx;
-        const filled = isPast || isCurrent;
         const stageColor = /^#[0-9A-Fa-f]{6}$/.test(stage.color ?? "") ? stage.color! : "#6366f1";
         const textColor = contrastTextOnHex(stageColor);
 
         let bgColor: string;
         let fgColor: string;
-        let opacity = 1;
 
-        if (isCurrent || isHovered) {
+        if (isHovered) {
           bgColor = stageColor;
           fgColor = textColor;
-          opacity = 1;
+        } else if (isCurrent) {
+          bgColor = stageColor;
+          fgColor = textColor;
         } else if (isPast) {
           bgColor = stageColor;
           fgColor = textColor;
-          opacity = 0.5;
         } else {
           bgColor = "#f3f4f6";
-          fgColor = isHovered ? textColor : "#9ca3af";
-          opacity = 1;
+          fgColor = "#9ca3af";
         }
+
+        const flexGrow = isHovered ? 3 : 1;
 
         return (
           <button
             key={stage.id}
             onClick={() => !loading && onStageChange(stage)}
             onMouseEnter={() => setHoveredIdx(idx)}
-            onMouseLeave={() => setHoveredIdx(null)}
             disabled={loading}
             title={stage.label}
-            className="first:rounded-l-lg last:rounded-r-lg"
+            className="relative border-r border-white/40 last:border-r-0 overflow-hidden"
             style={{
+              flexGrow,
+              flexShrink: 1,
+              flexBasis: 0,
               backgroundColor: bgColor,
               color: fgColor,
-              opacity: loading ? 0.6 : opacity,
+              opacity: loading ? 0.6 : (isPast && !isHovered ? 0.55 : 1),
               cursor: loading ? "not-allowed" : "pointer",
-              maxWidth: isCurrent || isHovered ? "260px" : "32px",
-              minWidth: isCurrent ? "64px" : "16px",
-              flexShrink: 0,
-              padding: isCurrent || isHovered ? "8px 10px" : "8px 4px",
-              overflow: "hidden",
-              transition: "max-width 0.2s ease, padding 0.2s ease, background-color 0.2s ease, opacity 0.2s ease",
-              boxShadow: isCurrent ? `0 0 0 2px ${stageColor}66` : "none",
+              padding: "8px 6px",
+              transition: "flex-grow 0.2s ease, background-color 0.2s ease, opacity 0.2s ease",
             }}
           >
-            <span
-              className="block text-[11px] font-semibold whitespace-nowrap text-center"
-              style={{
-                opacity: isCurrent || isHovered ? 1 : 0,
-                transition: "opacity 0.15s ease",
-              }}
-            >
+            <span className="block text-[11px] font-semibold whitespace-nowrap truncate text-center">
               {stage.label}
             </span>
           </button>

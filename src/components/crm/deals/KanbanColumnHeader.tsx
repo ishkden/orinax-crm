@@ -326,6 +326,25 @@ export default function KanbanColumnHeader({
         </div>
       )}
 
+      {/* Add deal button — always visible below the stage total */}
+      {s.addButton.show && (
+        <div className="flex justify-center py-1">
+          <button
+            type="button"
+            onClick={() => onAddDeal?.(stage.id)}
+            className="flex items-center justify-center text-gray-400 transition-colors hover:bg-brand-50/80 hover:text-brand-600"
+            style={{
+              width: s.addButton.size,
+              height: s.addButton.size,
+              borderRadius: s.addButton.borderRadius,
+            }}
+            title="Добавить сделку"
+          >
+            <Plus size={s.addButton.iconSize} strokeWidth={2} />
+          </button>
+        </div>
+      )}
+
       {/* Edit panel */}
       {editing &&
         panelPos &&

@@ -91,6 +91,30 @@ export default function DealsClient({
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
   const [, startTransition] = useTransition();
 
+  // Restore selected deal from URL on mount
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const dealSN = params.get("deal");
+    if (dealSN) {
+      const found = deals.find((d) => String(d.serialNumber) === dealSN);
+      if (found) setSelectedDeal(found);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Sync URL with selected deal
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    if (selectedDeal) {
+      url.searchParams.set("deal", String(selectedDeal.serialNumber));
+    } else {
+      url.searchParams.delete("deal");
+    }
+    window.history.replaceState({}, "", url.toString());
+  }, [selectedDeal]);
+
   const openCreateDeal = useCallback(() => {
     setModalStage(null);
     setModalOpen(true);

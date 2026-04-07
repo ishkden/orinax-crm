@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import Link from "next/link";
 import {
   X,
   Banknote,
@@ -11,7 +10,6 @@ import {
   Activity,
   MessageSquare,
   AlignLeft,
-  ExternalLink,
 } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import type { Deal, Stage } from "./types";
@@ -170,13 +168,13 @@ export default function DealRightDrawer({ deal, stages, onClose }: DealRightDraw
             onClick={onClose}
           />
 
-          {/* Drawer panel */}
+          {/* Drawer panel — full content area width */}
           <motion.div
             key="deal-right-drawer"
             role="dialog"
             aria-modal="true"
-            className="fixed top-0 bottom-0 z-[90] w-[500px] bg-white shadow-2xl flex flex-col overflow-hidden"
-            style={{ right: CRM_RIGHT_BAR_W }}
+            className="fixed top-0 bottom-0 z-[90] bg-white shadow-2xl flex flex-col overflow-hidden"
+            style={{ left: sidebarWidth, right: CRM_RIGHT_BAR_W }}
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
@@ -188,22 +186,13 @@ export default function DealRightDrawer({ deal, stages, onClose }: DealRightDraw
                 <h2 className="text-lg font-semibold text-gray-900 leading-tight line-clamp-2">
                   {deal.title}
                 </h2>
-                <div className="flex items-center gap-1 shrink-0 mt-0.5">
-                  <Link
-                    href={`/crm/deals/${deal.serialNumber}`}
-                    className="p-1.5 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-gray-100 transition-colors"
-                    title="Открыть полностью"
-                  >
-                    <ExternalLink size={16} />
-                  </Link>
-                  <button
-                    type="button"
-                    onClick={onClose}
-                    className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
-                  >
-                    <X size={18} />
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="shrink-0 mt-0.5 p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                >
+                  <X size={18} />
+                </button>
               </div>
 
               <div className="flex items-center gap-2.5 flex-wrap">

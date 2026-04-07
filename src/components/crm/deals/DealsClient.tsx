@@ -11,6 +11,7 @@ import { useCrmHeaderAction } from "@/components/crm/CrmHeaderActionContext";
 import { useCrmDealPipeline } from "@/components/crm/CrmDealPipelineContext";
 import type { DbPipeline } from "@/app/actions/deals";
 import type { Deal, CreateDealInput, Stage, Pipeline } from "./types";
+import type { CustomFieldDef } from "@/app/actions/custom-fields";
 import {
   updateDealStage,
   createDeal,
@@ -32,6 +33,7 @@ interface DealsClientProps {
   initialDealsByStage: Record<string, { items: Deal[]; total: number }>;
   initialPipelines: DbPipeline[];
   serverStageTotals?: Record<string, { amount: number; currency: string }>;
+  customFields?: CustomFieldDef[];
 }
 
 function mapDbToUiPipelines(dbPipelines: DbPipeline[]): Pipeline[] {
@@ -50,6 +52,7 @@ export default function DealsClient({
   initialDealsByStage,
   initialPipelines,
   serverStageTotals: initialServerStageTotals = {},
+  customFields = [],
 }: DealsClientProps) {
   const { setHeaderAction } = useCrmHeaderAction();
   const { setPipeline } = useCrmDealPipeline();
@@ -432,7 +435,11 @@ export default function DealsClient({
       <DealRightDrawer
         deal={selectedDeal}
         stages={activeStages}
+        customFields={customFields}
         onClose={handleDrawerClose}
+        onDealUpdate={(updated) =>
+          setDeals((prev) => prev.map((d) => (d.id === updated.id ? updated : d)))
+        }
       />
     </>
   );

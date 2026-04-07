@@ -78,6 +78,7 @@ type PrismaDeaWithRelations = {
   pipelineId: string | null;
   companyId: string | null;
   lastActivityTime: Date | null;
+  customFieldValues: unknown;
   contact: {
     firstName: string;
     lastName: string;
@@ -116,6 +117,7 @@ function mapDeal(d: PrismaDeaWithRelations): Deal {
     stageId: d.stageId,
     pipelineId: d.pipelineId,
     lastActivityTime: d.lastActivityTime?.toISOString() ?? null,
+    customFieldValues: (d.customFieldValues as Record<string, unknown>) ?? {},
   };
 }
 
@@ -131,6 +133,27 @@ const DEAL_INCLUDE = {
   },
   company: { select: { name: true } },
   assigned: { select: { name: true } },
+} as const;
+
+const DEAL_SELECT_SCALAR = {
+  id: true,
+  serialNumber: true,
+  title: true,
+  value: true,
+  currency: true,
+  stage: true,
+  priority: true,
+  contactId: true,
+  assignedId: true,
+  closeDate: true,
+  description: true,
+  tags: true,
+  createdAt: true,
+  stageId: true,
+  pipelineId: true,
+  companyId: true,
+  lastActivityTime: true,
+  customFieldValues: true,
 } as const;
 
 // ─── Server Actions ───────────────────────────────────────────────────────────

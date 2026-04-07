@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { GitBranch, Users, Bell, Shield, Palette, Database, Zap } from "lucide-react";
+import { GitBranch, Users, Bell, Shield, Palette, Database, Zap, SlidersHorizontal } from "lucide-react";
 
 const SETTINGS_CARDS = [
   {
@@ -9,6 +9,14 @@ const SETTINGS_CARDS = [
     description: "Воронки продаж, стадии, системные статусы (Успешно / Провалено)",
     color: "text-brand-500",
     bg: "bg-brand-50",
+  },
+  {
+    href: "/crm/settings/custom-fields",
+    icon: SlidersHorizontal,
+    title: "Пользовательские поля",
+    description: "Создавайте поля любого типа: строки, списки, даты, числа, файлы и другие",
+    color: "text-teal-500",
+    bg: "bg-teal-50",
   },
   {
     href: "#",

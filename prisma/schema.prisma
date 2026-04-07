@@ -37,6 +37,7 @@ model Org {
   dealContacts   DealContact[]
   channels       CommunicationChannel[]
   stageHistories StageHistory[]
+  customFields   CustomField[]
 }
 
 // Связь User ↔ Org через промежуточную таблицу (один user — много org)
@@ -273,6 +274,8 @@ model Deal {
   lastActivityBy       String?
   dateCreate           DateTime?
   dateModify           DateTime?
+
+  customFieldValues Json?
 
   isDeleted       Boolean   @default(false)
   syncedAt        DateTime?
@@ -581,6 +584,40 @@ enum ConversationStatus {
   PENDING
   RESOLVED
   CLOSED
+}
+
+// ─── Custom Fields ────────────────────────────────────────────────────────────
+
+enum CustomFieldType {
+  STRING
+  TEXT
+  LIST
+  DATETIME
+  DATE
+  RESOURCE
+  ADDRESS
+  URL
+  FILE
+  MONEY
+  BOOLEAN
+  NUMBER
+}
+
+model CustomField {
+  id        String          @id @default(cuid())
+  orgId     String
+  code      String          @unique
+  name      String
+  type      CustomFieldType
+  options   Json?
+  required  Boolean         @default(false)
+  sortOrder Int             @default(0)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  org Org @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@index([orgId])
 }
 
 // ─── SYSTEM SETTINGS (key-value store for admin config) ──────────────────────

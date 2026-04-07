@@ -25,6 +25,7 @@ export interface Deal {
   stageId: string | null;
   pipelineId: string | null;
   lastActivityTime: string | null;
+  customFieldValues: Record<string, unknown>;
 }
 
 export interface CreateDealInput {

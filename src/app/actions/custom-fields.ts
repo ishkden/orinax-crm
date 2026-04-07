@@ -32,6 +32,14 @@ export type CustomFieldDef = {
   required: boolean;
   sortOrder: number;
   section: string | null;
+  pipelineId: string | null;
+};
+
+export type PipelineSectionInfo = {
+  pipelineId: string;
+  pipelineName: string;
+  sectionName: string;
+  fields: CustomFieldDef[];
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -64,6 +72,8 @@ function mapField(f: {
   options: unknown;
   required: boolean;
   sortOrder: number;
+  section?: string | null;
+  pipelineId?: string | null;
 }): CustomFieldDef {
   return {
     id: f.id,
@@ -74,7 +84,8 @@ function mapField(f: {
     options: Array.isArray(f.options) ? (f.options as string[]) : null,
     required: f.required,
     sortOrder: f.sortOrder,
-    section: (f as any).section ?? null,
+    section: f.section ?? null,
+    pipelineId: f.pipelineId ?? null,
   };
 }
 
@@ -99,6 +110,7 @@ export async function createCustomField(data: {
   options?: string[];
   required?: boolean;
   section?: string | null;
+  pipelineId?: string | null;
 }): Promise<CustomFieldDef> {
   const orgId = await getOrgId();
 
@@ -124,6 +136,7 @@ export async function createCustomField(data: {
       required: data.required ?? false,
       sortOrder: count,
       section: data.section ?? null,
+      pipelineId: data.pipelineId ?? null,
     },
   });
   return mapField(field);
@@ -136,6 +149,7 @@ export async function updateCustomField(
     options?: string[];
     required?: boolean;
     section?: string | null;
+    pipelineId?: string | null;
   }
 ): Promise<CustomFieldDef> {
   const orgId = await getOrgId();
@@ -145,6 +159,7 @@ export async function updateCustomField(
   if (data.options !== undefined) updateData.options = data.options.length > 0 ? data.options : null;
   if (data.required !== undefined) updateData.required = data.required;
   if (data.section !== undefined) updateData.section = data.section;
+  if (data.pipelineId !== undefined) updateData.pipelineId = data.pipelineId;
 
   const field = await prisma.customField.update({
     where: { id, orgId },
@@ -169,6 +184,94 @@ export async function reorderCustomFields(ids: string[]): Promise<void> {
     )
   );
 }
+
+// ─── Pipeline Sections ────────────────────────────────────────────────────────
+
+/** Returns all pipeline-specific sections (from all pipelines) with their fields. */
+export async function getAllSectionsWithFields(): Promise<PipelineSectionInfo[]> {
+  const orgId = await getOrgId();
+
+  const [pipelines, fields] = await Promise.all([
+    prisma.pipeline.findMany({
+      where: { orgId },
+      select: { id: true, name: true },
+      orderBy: { sortOrder: "asc" },
+    }),
+    prisma.customField.findMany({
+      where: {
+        orgId,
+        entityType: "DEAL",
+        pipelineId: { not: null },
+        section: { not: null },
+      },
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+    }),
+  ]);
+
+  const pipelineMap = new Map(pipelines.map(p => [p.id, p.name]));
+
+  const grouped = new Map<string, PipelineSectionInfo>();
+  for (const f of fields) {
+    if (!f.pipelineId || !f.section) continue;
+    const key = `${f.pipelineId}::${f.section}`;
+    if (!grouped.has(key)) {
+      grouped.set(key, {
+        pipelineId: f.pipelineId,
+        pipelineName: pipelineMap.get(f.pipelineId) ?? "Неизвестная воронка",
+        sectionName: f.section,
+        fields: [],
+      });
+    }
+    grouped.get(key)!.fields.push(mapField(f));
+  }
+
+  return Array.from(grouped.values());
+}
+
+/**
+ * Clones a set of fields into the target pipeline with the given section name.
+ * Returns the newly created field definitions.
+ */
+export async function cloneSectionToPipeline(
+  sourceFields: CustomFieldDef[],
+  targetPipelineId: string,
+  sectionName: string
+): Promise<CustomFieldDef[]> {
+  const orgId = await getOrgId();
+  const created: CustomFieldDef[] = [];
+
+  for (const f of sourceFields) {
+    let code = generateCode();
+    let attempt = 0;
+    while (await prisma.customField.findUnique({ where: { code } })) {
+      code = generateCode();
+      if (++attempt > 10) throw new Error("Failed to generate unique code");
+    }
+
+    const count = await prisma.customField.count({ where: { orgId, entityType: "DEAL" } });
+    const newField = await prisma.customField.create({
+      data: {
+        orgId,
+        code,
+        name: f.name,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        type: f.type as any,
+        entityType: "DEAL",
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        options: (f.options && f.options.length > 0 ? f.options : null) as any,
+        required: f.required,
+        sortOrder: count,
+        section: sectionName,
+        pipelineId: targetPipelineId,
+      },
+    });
+    created.push(mapField(newField));
+  }
+
+  return created;
+}
+
+// ─── Entity field value saves ─────────────────────────────────────────────────
 
 export async function saveDealCustomFieldValues(
   dealId: string,

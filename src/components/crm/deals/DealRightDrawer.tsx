@@ -9,13 +9,19 @@ import {
   FileText, ChevronDown, Plus, FolderOpen,
   Type, List, Clock, MapPin, Link2, Paperclip,
   DollarSign, ToggleLeft, Hash, CalendarRange, ChevronRight,
-  Trash2, Search,
+  Trash2, Search, Layers,
 } from "lucide-react";
 import Link from "next/link";
-import { formatCurrency, formatDate, contrastTextOnHex } from "@/lib/utils";
+import { formatCurrency, formatDate } from "@/lib/utils";
 import type { Deal, Stage, Pipeline } from "./types";
-import type { CustomFieldDef, CustomFieldType } from "@/app/actions/custom-fields";
-import { saveDealCustomFieldValues, createCustomField, updateCustomField } from "@/app/actions/custom-fields";
+import type { CustomFieldDef, CustomFieldType, PipelineSectionInfo } from "@/app/actions/custom-fields";
+import {
+  saveDealCustomFieldValues,
+  createCustomField,
+  updateCustomField,
+  getAllSectionsWithFields,
+  cloneSectionToPipeline,
+} from "@/app/actions/custom-fields";
 import { updateDealStage, updateDealPipeline } from "@/app/actions/deals";
 import ContactInfoBlock from "./ContactInfoBlock";
 import { getContactByCuid } from "@/app/actions/contacts";
@@ -64,25 +70,245 @@ const FIELD_TYPES: { value: CustomFieldType; label: string; icon: React.ReactNod
   { value: "RESOURCE", label: "Ресурс",     icon: <CalendarRange size={14} />, color: "text-cyan-500 bg-cyan-50" },
 ];
 
-// ─── Add Field Modal ──────────────────────────────────────────────────────────
+// ─── Create Section Modal ─────────────────────────────────────────────────────
 
-function AddFieldModal({
-  existingSections,
-  preselectedSection,
+function CreateSectionModal({
   onClose,
   onCreate,
 }: {
-  existingSections: string[];
-  preselectedSection?: string;
+  onClose: () => void;
+  onCreate: (sectionName: string) => void;
+}) {
+  const [name, setName] = useState("");
+
+  function handleCreate() {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    onCreate(trimmed);
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/50"
+      onClick={e => e.target === e.currentTarget && onClose()}
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.96 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.96 }}
+        className="w-full max-w-sm bg-white rounded-2xl shadow-2xl overflow-hidden"
+      >
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+          <h2 className="text-sm font-semibold text-gray-900">Создать раздел</h2>
+          <button type="button" onClick={onClose} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors">
+            <X size={16} />
+          </button>
+        </div>
+        <div className="p-5 space-y-4">
+          <p className="text-xs text-gray-500">Введите название раздела. После создания вы сможете добавить в него поля.</p>
+          <input
+            autoFocus
+            type="text"
+            value={name}
+            onChange={e => setName(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && handleCreate()}
+            placeholder="Например: Дополнительная информация"
+            className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+          />
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={handleCreate}
+              disabled={!name.trim()}
+              className="flex-1 py-2.5 rounded-xl bg-brand-600 text-white text-sm font-medium hover:bg-brand-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              Создать раздел
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+            >
+              Отмена
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+// ─── Choose Section Modal ─────────────────────────────────────────────────────
+
+function ChooseSectionModal({
+  currentPipelineId,
+  existingSectionNames,
+  onClose,
+  onSelect,
+}: {
+  currentPipelineId: string | null;
+  existingSectionNames: string[];
+  onClose: () => void;
+  onSelect: (section: PipelineSectionInfo) => Promise<void>;
+}) {
+  const [sections, setSections] = useState<PipelineSectionInfo[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [selecting, setSelecting] = useState<string | null>(null);
+
+  useEffect(() => {
+    getAllSectionsWithFields().then(data => {
+      setSections(data);
+      setLoading(false);
+    });
+  }, []);
+
+  const FIELD_TYPE_LABELS: Record<string, string> = {
+    STRING: "Строка", TEXT: "Текст", NUMBER: "Число", LIST: "Список",
+    DATE: "Дата", DATETIME: "Дата/Время", BOOLEAN: "Да/Нет",
+    MONEY: "Деньги", URL: "Ссылка", ADDRESS: "Адрес", FILE: "Файл", RESOURCE: "Ресурс",
+  };
+
+  // Group sections by pipeline, filter by search
+  const grouped = sections.reduce<Record<string, PipelineSectionInfo[]>>((acc, s) => {
+    const q = search.toLowerCase();
+    if (q && !s.sectionName.toLowerCase().includes(q) && !s.pipelineName.toLowerCase().includes(q)) return acc;
+    if (!acc[s.pipelineId]) acc[s.pipelineId] = [];
+    acc[s.pipelineId].push(s);
+    return acc;
+  }, {});
+
+  const alreadyAdded = new Set(existingSectionNames);
+
+  async function handleSelect(section: PipelineSectionInfo) {
+    const key = `${section.pipelineId}::${section.sectionName}`;
+    setSelecting(key);
+    await onSelect(section);
+    setSelecting(null);
+  }
+
+  const hasAny = Object.keys(grouped).length > 0;
+
+  return (
+    <div
+      className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/50"
+      onClick={e => e.target === e.currentTarget && onClose()}
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.96 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.96 }}
+        className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden"
+      >
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+          <h2 className="text-sm font-semibold text-gray-900">Выбрать раздел</h2>
+          <button type="button" onClick={onClose} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors">
+            <X size={16} />
+          </button>
+        </div>
+
+        <div className="p-4 space-y-3">
+          <div className="relative">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Поиск разделов..."
+              className="w-full pl-9 pr-3 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+            />
+          </div>
+
+          <div className="max-h-[420px] overflow-y-auto space-y-4">
+            {loading ? (
+              <div className="text-center py-10 text-gray-400 text-sm">Загрузка...</div>
+            ) : !hasAny ? (
+              <div className="text-center py-10 text-gray-400 text-sm">
+                {sections.length === 0 ? "Нет созданных разделов в других воронках" : "Ничего не найдено"}
+              </div>
+            ) : (
+              Object.entries(grouped).map(([pipelineId, pSections]) => {
+                const pipelineName = pSections[0].pipelineName;
+                return (
+                  <div key={pipelineId}>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider px-1 mb-1.5">
+                      Воронка: {pipelineName}
+                    </p>
+                    <div className="space-y-2">
+                      {pSections.map(section => {
+                        const key = `${section.pipelineId}::${section.sectionName}`;
+                        const isCurrentPipeline = section.pipelineId === currentPipelineId;
+                        const alreadyHere = alreadyAdded.has(section.sectionName);
+                        const disabled = isCurrentPipeline || alreadyHere || selecting !== null;
+                        const isSelecting = selecting === key;
+
+                        return (
+                          <div
+                            key={key}
+                            className={`rounded-xl border overflow-hidden transition-all ${
+                              disabled && !isSelecting
+                                ? "border-gray-100 bg-gray-50 opacity-60"
+                                : "border-gray-200 bg-white hover:border-brand-300 hover:shadow-sm"
+                            }`}
+                          >
+                            <div className="flex items-center justify-between px-3 py-2 border-b border-gray-100 bg-gray-50">
+                              <div className="flex items-center gap-1.5">
+                                <FolderOpen size={13} className="text-gray-400" />
+                                <span className="text-xs font-semibold text-gray-700">{section.sectionName}</span>
+                                {(isCurrentPipeline || alreadyHere) && (
+                                  <span className="text-[10px] text-gray-400 bg-gray-200 px-1.5 py-0.5 rounded-full">уже добавлен</span>
+                                )}
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => !disabled && handleSelect(section)}
+                                disabled={disabled}
+                                className={`text-xs font-medium px-2.5 py-1 rounded-lg transition-colors ${
+                                  disabled
+                                    ? "text-gray-300 cursor-not-allowed"
+                                    : "text-brand-600 hover:bg-brand-50"
+                                }`}
+                              >
+                                {isSelecting ? "Добавляется..." : "Добавить"}
+                              </button>
+                            </div>
+                            <div className="px-3 py-2 space-y-0.5">
+                              {section.fields.map(f => (
+                                <div key={f.id} className="flex items-center gap-2 py-0.5">
+                                  <span className="text-xs text-gray-600">{f.name}</span>
+                                  <span className="text-[10px] text-gray-400">— {FIELD_TYPE_LABELS[f.type] ?? f.type}</span>
+                                </div>
+                              ))}
+                              {section.fields.length === 0 && (
+                                <p className="text-xs text-gray-400 italic">Нет полей</p>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+// ─── Add Field Modal ──────────────────────────────────────────────────────────
+
+function AddFieldModal({
+  sectionName,
+  onClose,
+  onCreate,
+}: {
+  sectionName: string;
   onClose: () => void;
   onCreate: (field: CustomFieldDef) => void;
 }) {
-  const hasPreselected = !!preselectedSection;
-  const [step, setStep] = useState<"section" | "field">(hasPreselected ? "field" : "section");
-  const [selectedSection, setSelectedSection] = useState<string>(preselectedSection ?? "");
-  const [newSectionName, setNewSectionName] = useState("");
-  const [creatingNewSection, setCreatingNewSection] = useState(!hasPreselected && existingSections.length === 0);
-
   const [fieldName, setFieldName] = useState("");
   const [fieldType, setFieldType] = useState<CustomFieldType>("STRING");
   const [fieldOptions, setFieldOptions] = useState<string[]>([]);
@@ -91,15 +317,6 @@ function AddFieldModal({
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  const sectionValue = hasPreselected
-    ? preselectedSection!
-    : creatingNewSection ? newSectionName.trim() : selectedSection;
-
-  function goToField() {
-    if (!sectionValue) return;
-    setStep("field");
-  }
-
   function addOption() {
     const v = optionDraft.trim();
     if (!v || fieldOptions.includes(v)) return;
@@ -107,8 +324,8 @@ function AddFieldModal({
     setOptionDraft("");
   }
 
-  function handleCreate() {
-    if (!fieldName.trim() || !sectionValue) return;
+  function handleCreate(pipelineId?: string | null) {
+    if (!fieldName.trim()) return;
     setError(null);
     startTransition(async () => {
       try {
@@ -118,7 +335,8 @@ function AddFieldModal({
           entityType: "DEAL",
           options: fieldOptions.length > 0 ? fieldOptions : undefined,
           required,
-          section: sectionValue,
+          section: sectionName,
+          pipelineId: pipelineId ?? null,
         });
         onCreate(created);
       } catch (e) {
@@ -128,7 +346,10 @@ function AddFieldModal({
   }
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/50" onClick={e => e.target === e.currentTarget && onClose()}>
+    <div
+      className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/50"
+      onClick={e => e.target === e.currentTarget && onClose()}
+    >
       <motion.div
         initial={{ opacity: 0, scale: 0.96 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -137,149 +358,115 @@ function AddFieldModal({
       >
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <div className="flex items-center gap-2">
-            {step === "field" && !hasPreselected && (
-              <button type="button" onClick={() => setStep("section")} className="p-1 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors">
-                <ChevronRight size={16} className="rotate-180" />
-              </button>
-            )}
-            <h2 className="text-sm font-semibold text-gray-900">
-              {step === "section" ? "Выбор раздела" : "Новое поле"}
-            </h2>
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-brand-50 border border-brand-100">
+              <FolderOpen size={12} className="text-brand-600" />
+              <span className="text-xs font-medium text-brand-700">{sectionName}</span>
+            </div>
+            <h2 className="text-sm font-semibold text-gray-900">— Новое поле</h2>
           </div>
           <button type="button" onClick={onClose} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors">
             <X size={16} />
           </button>
         </div>
 
-        <div className="p-5">
-          {step === "section" ? (
-            <div className="space-y-4">
-              <p className="text-xs text-gray-500">Поле можно добавить только в раздел. Выберите существующий или создайте новый.</p>
+        <div className="p-5 space-y-4">
+          <div>
+            <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">Название поля</label>
+            <input
+              autoFocus
+              type="text"
+              value={fieldName}
+              onChange={e => setFieldName(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && !isPending && fieldName.trim() && handleCreate()}
+              placeholder="Например: Источник лида"
+              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+            />
+          </div>
 
-              {existingSections.length > 0 && (
-                <div className="space-y-1.5">
-                  <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Существующие разделы</p>
-                  <div className="space-y-1">
-                    {existingSections.map(sec => (
-                      <button key={sec} type="button" onClick={() => { setSelectedSection(sec); setCreatingNewSection(false); }}
-                        className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl border text-left transition-all ${!creatingNewSection && selectedSection === sec ? "border-brand-500 bg-brand-50 ring-1 ring-brand-500" : "border-gray-100 bg-gray-50 hover:border-gray-200 hover:bg-gray-100"}`}>
-                        <FolderOpen size={15} className={!creatingNewSection && selectedSection === sec ? "text-brand-600" : "text-gray-400"} />
-                        <span className="text-sm font-medium text-gray-700">{sec}</span>
-                        {!creatingNewSection && selectedSection === sec && <Check size={14} className="ml-auto text-brand-600" />}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div className="space-y-1.5">
-                <button type="button" onClick={() => setCreatingNewSection(true)}
-                  className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl border transition-all ${creatingNewSection ? "border-brand-500 bg-brand-50 ring-1 ring-brand-500" : "border-dashed border-gray-200 hover:border-brand-300 hover:bg-gray-50"}`}>
-                  <Plus size={15} className={creatingNewSection ? "text-brand-600" : "text-gray-400"} />
-                  <span className={`text-sm font-medium ${creatingNewSection ? "text-brand-700" : "text-gray-500"}`}>Создать новый раздел</span>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">Тип поля</label>
+            <div className="grid grid-cols-3 gap-1.5">
+              {FIELD_TYPES.map(t => (
+                <button
+                  key={t.value}
+                  type="button"
+                  onClick={() => setFieldType(t.value)}
+                  className={`flex items-center gap-1.5 px-2.5 py-2 rounded-lg border text-left transition-all ${
+                    fieldType === t.value
+                      ? "border-brand-500 bg-brand-50 ring-1 ring-brand-500"
+                      : "border-gray-100 bg-white hover:border-gray-200 hover:bg-gray-50"
+                  }`}
+                >
+                  <span className={`shrink-0 rounded-md p-1 ${t.color}`}>{t.icon}</span>
+                  <span className="text-xs font-medium text-gray-700 truncate">{t.label}</span>
                 </button>
-                {creatingNewSection && (
-                  <input autoFocus type="text" value={newSectionName} onChange={e => setNewSectionName(e.target.value)}
-                    onKeyDown={e => e.key === "Enter" && sectionValue && goToField()}
-                    placeholder="Название раздела"
-                    className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500" />
-                )}
-              </div>
-
-              <button type="button" onClick={goToField} disabled={!sectionValue}
-                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-brand-600 text-white text-sm font-medium hover:bg-brand-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
-                Далее <ChevronRight size={15} />
-              </button>
+              ))}
             </div>
-          ) : (
-            <div className="space-y-4">
-              {hasPreselected ? (
-                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-50 border border-brand-100 w-fit">
-                  <FolderOpen size={13} className="text-brand-600" />
-                  <span className="text-xs font-medium text-brand-700">{sectionValue}</span>
-                </div>
-              ) : (
-                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-50 border border-brand-100 w-fit">
-                  <FolderOpen size={13} className="text-brand-600" />
-                  <span className="text-xs font-medium text-brand-700">{sectionValue}</span>
-                </div>
-              )}
+          </div>
 
-              <div>
-                <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">Название поля</label>
-                <input autoFocus type="text" value={fieldName} onChange={e => setFieldName(e.target.value)}
-                  onKeyDown={e => e.key === "Enter" && !isPending && fieldName.trim() && handleCreate()}
-                  placeholder="Например: Источник лида"
-                  className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500" />
+          {fieldType === "LIST" && (
+            <div>
+              <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">Значения списка</label>
+              <div className="flex gap-2 mb-2">
+                <input
+                  type="text"
+                  value={optionDraft}
+                  onChange={e => setOptionDraft(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && (e.preventDefault(), addOption())}
+                  placeholder="Введите значение и нажмите Enter"
+                  className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+                />
+                <button type="button" onClick={addOption} className="px-3 py-2 rounded-lg bg-brand-50 text-brand-600 hover:bg-brand-100 transition-colors">
+                  <Plus size={14} />
+                </button>
               </div>
-
-              <div>
-                <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">Тип поля</label>
-                <div className="grid grid-cols-3 gap-1.5">
-                  {FIELD_TYPES.map(t => (
-                    <button key={t.value} type="button" onClick={() => setFieldType(t.value)}
-                      className={`flex items-center gap-1.5 px-2.5 py-2 rounded-lg border text-left transition-all ${fieldType === t.value ? "border-brand-500 bg-brand-50 ring-1 ring-brand-500" : "border-gray-100 bg-white hover:border-gray-200 hover:bg-gray-50"}`}>
-                      <span className={`shrink-0 rounded-md p-1 ${t.color}`}>{t.icon}</span>
-                      <span className="text-xs font-medium text-gray-700 truncate">{t.label}</span>
-                    </button>
+              {fieldOptions.length > 0 && (
+                <div className="space-y-1">
+                  {fieldOptions.map((opt, i) => (
+                    <div key={i} className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-lg">
+                      <span className="flex-1 text-sm text-gray-700">{opt}</span>
+                      <button type="button" onClick={() => setFieldOptions(prev => prev.filter((_, idx) => idx !== i))} className="text-gray-400 hover:text-red-500">
+                        <X size={12} />
+                      </button>
+                    </div>
                   ))}
                 </div>
-              </div>
-
-              {fieldType === "LIST" && (
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">Значения списка</label>
-                  <div className="flex gap-2 mb-2">
-                    <input type="text" value={optionDraft} onChange={e => setOptionDraft(e.target.value)}
-                      onKeyDown={e => e.key === "Enter" && (e.preventDefault(), addOption())}
-                      placeholder="Введите значение и нажмите Enter"
-                      className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500" />
-                    <button type="button" onClick={addOption} className="px-3 py-2 rounded-lg bg-brand-50 text-brand-600 hover:bg-brand-100 transition-colors">
-                      <Plus size={14} />
-                    </button>
-                  </div>
-                  {fieldOptions.length > 0 && (
-                    <div className="space-y-1">
-                      {fieldOptions.map((opt, i) => (
-                        <div key={i} className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-lg">
-                          <span className="flex-1 text-sm text-gray-700">{opt}</span>
-                          <button type="button" onClick={() => setFieldOptions(prev => prev.filter((_, idx) => idx !== i))} className="text-gray-400 hover:text-red-500">
-                            <X size={12} />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
               )}
-
-              <label className="flex items-center gap-3 cursor-pointer">
-                <div onClick={() => setRequired(!required)} className={`relative w-9 h-5 rounded-full transition-colors cursor-pointer ${required ? "bg-brand-600" : "bg-gray-200"}`}>
-                  <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${required ? "translate-x-4" : ""}`} />
-                </div>
-                <span className="text-sm text-gray-700">Обязательное поле</span>
-              </label>
-
-              {error && <p className="text-sm text-red-500">{error}</p>}
-
-              <div className="flex gap-2 pt-1">
-                <button type="button" onClick={handleCreate} disabled={!fieldName.trim() || isPending}
-                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-brand-600 text-white text-sm font-medium hover:bg-brand-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
-                  {isPending ? "Создание..." : "Создать поле"}
-                </button>
-                <button type="button" onClick={onClose} className="px-4 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors">
-                  Отмена
-                </button>
-              </div>
             </div>
           )}
+
+          <label className="flex items-center gap-3 cursor-pointer">
+            <div
+              onClick={() => setRequired(!required)}
+              className={`relative w-9 h-5 rounded-full transition-colors cursor-pointer ${required ? "bg-brand-600" : "bg-gray-200"}`}
+            >
+              <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${required ? "translate-x-4" : ""}`} />
+            </div>
+            <span className="text-sm text-gray-700">Обязательное поле</span>
+          </label>
+
+          {error && <p className="text-sm text-red-500">{error}</p>}
+
+          <div className="flex gap-2 pt-1">
+            <button
+              type="button"
+              onClick={() => handleCreate()}
+              disabled={!fieldName.trim() || isPending}
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-brand-600 text-white text-sm font-medium hover:bg-brand-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              {isPending ? "Создание..." : "Создать поле"}
+            </button>
+            <button type="button" onClick={onClose} className="px-4 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors">
+              Отмена
+            </button>
+          </div>
         </div>
       </motion.div>
     </div>
   );
 }
 
-// ─── Select Field Modal ───────────────────────────────────────────────────────
+// ─── Select Field Modal (existing fields → add to section) ────────────────────
 
 function SelectFieldModal({
   availableFields,
@@ -311,9 +498,16 @@ function SelectFieldModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/50" onClick={e => e.target === e.currentTarget && onClose()}>
-      <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.96 }}
-        className="w-full max-w-sm bg-white rounded-2xl shadow-2xl overflow-hidden">
+    <div
+      className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/50"
+      onClick={e => e.target === e.currentTarget && onClose()}
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.96 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.96 }}
+        className="w-full max-w-sm bg-white rounded-2xl shadow-2xl overflow-hidden"
+      >
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <h2 className="text-sm font-semibold text-gray-900">Выбрать поле</h2>
           <button type="button" onClick={onClose} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors">
@@ -323,8 +517,13 @@ function SelectFieldModal({
         <div className="p-4">
           <div className="relative mb-3">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Поиск полей..."
-              className="w-full pl-9 pr-3 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500" />
+            <input
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Поиск полей..."
+              className="w-full pl-9 pr-3 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+            />
           </div>
           {filtered.length === 0 ? (
             <div className="text-center py-8 text-gray-400 text-sm">
@@ -333,8 +532,13 @@ function SelectFieldModal({
           ) : (
             <div className="space-y-1 max-h-72 overflow-y-auto">
               {filtered.map(field => (
-                <button key={field.id} type="button" onClick={() => handleSelect(field)} disabled={selecting === field.id || isPending}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-50 text-left transition-colors disabled:opacity-50">
+                <button
+                  key={field.id}
+                  type="button"
+                  onClick={() => handleSelect(field)}
+                  disabled={selecting === field.id || isPending}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-50 text-left transition-colors disabled:opacity-50"
+                >
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-800 truncate">{field.name}</p>
                     <p className="text-xs text-gray-400">{FIELD_TYPE_LABELS[field.type] ?? field.type}</p>
@@ -477,7 +681,6 @@ function CustomFieldRow({ field, value, onSave, onRemove }: {
   const displayValue = formatFieldValue(value, field.type);
   const isEmpty = displayValue === "—";
 
-  // BOOLEAN: always show inline toggle, no edit mode
   if (isBool) {
     return (
       <div className="flex items-center justify-between py-2.5 group">
@@ -498,7 +701,6 @@ function CustomFieldRow({ field, value, onSave, onRemove }: {
     );
   }
 
-  // LIST: show in-place list, auto-save on click
   if (isList) {
     const options = field.options ?? [];
     const currentVal = Array.isArray(value) ? (value as string[])[0] ?? null : value as string ?? null;
@@ -552,7 +754,6 @@ function CustomFieldRow({ field, value, onSave, onRemove }: {
     );
   }
 
-  // Other types
   return (
     <div className="py-2.5 group">
       <div className="flex items-center justify-between mb-0.5">
@@ -642,65 +843,22 @@ function StageKanban({ stages, currentStageId, onStageChange, loading }: {
   onStageChange: (stage: Stage) => void;
   loading: boolean;
 }) {
-  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
-
   if (stages.length === 0) return null;
   const currentIdx = stages.findIndex(s => s.id === currentStageId);
 
   return (
-    <div
-      className="flex w-full rounded-lg overflow-hidden border border-gray-200"
-      onMouseLeave={() => setHoveredIdx(null)}
-    >
+    <div className="flex w-full overflow-x-auto rounded-lg overflow-hidden border border-gray-200">
       {stages.map((stage, idx) => {
         const isPast = currentIdx >= 0 && idx < currentIdx;
         const isCurrent = idx === currentIdx;
-        const isHovered = hoveredIdx === idx;
-        const stageColor = /^#[0-9A-Fa-f]{6}$/.test(stage.color ?? "") ? stage.color! : "#6366f1";
-        const textColor = contrastTextOnHex(stageColor);
-
-        let bgColor: string;
-        let fgColor: string;
-
-        if (isHovered) {
-          bgColor = stageColor;
-          fgColor = textColor;
-        } else if (isCurrent) {
-          bgColor = stageColor;
-          fgColor = textColor;
-        } else if (isPast) {
-          bgColor = stageColor;
-          fgColor = textColor;
-        } else {
-          bgColor = "#f3f4f6";
-          fgColor = "#9ca3af";
-        }
-
-        const flexGrow = isHovered ? 3 : 1;
+        const filled = isPast || isCurrent;
+        const stageColor = stage.color || "#6366f1";
 
         return (
-          <button
-            key={stage.id}
-            onClick={() => !loading && onStageChange(stage)}
-            onMouseEnter={() => setHoveredIdx(idx)}
-            disabled={loading}
-            title={stage.label}
-            className="relative border-r border-white/40 last:border-r-0 overflow-hidden"
-            style={{
-              flexGrow,
-              flexShrink: 1,
-              flexBasis: 0,
-              backgroundColor: bgColor,
-              color: fgColor,
-              opacity: loading ? 0.6 : (isPast && !isHovered ? 0.55 : 1),
-              cursor: loading ? "not-allowed" : "pointer",
-              padding: "8px 6px",
-              transition: "flex-grow 0.2s ease, background-color 0.2s ease, opacity 0.2s ease",
-            }}
-          >
-            <span className="block text-[11px] font-semibold whitespace-nowrap truncate text-center">
-              {stage.label}
-            </span>
+          <button key={stage.id} onClick={() => !loading && onStageChange(stage)} disabled={loading} title={stage.label}
+            className={`flex-1 min-w-0 px-2 py-2.5 text-[11px] font-semibold text-center transition-all border-r border-white/30 last:border-r-0 truncate ${loading ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}
+            style={filled ? { backgroundColor: stageColor, color: "#fff" } : { backgroundColor: "#f3f4f6", color: "#6b7280" }}>
+            {stage.label}
           </button>
         );
       })}
@@ -710,23 +868,49 @@ function StageKanban({ stages, currentStageId, onStageChange, loading }: {
 
 // ─── Details Left ─────────────────────────────────────────────────────────────
 
-function DetailsLeft({ deal, customFields, allDealFields, onFieldSave, onFieldRemove, onFieldAssign, onOpenContact, onAddField, onSelectField }: {
+function DetailsLeft({
+  deal,
+  customFields,
+  currentPipelineId,
+  pendingSections,
+  onFieldSave,
+  onFieldRemove,
+  onFieldAssign,
+  onOpenContact,
+  onAddField,
+  onSelectField,
+  onCreateSection,
+  onChooseSection,
+}: {
   deal: Deal;
   customFields: CustomFieldDef[];
-  allDealFields: CustomFieldDef[];
+  currentPipelineId: string | null;
+  pendingSections: string[];
   onFieldSave: (code: string, value: unknown) => Promise<void>;
   onFieldRemove: (fieldId: string) => Promise<void>;
   onFieldAssign: (field: CustomFieldDef, sectionName: string) => Promise<void>;
   onOpenContact: (contactCuid: string) => void;
   onAddField: (sectionName: string) => void;
   onSelectField: (sectionName: string) => void;
+  onCreateSection: () => void;
+  onChooseSection: () => void;
 }) {
-  const sections = customFields.reduce<Record<string, CustomFieldDef[]>>((acc, f) => {
+  // Filter fields for the current pipeline (pipeline-specific + legacy global fields)
+  const pipelineFields = customFields.filter(
+    f => !f.pipelineId || f.pipelineId === currentPipelineId
+  );
+
+  const sections = pipelineFields.reduce<Record<string, CustomFieldDef[]>>((acc, f) => {
     const sec = f.section ?? "Основное";
     if (!acc[sec]) acc[sec] = [];
     acc[sec].push(f);
     return acc;
   }, {});
+
+  // Include pending (empty) sections that don't yet have fields
+  const allSectionNames = Array.from(
+    new Set([...Object.keys(sections), ...pendingSections])
+  );
 
   return (
     <div className="space-y-4 pb-6">
@@ -757,61 +941,93 @@ function DetailsLeft({ deal, customFields, allDealFields, onFieldSave, onFieldRe
       )}
 
       {/* Custom fields grouped by section */}
-      {Object.keys(sections).length > 0 ? (
+      {allSectionNames.length > 0 && (
         <div className="space-y-3">
-          {Object.entries(sections).map(([sectionName, fields]) => (
-            <div key={sectionName} className="rounded-xl border border-gray-100 overflow-hidden">
-              {/* Section header */}
-              <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b border-gray-100">
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
-                  <FolderOpen size={11} className="text-gray-400" />
-                  {sectionName}
-                </p>
-                <Link href="/crm/settings/custom-fields" className="flex items-center gap-1 text-[10px] text-gray-300 hover:text-brand-500 transition-colors">
-                  <SlidersHorizontal size={10} /> Настроить
-                </Link>
+          {allSectionNames.map(sectionName => {
+            const fields = sections[sectionName] ?? [];
+            const isPending = fields.length === 0;
+            return (
+              <div key={sectionName} className="rounded-xl border border-gray-100 overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b border-gray-100">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
+                    <FolderOpen size={11} className="text-gray-400" />
+                    {sectionName}
+                    {isPending && <span className="text-[9px] text-gray-300 font-normal normal-case tracking-normal ml-1">пустой</span>}
+                  </p>
+                  <Link href="/crm/settings/custom-fields" className="flex items-center gap-1 text-[10px] text-gray-300 hover:text-brand-500 transition-colors">
+                    <SlidersHorizontal size={10} /> Настроить
+                  </Link>
+                </div>
+                {fields.length > 0 && (
+                  <div className="bg-white px-4 divide-y divide-gray-50">
+                    {fields.map(f => (
+                      <CustomFieldRow
+                        key={f.id}
+                        field={f}
+                        value={deal.customFieldValues?.[f.code] ?? null}
+                        onSave={onFieldSave}
+                        onRemove={onFieldRemove}
+                      />
+                    ))}
+                  </div>
+                )}
+                <div className="flex border-t border-gray-100">
+                  <button
+                    type="button"
+                    onClick={() => onAddField(sectionName)}
+                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs text-gray-500 hover:text-brand-600 hover:bg-brand-50 transition-colors border-r border-gray-100"
+                  >
+                    <Plus size={12} /> Создать поле
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onSelectField(sectionName)}
+                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs text-gray-500 hover:text-brand-600 hover:bg-brand-50 transition-colors"
+                  >
+                    <List size={12} /> Выбрать поле
+                  </button>
+                </div>
               </div>
-              {/* Fields */}
-              <div className="bg-white px-4 divide-y divide-gray-50">
-                {fields.map(f => (
-                  <CustomFieldRow
-                    key={f.id}
-                    field={f}
-                    value={deal.customFieldValues?.[f.code] ?? null}
-                    onSave={onFieldSave}
-                    onRemove={onFieldRemove}
-                  />
-                ))}
-              </div>
-              {/* Section bottom buttons */}
-              <div className="flex border-t border-gray-100">
-                <button type="button" onClick={() => onAddField(sectionName)}
-                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs text-gray-500 hover:text-brand-600 hover:bg-brand-50 transition-colors border-r border-gray-100">
-                  <Plus size={12} /> Создать поле
-                </button>
-                <button type="button" onClick={() => onSelectField(sectionName)}
-                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs text-gray-500 hover:text-brand-600 hover:bg-brand-50 transition-colors">
-                  <List size={12} /> Выбрать поле
-                </button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
-      ) : null}
+      )}
 
-      {/* Global add button when no sections */}
-      <button type="button" onClick={() => onAddField("")}
-        className="w-full flex items-center gap-2 rounded-xl border border-dashed border-gray-200 px-4 py-2.5 text-sm text-gray-400 hover:border-brand-300 hover:text-brand-500 transition-colors">
-        <Plus size={14} className="shrink-0" />
-        <span>{Object.keys(sections).length > 0 ? "Добавить поле в новый раздел" : "Добавить пользовательские поля"}</span>
-      </button>
+      {/* Two minimal bottom buttons */}
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={onCreateSection}
+          className="flex-1 flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-gray-200 px-3 py-2.5 text-sm text-gray-400 hover:border-brand-400 hover:text-brand-600 hover:bg-brand-50/50 transition-colors"
+        >
+          <Plus size={14} className="shrink-0" />
+          <span>Создать раздел</span>
+        </button>
+        <button
+          type="button"
+          onClick={onChooseSection}
+          className="flex-1 flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-gray-200 px-3 py-2.5 text-sm text-gray-400 hover:border-brand-400 hover:text-brand-600 hover:bg-brand-50/50 transition-colors"
+        >
+          <Layers size={14} className="shrink-0" />
+          <span>Выбрать раздел</span>
+        </button>
+      </div>
     </div>
   );
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export default function DealRightDrawer({ deal, stages, pipelines, customFields = [], onClose, onDealUpdate, onFieldCreated, onFieldUpdated }: DealRightDrawerProps) {
+export default function DealRightDrawer({
+  deal,
+  stages,
+  pipelines,
+  customFields = [],
+  onClose,
+  onDealUpdate,
+  onFieldCreated,
+  onFieldUpdated,
+}: DealRightDrawerProps) {
   const open = deal !== null;
   const [activeTab, setActiveTab] = useState<TabId>("general");
   const { widthPx: sidebarWidth } = useSidebar();
@@ -824,9 +1040,14 @@ export default function DealRightDrawer({ deal, stages, pipelines, customFields 
   useEffect(() => { setMounted(true); }, []);
   const [drawerContact, setDrawerContact] = useState<ContactDetail | null>(null);
 
+  // Empty sections created before any field is added
+  const [pendingSections, setPendingSections] = useState<string[]>([]);
+
   // Modals
   const [addFieldSection, setAddFieldSection] = useState<string | null>(null);
   const [selectFieldSection, setSelectFieldSection] = useState<string | null>(null);
+  const [createSectionOpen, setCreateSectionOpen] = useState(false);
+  const [chooseSectionOpen, setChooseSectionOpen] = useState(false);
 
   const openContactDrawer = useCallback(async (contactCuid: string) => {
     const data = await getContactByCuid(contactCuid);
@@ -847,14 +1068,16 @@ export default function DealRightDrawer({ deal, stages, pipelines, customFields 
     if (!open) return;
     function onEsc(e: KeyboardEvent) {
       if (e.key === "Escape") {
-        if (addFieldSection !== null) setAddFieldSection(null);
-        else if (selectFieldSection !== null) setSelectFieldSection(null);
-        else onClose();
+        if (addFieldSection !== null) { setAddFieldSection(null); return; }
+        if (selectFieldSection !== null) { setSelectFieldSection(null); return; }
+        if (createSectionOpen) { setCreateSectionOpen(false); return; }
+        if (chooseSectionOpen) { setChooseSectionOpen(false); return; }
+        onClose();
       }
     }
     document.addEventListener("keydown", onEsc);
     return () => document.removeEventListener("keydown", onEsc);
-  }, [open, onClose, addFieldSection, selectFieldSection]);
+  }, [open, onClose, addFieldSection, selectFieldSection, createSectionOpen, chooseSectionOpen]);
 
   useEffect(() => {
     if (open) document.body.style.overflow = "hidden";
@@ -863,7 +1086,14 @@ export default function DealRightDrawer({ deal, stages, pipelines, customFields 
   }, [open]);
 
   useEffect(() => {
-    if (!open) { setActiveTab("general"); setAddFieldSection(null); setSelectFieldSection(null); }
+    if (!open) {
+      setActiveTab("general");
+      setAddFieldSection(null);
+      setSelectFieldSection(null);
+      setCreateSectionOpen(false);
+      setChooseSectionOpen(false);
+      setPendingSections([]);
+    }
   }, [open]);
 
   const handleFieldSave = useCallback(async (code: string, value: unknown) => {
@@ -917,12 +1147,52 @@ export default function DealRightDrawer({ deal, stages, pipelines, customFields 
     finally { setStageChanging(false); }
   }
 
-  const existingSections = Array.from(new Set(customFields.map(f => f.section).filter(Boolean) as string[]));
+  // Section names currently in the pipeline
+  const pipelineFields = customFields.filter(
+    f => !f.pipelineId || f.pipelineId === currentPipelineId
+  );
+  const existingSectionNames = Array.from(
+    new Set([
+      ...pipelineFields.map(f => f.section).filter(Boolean) as string[],
+      ...pendingSections,
+    ])
+  );
 
-  // Fields available to select for a section: DEAL fields not currently in this section
+  // Fields available to be moved into a section (currently without a section or from other sections)
   const availableForSection = selectFieldSection !== null
-    ? customFields.filter(f => f.section !== selectFieldSection)
+    ? pipelineFields.filter(f => f.section !== selectFieldSection)
     : [];
+
+  // Handler: "Create Section" — add to pending
+  function handleCreateSection(sectionName: string) {
+    if (!existingSectionNames.includes(sectionName)) {
+      setPendingSections(prev => [...prev, sectionName]);
+    }
+    setCreateSectionOpen(false);
+  }
+
+  // Handler: "Choose Section" — clone fields to current pipeline
+  async function handleChooseSection(section: PipelineSectionInfo) {
+    if (!currentPipelineId) return;
+    try {
+      const cloned = await cloneSectionToPipeline(section.fields, currentPipelineId, section.sectionName);
+      for (const field of cloned) {
+        if (onFieldCreated) onFieldCreated(field);
+      }
+      // Remove from pending if it was there
+      setPendingSections(prev => prev.filter(n => n !== section.sectionName));
+    } catch (e) { console.error("Failed to clone section", e); }
+    setChooseSectionOpen(false);
+  }
+
+  // When a field is created in a pending section, remove from pending
+  function handleFieldCreatedInSection(field: CustomFieldDef) {
+    if (field.section) {
+      setPendingSections(prev => prev.filter(n => n !== field.section));
+    }
+    if (onFieldCreated) onFieldCreated(field);
+    setAddFieldSection(null);
+  }
 
   const content = (
     <AnimatePresence>
@@ -966,13 +1236,16 @@ export default function DealRightDrawer({ deal, stages, pipelines, customFields 
                     <DetailsLeft
                       deal={deal}
                       customFields={customFields}
-                      allDealFields={customFields}
+                      currentPipelineId={currentPipelineId}
+                      pendingSections={pendingSections}
                       onFieldSave={handleFieldSave}
                       onFieldRemove={handleFieldRemove}
                       onFieldAssign={handleFieldAssign}
                       onOpenContact={openContactDrawer}
                       onAddField={(sec) => setAddFieldSection(sec)}
                       onSelectField={(sec) => setSelectFieldSection(sec)}
+                      onCreateSection={() => setCreateSectionOpen(true)}
+                      onChooseSection={() => setChooseSectionOpen(true)}
                     />
                   </div>
                   <div className="col-span-3 overflow-y-auto p-4">
@@ -996,13 +1269,9 @@ export default function DealRightDrawer({ deal, stages, pipelines, customFields 
           <AnimatePresence>
             {addFieldSection !== null && (
               <AddFieldModal
-                existingSections={existingSections}
-                preselectedSection={addFieldSection || undefined}
+                sectionName={addFieldSection}
                 onClose={() => setAddFieldSection(null)}
-                onCreate={(field) => {
-                  if (onFieldCreated) onFieldCreated(field);
-                  setAddFieldSection(null);
-                }}
+                onCreate={handleFieldCreatedInSection}
               />
             )}
           </AnimatePresence>
@@ -1017,6 +1286,28 @@ export default function DealRightDrawer({ deal, stages, pipelines, customFields 
                   await handleFieldAssign(field, selectFieldSection);
                   setSelectFieldSection(null);
                 }}
+              />
+            )}
+          </AnimatePresence>
+
+          {/* ── Create Section Modal ── */}
+          <AnimatePresence>
+            {createSectionOpen && (
+              <CreateSectionModal
+                onClose={() => setCreateSectionOpen(false)}
+                onCreate={handleCreateSection}
+              />
+            )}
+          </AnimatePresence>
+
+          {/* ── Choose Section Modal ── */}
+          <AnimatePresence>
+            {chooseSectionOpen && (
+              <ChooseSectionModal
+                currentPipelineId={currentPipelineId}
+                existingSectionNames={existingSectionNames}
+                onClose={() => setChooseSectionOpen(false)}
+                onSelect={handleChooseSection}
               />
             )}
           </AnimatePresence>

@@ -213,9 +213,10 @@ model Pipeline {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  org    Org     @relation(fields: [orgId], references: [id])
-  stages Stage[]
-  deals  Deal[]
+  org          Org           @relation(fields: [orgId], references: [id])
+  stages       Stage[]
+  deals        Deal[]
+  customFields CustomField[]
 
   @@unique([orgId, sourceId])
 }
@@ -615,23 +616,26 @@ enum CustomFieldType {
 }
 
 model CustomField {
-  id        String          @id @default(cuid())
-  orgId     String
-  code      String          @unique
-  name      String
+  id         String                @id @default(cuid())
+  orgId      String
+  code       String                @unique
+  name       String
   type       CustomFieldType
   entityType CustomFieldEntityType @default(DEAL)
   options    Json?
-  required  Boolean         @default(false)
-  sortOrder Int             @default(0)
-  section   String?
-  createdAt DateTime        @default(now())
-  updatedAt DateTime        @updatedAt
+  required   Boolean               @default(false)
+  sortOrder  Int                   @default(0)
+  section    String?
+  pipelineId String?
+  createdAt  DateTime              @default(now())
+  updatedAt  DateTime              @updatedAt
 
-  org Org @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  org      Org       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  pipeline Pipeline? @relation(fields: [pipelineId], references: [id], onDelete: SetNull)
 
   @@index([orgId])
   @@index([orgId, entityType])
+  @@index([pipelineId])
 }
 
 // ─── SYSTEM SETTINGS (key-value store for admin config) ──────────────────────

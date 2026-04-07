@@ -73,7 +73,13 @@ export default function DealsClient({
     initialServerStageTotals
   );
 
-  const [activePipelineId, setActivePipelineId] = useState(pipelines[0]?.id ?? "");
+  const [activePipelineId, setActivePipelineId] = useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("crm_active_pipeline_id");
+      if (saved && pipelines.some((p) => p.id === saved)) return saved;
+    }
+    return pipelines[0]?.id ?? "";
+  });
   const [viewMode, setViewMode] = useState<ViewMode>("kanban");
   const [searchQuery, setSearchQuery] = useState("");
   const [filterAssignee, setFilterAssignee] = useState<string | null>(null);
@@ -94,6 +100,12 @@ export default function DealsClient({
     setHeaderAction({ label: "Добавить сделку", onClick: openCreateDeal });
     return () => setHeaderAction(null);
   }, [setHeaderAction, openCreateDeal]);
+
+  useEffect(() => {
+    if (activePipelineId) {
+      localStorage.setItem("crm_active_pipeline_id", activePipelineId);
+    }
+  }, [activePipelineId]);
 
   useEffect(() => {
     if (pipelines.length > 0) {

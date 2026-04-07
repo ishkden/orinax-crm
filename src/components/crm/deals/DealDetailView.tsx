@@ -157,7 +157,7 @@ function DetailsTab({ deal }: { deal: FullDeal }) {
           <p className="text-xs text-zinc-500 mb-1">Теги</p>
           <div className="flex flex-wrap gap-1">
             {deal.tags.map((tag) => (
-              <span key={tag} className="px-2 py-0.5 bg-zinc-800 text-zinc-300 text-xs rounded-full">
+              <span key={tag} className="px-2 py-0.5 bg-zinc-950 text-zinc-300 text-xs rounded-full">
                 <Tag className="inline w-3 h-3 mr-1" />{tag}
               </span>
             ))}
@@ -196,7 +196,7 @@ function ContactsTab({ deal, onOpenContact }: { deal: FullDeal; onOpenContact: (
   return (
     <div className="space-y-3">
       {contacts.map((dc) => (
-        <div key={dc.id} className="p-3 bg-zinc-800/50 rounded-lg border border-zinc-700/50">
+        <div key={dc.id} className="p-3 bg-zinc-950 rounded-lg border border-zinc-800/60">
           <div className="flex items-center gap-2 mb-2">
             <User className="w-4 h-4 text-zinc-400" />
             <button
@@ -241,7 +241,7 @@ function ActivitiesTab({ activities }: { activities: ActivityItem[] }) {
   return (
     <div className="space-y-2">
       {activities.map((a) => (
-        <div key={a.id} className="p-3 bg-zinc-800/50 rounded-lg border border-zinc-700/50">
+        <div key={a.id} className="p-3 bg-zinc-950 rounded-lg border border-zinc-800/60">
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-2">
               <span className="px-1.5 py-0.5 text-[10px] bg-zinc-700 text-zinc-300 rounded uppercase">{a.type}</span>
@@ -262,7 +262,7 @@ function TasksTab({ tasks }: { tasks: TaskItem[] }) {
   return (
     <div className="space-y-2">
       {tasks.map((t) => (
-        <div key={t.id} className="p-3 bg-zinc-800/50 rounded-lg border border-zinc-700/50 flex items-center justify-between">
+        <div key={t.id} className="p-3 bg-zinc-950 rounded-lg border border-zinc-800/60 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className={`w-2 h-2 rounded-full ${t.status === "DONE" ? "bg-green-500" : t.status === "IN_PROGRESS" ? "bg-yellow-500" : "bg-zinc-500"}`} />
             <span className={`text-sm ${t.status === "DONE" ? "text-zinc-500 line-through" : "text-zinc-200"}`}>{t.title}</span>
@@ -282,7 +282,7 @@ function CommentsTab({ comments }: { comments: CommentItem[] }) {
   return (
     <div className="space-y-2">
       {comments.map((c) => (
-        <div key={c.id} className="p-3 bg-zinc-800/50 rounded-lg border border-zinc-700/50">
+        <div key={c.id} className="p-3 bg-zinc-950 rounded-lg border border-zinc-800/60">
           <div className="flex items-center justify-between mb-1">
             <span className="text-xs text-zinc-500">{c.author || "Система"}</span>
             <span className="text-xs text-zinc-500">{formatDateTime(c.createdAt)}</span>
@@ -299,7 +299,7 @@ function HistoryTab({ history }: { history: StageHistoryItem[] }) {
   return (
     <div className="space-y-2">
       {history.map((h) => (
-        <div key={h.id} className="flex items-center gap-3 p-3 bg-zinc-800/50 rounded-lg border border-zinc-700/50">
+        <div key={h.id} className="flex items-center gap-3 p-3 bg-zinc-950 rounded-lg border border-zinc-800/60">
           <div className="flex items-center gap-2 text-sm">
             {h.fromStage && (
               <>
@@ -332,9 +332,9 @@ export default function DealDetailView({ deal }: { deal: FullDeal }) {
   const closeDrawer = useCallback(() => setDrawerContact(null), []);
 
   return (
-    <div className="flex flex-col h-full bg-zinc-950 text-white">
+    <div className="flex flex-col h-full bg-zinc-900 text-white">
       {/* Header */}
-      <div className="border-b border-zinc-800 px-6 py-4">
+      <div className="border-b border-zinc-800 bg-zinc-950/40 px-6 py-4">
         <div className="flex items-center gap-3 mb-3">
           <Link href="/crm/deals" className="p-1.5 rounded-md hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 transition-colors">
             <ArrowLeft className="w-5 h-5" />

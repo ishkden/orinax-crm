@@ -138,6 +138,7 @@ export default function KanbanBoard({
   const [activeDeal, setActiveDeal] = useState<Deal | null>(null);
   const [totalsFrozen, setTotalsFrozen] = useState(false);
   const snapshotRef = useRef<Deal[] | null>(null);
+  const frozenServerTotalsRef = useRef<Record<string, { amount: number; currency: string }> | null>(null);
 
   const headerRowRef = useRef<HTMLDivElement>(null);
   const [headerHeight, setHeaderHeight] = useState(130);
@@ -171,6 +172,7 @@ export default function KanbanBoard({
     const deal = deals.find((d) => d.id === event.active.id);
     if (deal) {
       snapshotRef.current = deals.map((d) => ({ ...d }));
+      frozenServerTotalsRef.current = serverStageTotals ? { ...serverStageTotals } : null;
       setTotalsFrozen(true);
       setActiveDeal(deal);
     }
@@ -202,6 +204,7 @@ export default function KanbanBoard({
     if (!over || !originalStage) {
       setTotalsFrozen(false);
       snapshotRef.current = null;
+      frozenServerTotalsRef.current = null;
       return;
     }
     const overId = String(over.id);
@@ -221,6 +224,7 @@ export default function KanbanBoard({
     }
     setTotalsFrozen(false);
     snapshotRef.current = null;
+    frozenServerTotalsRef.current = null;
   }
 
   function handleStageDragEnd(event: DragEndEvent) {
@@ -292,11 +296,12 @@ export default function KanbanBoard({
               const stageDeals = deals.filter((d) => d.stage === stage.id);
               const loadedMeta = loadedStageTotals.get(stage.id) ?? { total: 0, currency: "RUB" };
               const serverMeta = serverStageTotals?.[stage.id];
+              const frozenMeta = frozenServerTotalsRef.current?.[stage.id];
               const committedTotal = totalsFrozen
-                ? loadedMeta.total
+                ? (frozenMeta?.amount ?? loadedMeta.total)
                 : (serverMeta?.amount ?? loadedMeta.total);
               const committedCurrency = totalsFrozen
-                ? loadedMeta.currency
+                ? (frozenMeta?.currency ?? loadedMeta.currency)
                 : (serverMeta?.currency ?? loadedMeta.currency);
 
               return (

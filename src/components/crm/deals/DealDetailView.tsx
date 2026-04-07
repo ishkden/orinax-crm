@@ -7,6 +7,7 @@ import {
   Clock, FileText, MessageSquare, ListTodo, History,
   Users, Info, Tag,
 } from "lucide-react";
+import { contrastTextOnHex } from "@/lib/utils";
 import type { FullDeal, ActivityItem, TaskItem, CommentItem, StageHistoryItem, DealContactItem } from "@/app/actions/deals";
 import { getContactByCuid } from "@/app/actions/contacts";
 import type { ContactDetail } from "@/app/actions/contacts";
@@ -42,23 +43,70 @@ function formatMoney(value: number, currency: string): string {
 }
 
 function StagePipeline({ deal }: { deal: FullDeal }) {
+  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
+
   if (!deal.allStages.length) return null;
   const currentIdx = deal.allStages.findIndex((s) => s.id === deal.stageRel?.id);
 
   return (
-    <div className="flex items-center gap-1 overflow-x-auto py-2">
+    <div className="flex items-center gap-1 py-2 overflow-x-auto">
       {deal.allStages.map((stage, idx) => {
         const isCurrent = idx === currentIdx;
         const isPast = idx < currentIdx;
-        const bg = isCurrent
-          ? (stage.isWon ? "bg-green-500" : stage.isFinal ? "bg-red-500" : "bg-indigo-500")
-          : isPast
-            ? "bg-zinc-600"
-            : "bg-zinc-800";
-        const text = isCurrent ? "text-white font-semibold" : isPast ? "text-zinc-300" : "text-zinc-500";
+        const isHovered = hoveredIdx === idx;
+        const expanded = isCurrent || isHovered;
+
+        const stageColor = /^#[0-9A-Fa-f]{6}$/.test(stage.color ?? "") ? stage.color! : "#6366f1";
+        const textColor = contrastTextOnHex(stageColor);
+
+        let bgColor: string;
+        let bgOpacity: number;
+        let fgColor: string;
+
+        if (expanded) {
+          bgColor = stageColor;
+          bgOpacity = 1;
+          fgColor = textColor;
+        } else if (isPast) {
+          bgColor = stageColor;
+          bgOpacity = 0.4;
+          fgColor = textColor;
+        } else {
+          bgColor = "#27272a";
+          bgOpacity = 1;
+          fgColor = "#71717a";
+        }
+
         return (
-          <div key={stage.id} className={`px-3 py-1.5 rounded-md text-xs whitespace-nowrap ${bg} ${text}`}>
-            {stage.name}
+          <div
+            key={stage.id}
+            onMouseEnter={() => setHoveredIdx(idx)}
+            onMouseLeave={() => setHoveredIdx(null)}
+            title={stage.name}
+            style={{
+              backgroundColor: bgColor,
+              opacity: bgOpacity,
+              color: fgColor,
+              maxWidth: expanded ? "260px" : "28px",
+              minWidth: "16px",
+              padding: expanded ? "6px 12px" : "6px 4px",
+              transition: "max-width 0.2s ease, padding 0.2s ease, opacity 0.2s ease, background-color 0.2s ease",
+              overflow: "hidden",
+              borderRadius: "6px",
+              cursor: "default",
+              flexShrink: 0,
+              boxShadow: expanded ? `0 0 0 2px ${stageColor}55` : "none",
+            }}
+          >
+            <span
+              className="text-xs font-medium whitespace-nowrap block"
+              style={{
+                opacity: expanded ? 1 : 0,
+                transition: "opacity 0.15s ease",
+              }}
+            >
+              {stage.name}
+            </span>
           </div>
         );
       })}

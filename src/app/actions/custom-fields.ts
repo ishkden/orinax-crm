@@ -31,6 +31,7 @@ export type CustomFieldDef = {
   options: string[] | null;
   required: boolean;
   sortOrder: number;
+  section: string | null;
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -73,6 +74,7 @@ function mapField(f: {
     options: Array.isArray(f.options) ? (f.options as string[]) : null,
     required: f.required,
     sortOrder: f.sortOrder,
+    section: (f as any).section ?? null,
   };
 }
 
@@ -96,6 +98,7 @@ export async function createCustomField(data: {
   entityType: CustomFieldEntityType;
   options?: string[];
   required?: boolean;
+  section?: string | null;
 }): Promise<CustomFieldDef> {
   const orgId = await getOrgId();
 
@@ -120,6 +123,7 @@ export async function createCustomField(data: {
       options: (data.options && data.options.length > 0 ? data.options : null) as any,
       required: data.required ?? false,
       sortOrder: count,
+      section: data.section ?? null,
     },
   });
   return mapField(field);
@@ -131,6 +135,7 @@ export async function updateCustomField(
     name?: string;
     options?: string[];
     required?: boolean;
+    section?: string | null;
   }
 ): Promise<CustomFieldDef> {
   const orgId = await getOrgId();
@@ -139,6 +144,7 @@ export async function updateCustomField(
   if (data.name !== undefined) updateData.name = data.name.trim();
   if (data.options !== undefined) updateData.options = data.options.length > 0 ? data.options : null;
   if (data.required !== undefined) updateData.required = data.required;
+  if (data.section !== undefined) updateData.section = data.section;
 
   const field = await prisma.customField.update({
     where: { id, orgId },

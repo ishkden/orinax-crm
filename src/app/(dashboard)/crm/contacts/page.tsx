@@ -1,37 +1,8 @@
-import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getContactsList } from "@/app/actions/contacts";
 import CrmRegisterPrimaryAction from "@/components/crm/CrmRegisterPrimaryAction";
 import ContactsListClient from "@/components/crm/contacts/ContactsListClient";
 
 const PAGE_SIZE_OPTIONS = [20, 50, 100] as const;
-
-async function getContacts(page: number, pageSize: number) {
-  const session = await getServerSession(authOptions);
-  const userId = (session?.user as { id?: string } | undefined)?.id;
-  if (!userId) return { contacts: [], total: 0 };
-
-  const member = await prisma.orgMember.findFirst({
-    where: { userId },
-    select: { orgId: true },
-  });
-  if (!member) return { contacts: [], total: 0 };
-
-  const where = { orgId: member.orgId, isDeleted: false };
-
-  const [contacts, total] = await Promise.all([
-    prisma.contact.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      include: { assigned: true },
-      take: pageSize,
-      skip: (page - 1) * pageSize,
-    }),
-    prisma.contact.count({ where }),
-  ]);
-
-  return { contacts, total };
-}
 
 export default async function ContactsPage({
   searchParams,
@@ -44,7 +15,7 @@ export default async function ContactsPage({
     : 20;
   const page = Math.max(1, Number(params.page) || 1);
 
-  const { contacts, total } = await getContacts(page, pageSize);
+  const { contacts, total } = await getContactsList(page, pageSize);
 
   return (
     <>

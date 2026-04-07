@@ -12,6 +12,7 @@ export interface Deal {
   stage: string;
   priority: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
   contactId: string | null;
+  contactSerialNumber: number | null;
   contactName: string;
   contactPhone: string | null;
   contactEmail: string | null;

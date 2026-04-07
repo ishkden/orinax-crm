@@ -52,12 +52,13 @@ export default function DealsClient({
   initialDealsByStage,
   initialPipelines,
   serverStageTotals: initialServerStageTotals = {},
-  customFields = [],
+  customFields: initialCustomFields = [],
 }: DealsClientProps) {
   const { setHeaderAction } = useCrmHeaderAction();
   const { setPipeline } = useCrmDealPipeline();
 
   const [pipelines, setPipelines] = useState(() => mapDbToUiPipelines(initialPipelines));
+  const [customFields, setCustomFields] = useState(initialCustomFields);
 
   const [deals, setDeals] = useState<Deal[]>(() =>
     Object.values(initialDealsByStage).flatMap(({ items }) => items)
@@ -441,6 +442,7 @@ export default function DealsClient({
         onDealUpdate={(updated) =>
           setDeals((prev) => prev.map((d) => (d.id === updated.id ? updated : d)))
         }
+        onFieldCreated={(field) => setCustomFields((prev) => [...prev, field])}
       />
     </>
   );

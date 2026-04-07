@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import Link from "next/link";
 import {
   ArrowLeft, Building2, User, Phone, Mail, Calendar,
@@ -8,6 +8,9 @@ import {
   Users, Info, Tag,
 } from "lucide-react";
 import type { FullDeal, ActivityItem, TaskItem, CommentItem, StageHistoryItem, DealContactItem } from "@/app/actions/deals";
+import { getContactByCuid } from "@/app/actions/contacts";
+import type { ContactDetail } from "@/app/actions/contacts";
+import ContactDetailDrawer from "@/components/crm/contacts/ContactDetailDrawer";
 
 const TABS = [
   { key: "details", label: "Детали", icon: Info },
@@ -133,7 +136,7 @@ function DetailsTab({ deal }: { deal: FullDeal }) {
   );
 }
 
-function ContactsTab({ deal }: { deal: FullDeal }) {
+function ContactsTab({ deal, onOpenContact }: { deal: FullDeal; onOpenContact: (id: string) => void }) {
   const contacts: DealContactItem[] = deal.dealContacts.length
     ? deal.dealContacts
     : deal.contact
@@ -148,9 +151,13 @@ function ContactsTab({ deal }: { deal: FullDeal }) {
         <div key={dc.id} className="p-3 bg-zinc-800/50 rounded-lg border border-zinc-700/50">
           <div className="flex items-center gap-2 mb-2">
             <User className="w-4 h-4 text-zinc-400" />
-            <Link href={`/crm/contacts/${dc.contact.id}`} className="text-sm font-medium text-zinc-200 hover:text-indigo-400">
+            <button
+              type="button"
+              onClick={() => onOpenContact(dc.contact.id)}
+              className="text-sm font-medium text-zinc-200 hover:text-indigo-400 text-left"
+            >
               {dc.contact.firstName} {dc.contact.lastName}
-            </Link>
+            </button>
             {dc.isPrimary && (
               <span className="px-1.5 py-0.5 text-[10px] bg-indigo-500/20 text-indigo-400 rounded">основной</span>
             )}
@@ -267,6 +274,14 @@ function HistoryTab({ history }: { history: StageHistoryItem[] }) {
 
 export default function DealDetailView({ deal }: { deal: FullDeal }) {
   const [activeTab, setActiveTab] = useState<TabKey>("details");
+  const [drawerContact, setDrawerContact] = useState<ContactDetail | null>(null);
+
+  const openContactDrawer = useCallback(async (contactCuid: string) => {
+    const data = await getContactByCuid(contactCuid);
+    if (data) setDrawerContact(data);
+  }, []);
+
+  const closeDrawer = useCallback(() => setDrawerContact(null), []);
 
   return (
     <div className="flex flex-col h-full bg-zinc-950 text-white">
@@ -311,10 +326,14 @@ export default function DealDetailView({ deal }: { deal: FullDeal }) {
           {deal.contact && (
             <div>
               <p className="text-xs text-zinc-500 mb-2 uppercase tracking-wider">Основной контакт</p>
-              <Link href={`/crm/contacts/${deal.contact.id}`} className="text-sm font-medium text-zinc-200 hover:text-indigo-400 flex items-center gap-1.5">
-                <User className="w-3.5 h-3.5 text-zinc-400" />
+              <button
+                type="button"
+                onClick={() => openContactDrawer(deal.contact!.id)}
+                className="text-sm font-medium text-zinc-200 hover:text-indigo-400 flex items-center gap-1.5 text-left w-full"
+              >
+                <User className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
                 {deal.contact.firstName} {deal.contact.lastName}
-              </Link>
+              </button>
               {deal.contact.position && <p className="text-xs text-zinc-500 mt-1 ml-5">{deal.contact.position}</p>}
               {deal.contact.phone && (
                 <p className="text-xs text-zinc-400 mt-1 ml-5 flex items-center gap-1">
@@ -391,7 +410,7 @@ export default function DealDetailView({ deal }: { deal: FullDeal }) {
           {/* Tab content */}
           <div className="flex-1 overflow-y-auto p-4">
             {activeTab === "details" && <DetailsTab deal={deal} />}
-            {activeTab === "contacts" && <ContactsTab deal={deal} />}
+            {activeTab === "contacts" && <ContactsTab deal={deal} onOpenContact={openContactDrawer} />}
             {activeTab === "activities" && <ActivitiesTab activities={deal.activities} />}
             {activeTab === "tasks" && <TasksTab tasks={deal.tasks} />}
             {activeTab === "comments" && <CommentsTab comments={deal.comments} />}
@@ -399,6 +418,8 @@ export default function DealDetailView({ deal }: { deal: FullDeal }) {
           </div>
         </div>
       </div>
+
+      <ContactDetailDrawer contact={drawerContact} onClose={closeDrawer} />
     </div>
   );
 }

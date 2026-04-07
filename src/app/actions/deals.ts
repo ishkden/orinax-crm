@@ -80,6 +80,7 @@ type PrismaDeaWithRelations = {
   lastActivityTime: Date | null;
   customFieldValues: unknown;
   contact: {
+    serialNumber: number;
     firstName: string;
     lastName: string;
     phone: string | null;
@@ -102,6 +103,7 @@ function mapDeal(d: PrismaDeaWithRelations): Deal {
     stage: d.stageId || d.stage as string,
     priority: d.priority as Deal["priority"],
     contactId: d.contactId,
+    contactSerialNumber: d.contact?.serialNumber ?? null,
     contactName: d.contact
       ? `${d.contact.firstName} ${d.contact.lastName}`.trim()
       : "—",
@@ -124,6 +126,7 @@ function mapDeal(d: PrismaDeaWithRelations): Deal {
 const DEAL_INCLUDE = {
   contact: {
     select: {
+      serialNumber: true,
       firstName: true,
       lastName: true,
       phone: true,

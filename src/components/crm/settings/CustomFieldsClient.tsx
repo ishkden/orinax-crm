@@ -283,7 +283,7 @@ function FieldForm({
 }: {
   initial?: Partial<CustomFieldDef>;
   entityType: CustomFieldEntityType;
-  onSave: (data: { name: string; type: CustomFieldType; options: string[]; required: boolean }) => void;
+  onSave: (data: { name: string; type: CustomFieldType; options: string[]; required: boolean; section: string | null }) => void;
   onCancel: () => void;
   isPending: boolean;
 }) {
@@ -291,6 +291,7 @@ function FieldForm({
   const [type, setType] = useState<CustomFieldType>(initial?.type ?? "STRING");
   const [options, setOptions] = useState<string[]>(initial?.options ?? []);
   const [required, setRequired] = useState(initial?.required ?? false);
+  const [section, setSection] = useState<string>(initial?.section ?? "");
   const isEdit = !!initial?.id;
 
   const entityTab = ENTITY_TABS.find((e) => e.value === entityType)!;
@@ -298,7 +299,7 @@ function FieldForm({
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) return;
-    onSave({ name, type, options, required });
+    onSave({ name, type, options, required, section: section.trim() || null });
   }
 
   return (
@@ -321,6 +322,20 @@ function FieldForm({
           placeholder="Например: Источник лида"
           className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
         />
+      </div>
+
+      {/* Section */}
+      <div>
+        <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">
+          Раздел
+        </label>
+        <input
+          value={section}
+          onChange={(e) => setSection(e.target.value)}
+          placeholder="Например: Контакт, Финансы, Прочее"
+          className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+        />
+        <p className="text-[11px] text-gray-400 mt-1">Оставьте пустым, чтобы не группировать</p>
       </div>
 
       {/* Type */}
@@ -470,11 +485,11 @@ export default function CustomFieldsClient({
   const fields = allFields.filter((f) => f.entityType === activeEntity);
   const activeTab = ENTITY_TABS.find((t) => t.value === activeEntity)!;
 
-  function handleAdd(data: { name: string; type: CustomFieldType; options: string[]; required: boolean }) {
+  function handleAdd(data: { name: string; type: CustomFieldType; options: string[]; required: boolean; section: string | null }) {
     setError(null);
     startTransition(async () => {
       try {
-        const created = await createCustomField({ ...data, entityType: activeEntity });
+        const created = await createCustomField({ ...data, entityType: activeEntity, section: data.section });
         setAllFields((prev) => [...prev, created]);
         setShowAdd(false);
       } catch (e) {
@@ -483,7 +498,7 @@ export default function CustomFieldsClient({
     });
   }
 
-  function handleEdit(data: { name: string; type: CustomFieldType; options: string[]; required: boolean }) {
+  function handleEdit(data: { name: string; type: CustomFieldType; options: string[]; required: boolean; section: string | null }) {
     if (!editField) return;
     setError(null);
     startTransition(async () => {
@@ -492,6 +507,7 @@ export default function CustomFieldsClient({
           name: data.name,
           options: data.options,
           required: data.required,
+          section: data.section,
         });
         setAllFields((prev) => prev.map((f) => (f.id === updated.id ? updated : f)));
         setEditField(null);
@@ -606,14 +622,32 @@ export default function CustomFieldsClient({
                 </button>
               </div>
             ) : (
-              <div className="divide-y divide-gray-50">
-                {fields.map((f) => (
-                  <FieldRow
-                    key={f.id}
-                    field={f}
-                    onEdit={() => { setEditField(f); setShowAdd(false); }}
-                    onDelete={() => setDeleteId(f.id)}
-                  />
+              <div>
+                {Object.entries(
+                  fields.reduce<Record<string, CustomFieldDef[]>>((acc, f) => {
+                    const sec = f.section ?? "Без раздела";
+                    if (!acc[sec]) acc[sec] = [];
+                    acc[sec].push(f);
+                    return acc;
+                  }, {})
+                ).map(([sectionName, sectionFields]) => (
+                  <div key={sectionName} className="last:border-b-0">
+                    <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 border-b border-t border-gray-100">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400 shrink-0"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                      <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{sectionName}</span>
+                      <span className="text-xs text-gray-400 ml-1">({sectionFields.length})</span>
+                    </div>
+                    <div className="divide-y divide-gray-50">
+                      {sectionFields.map((f) => (
+                        <FieldRow
+                          key={f.id}
+                          field={f}
+                          onEdit={() => { setEditField(f); setShowAdd(false); }}
+                          onDelete={() => setDeleteId(f.id)}
+                        />
+                      ))}
+                    </div>
+                  </div>
                 ))}
               </div>
             )}

@@ -160,6 +160,7 @@ model Company {
 }
 
 model Contact {
+  serialNumber Int    @unique @default(autoincrement())
   id        String        @id @default(cuid())
   orgId     String
   firstName String
@@ -208,6 +209,7 @@ model Pipeline {
   sourceId  String?
   name      String
   sortOrder Int      @default(0)
+  section   String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -622,6 +624,7 @@ model CustomField {
   options    Json?
   required  Boolean         @default(false)
   sortOrder Int             @default(0)
+  section   String?
   createdAt DateTime        @default(now())
   updatedAt DateTime        @updatedAt
 

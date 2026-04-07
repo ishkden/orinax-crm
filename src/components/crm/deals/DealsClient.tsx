@@ -439,10 +439,12 @@ export default function DealsClient({
         stages={activeStages}
         customFields={customFields}
         onClose={handleDrawerClose}
-        onDealUpdate={(updated) =>
-          setDeals((prev) => prev.map((d) => (d.id === updated.id ? updated : d)))
-        }
+        onDealUpdate={(updated) => {
+          setDeals((prev) => prev.map((d) => (d.id === updated.id ? updated : d)));
+          setSelectedDeal(updated);
+        }}
         onFieldCreated={(field) => setCustomFields((prev) => [...prev, field])}
+        onFieldUpdated={(field) => setCustomFields((prev) => prev.map((f) => (f.id === field.id ? field : f)))}
       />
     </>
   );

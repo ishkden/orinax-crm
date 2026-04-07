@@ -12,7 +12,7 @@ import {
   Trash2, Search,
 } from "lucide-react";
 import Link from "next/link";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatCurrency, formatDate, contrastTextOnHex } from "@/lib/utils";
 import type { Deal, Stage, Pipeline } from "./types";
 import type { CustomFieldDef, CustomFieldType } from "@/app/actions/custom-fields";
 import { saveDealCustomFieldValues, createCustomField, updateCustomField } from "@/app/actions/custom-fields";
@@ -642,22 +642,71 @@ function StageKanban({ stages, currentStageId, onStageChange, loading }: {
   onStageChange: (stage: Stage) => void;
   loading: boolean;
 }) {
+  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
+
   if (stages.length === 0) return null;
   const currentIdx = stages.findIndex(s => s.id === currentStageId);
 
   return (
-    <div className="flex w-full overflow-x-auto rounded-lg overflow-hidden border border-gray-200">
+    <div className="flex w-full overflow-x-auto rounded-lg border border-gray-200 gap-px bg-gray-200">
       {stages.map((stage, idx) => {
         const isPast = currentIdx >= 0 && idx < currentIdx;
         const isCurrent = idx === currentIdx;
+        const isHovered = hoveredIdx === idx;
         const filled = isPast || isCurrent;
-        const stageColor = stage.color || "#6366f1";
+        const stageColor = /^#[0-9A-Fa-f]{6}$/.test(stage.color ?? "") ? stage.color! : "#6366f1";
+        const textColor = contrastTextOnHex(stageColor);
+
+        let bgColor: string;
+        let fgColor: string;
+        let opacity = 1;
+
+        if (isCurrent || isHovered) {
+          bgColor = stageColor;
+          fgColor = textColor;
+          opacity = 1;
+        } else if (isPast) {
+          bgColor = stageColor;
+          fgColor = textColor;
+          opacity = 0.5;
+        } else {
+          bgColor = "#f3f4f6";
+          fgColor = isHovered ? textColor : "#9ca3af";
+          opacity = 1;
+        }
 
         return (
-          <button key={stage.id} onClick={() => !loading && onStageChange(stage)} disabled={loading} title={stage.label}
-            className={`flex-1 min-w-0 px-2 py-2.5 text-[11px] font-semibold text-center transition-all border-r border-white/30 last:border-r-0 truncate ${loading ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}
-            style={filled ? { backgroundColor: stageColor, color: "#fff" } : { backgroundColor: "#f3f4f6", color: "#6b7280" }}>
-            {stage.label}
+          <button
+            key={stage.id}
+            onClick={() => !loading && onStageChange(stage)}
+            onMouseEnter={() => setHoveredIdx(idx)}
+            onMouseLeave={() => setHoveredIdx(null)}
+            disabled={loading}
+            title={stage.label}
+            className="first:rounded-l-lg last:rounded-r-lg"
+            style={{
+              backgroundColor: bgColor,
+              color: fgColor,
+              opacity: loading ? 0.6 : opacity,
+              cursor: loading ? "not-allowed" : "pointer",
+              maxWidth: isCurrent || isHovered ? "260px" : "32px",
+              minWidth: isCurrent ? "64px" : "16px",
+              flexShrink: 0,
+              padding: isCurrent || isHovered ? "8px 10px" : "8px 4px",
+              overflow: "hidden",
+              transition: "max-width 0.2s ease, padding 0.2s ease, background-color 0.2s ease, opacity 0.2s ease",
+              boxShadow: isCurrent ? `0 0 0 2px ${stageColor}66` : "none",
+            }}
+          >
+            <span
+              className="block text-[11px] font-semibold whitespace-nowrap text-center"
+              style={{
+                opacity: isCurrent || isHovered ? 1 : 0,
+                transition: "opacity 0.15s ease",
+              }}
+            >
+              {stage.label}
+            </span>
           </button>
         );
       })}

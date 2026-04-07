@@ -501,24 +501,26 @@ function PipelineSelector({ pipelines, currentPipelineId, onSelect, loading }: {
 function StageKanban({ stages, currentStageId, onStageChange, loading }: {
   stages: Stage[];
   currentStageId: string | null;
-  onStageChange: (s: Stage) => void;
+  onStageChange: (stage: Stage) => void;
   loading: boolean;
 }) {
-  if (!stages.length) return null;
+  if (stages.length === 0) return null;
   const currentIdx = stages.findIndex(s => s.id === currentStageId);
 
   return (
-    <div className="flex gap-1 overflow-x-auto pb-0.5 scrollbar-none">
+    <div className="flex w-full overflow-x-auto rounded-lg overflow-hidden border border-gray-200">
       {stages.map((stage, idx) => {
-        const isActive = stage.id === currentStageId;
-        const isPast = currentIdx !== -1 && idx < currentIdx;
+        const isPast = currentIdx >= 0 && idx < currentIdx;
+        const isCurrent = idx === currentIdx;
+        const filled = isPast || isCurrent;
+        const stageColor = stage.color || "#6366f1";
+
         return (
-          <button key={stage.id} type="button" onClick={() => !loading && onStageChange(stage)} disabled={loading}
-            title={stage.label}
-            className={`flex-1 min-w-[60px] h-1.5 rounded-full transition-all ${
-              isActive ? "bg-brand-600" : isPast ? "bg-brand-300" : "bg-gray-200 hover:bg-gray-300"
-            } disabled:cursor-not-allowed`}
-          />
+          <button key={stage.id} onClick={() => !loading && onStageChange(stage)} disabled={loading} title={stage.label}
+            className={`flex-1 min-w-0 px-2 py-2.5 text-[11px] font-semibold text-center transition-all border-r border-white/30 last:border-r-0 truncate ${loading ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}
+            style={filled ? { backgroundColor: stageColor, color: "#fff" } : { backgroundColor: "#f3f4f6", color: "#6b7280" }}>
+            {stage.label}
+          </button>
         );
       })}
     </div>

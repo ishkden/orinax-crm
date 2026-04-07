@@ -58,8 +58,7 @@ export default function ContactDrawer({ deal, onClose }: ContactDrawerProps) {
           <motion.button
             type="button"
             aria-label="Закрыть"
-            className="fixed top-0 bottom-0 z-[80] bg-black/30"
-            style={{ left, right }}
+            className="fixed inset-0 z-[80] bg-black/50"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}

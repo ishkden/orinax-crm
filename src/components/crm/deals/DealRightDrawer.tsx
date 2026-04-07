@@ -359,7 +359,7 @@ export default function DealRightDrawer({ deal, stages, pipelines, customFields 
     <AnimatePresence>
       {deal && (
         <>
-          <motion.div className="fixed top-0 bottom-0 z-[80] bg-black/40" style={{ left: sidebarWidth, right: CRM_RIGHT_BAR_W }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} />
+          <motion.div className="fixed inset-0 z-[80] bg-black/50" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} />
 
           <motion.div key="deal-right-drawer" role="dialog" aria-modal="true"
             className="fixed top-0 bottom-0 z-[90] bg-white shadow-2xl flex flex-col overflow-hidden"

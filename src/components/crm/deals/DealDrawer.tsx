@@ -57,7 +57,7 @@ export default function DealDrawer({ deal, stages, onClose }: DealDrawerProps) {
           <motion.button
             type="button"
             aria-label="Закрыть"
-            className="fixed top-0 bottom-0 z-[80] bg-black/30"
+            className="fixed inset-0 z-[80] bg-black/50"
             style={{ left, right }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}

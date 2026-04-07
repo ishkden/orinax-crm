@@ -123,15 +123,15 @@ export async function updateCustomField(
   }
 ): Promise<CustomFieldDef> {
   const orgId = await getOrgId();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const updateData: any = {};
+  if (data.name !== undefined) updateData.name = data.name.trim();
+  if (data.options !== undefined) updateData.options = data.options.length > 0 ? data.options : null;
+  if (data.required !== undefined) updateData.required = data.required;
+
   const field = await prisma.customField.update({
     where: { id, orgId },
-    data: {
-      ...(data.name !== undefined && { name: data.name.trim() }),
-      ...(data.options !== undefined && {
-        options: data.options.length > 0 ? data.options : null,
-      }),
-      ...(data.required !== undefined && { required: data.required }),
-    },
+    data: updateData,
   });
   return mapField(field);
 }

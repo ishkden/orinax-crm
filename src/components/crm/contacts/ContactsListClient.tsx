@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn, formatDate } from "@/lib/utils";
 import Badge from "@/components/ui/Badge";
@@ -28,27 +28,32 @@ interface ContactRow {
 
 interface ContactsListClientProps {
   contacts: ContactRow[];
+  total: number;
+  page: number;
+  pageSize: PageSize;
 }
 
-export default function ContactsListClient({ contacts }: ContactsListClientProps) {
-  const [pageSize, setPageSize] = useState<PageSize>(20);
-  const [currentPage, setCurrentPage] = useState(1);
+export default function ContactsListClient({ contacts, total, page, pageSize }: ContactsListClientProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [pageSize]);
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
-  const totalPages = Math.max(1, Math.ceil(contacts.length / pageSize));
-  const safePage = Math.min(currentPage, totalPages);
-  const paginated = contacts.slice((safePage - 1) * pageSize, safePage * pageSize);
+  function navigate(newPage: number, newPageSize: PageSize) {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("page", String(newPage));
+    params.set("pageSize", String(newPageSize));
+    router.push(`${pathname}?${params.toString()}`);
+  }
 
   return (
     <div className="bg-white rounded-xl border border-gray-200">
       <div className="px-6 py-4 border-b border-gray-100">
-        <p className="text-sm text-gray-500">{contacts.length} контактов</p>
+        <p className="text-sm text-gray-500">{total} контактов</p>
       </div>
 
-      {contacts.length === 0 ? (
+      {total === 0 ? (
         <div className="px-6 py-16 text-center">
           <p className="text-gray-400 text-sm">Нет контактов. Добавьте первый!</p>
         </div>
@@ -69,7 +74,7 @@ export default function ContactsListClient({ contacts }: ContactsListClientProps
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {paginated.map((c) => {
+                {contacts.map((c) => {
                   const status = statusConfig[c.status] ?? { label: c.status, variant: "default" as const };
                   return (
                     <tr key={c.id} className="hover:bg-gray-50 transition-colors cursor-pointer">
@@ -101,7 +106,7 @@ export default function ContactsListClient({ contacts }: ContactsListClientProps
 
           <div className="px-6 py-3 border-t border-gray-100 flex items-center justify-between gap-4 flex-wrap">
             <span className="text-sm text-gray-500">
-              {(safePage - 1) * pageSize + 1}–{Math.min(safePage * pageSize, contacts.length)} из {contacts.length}
+              {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, total)} из {total}
             </span>
 
             <div className="flex items-center gap-3">
@@ -110,7 +115,7 @@ export default function ContactsListClient({ contacts }: ContactsListClientProps
                 {PAGE_SIZE_OPTIONS.map((size) => (
                   <button
                     key={size}
-                    onClick={() => setPageSize(size)}
+                    onClick={() => navigate(1, size)}
                     className={cn(
                       "px-2.5 py-1 text-sm rounded-md transition-colors",
                       pageSize === size
@@ -125,19 +130,19 @@ export default function ContactsListClient({ contacts }: ContactsListClientProps
 
               <div className="flex items-center gap-1">
                 <button
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  disabled={safePage === 1}
+                  onClick={() => navigate(page - 1, pageSize)}
+                  disabled={page === 1}
                   className="p-1.5 rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                   aria-label="Предыдущая страница"
                 >
                   <ChevronLeft size={16} />
                 </button>
                 <span className="text-sm text-gray-600 tabular-nums px-1">
-                  {safePage} / {totalPages}
+                  {page} / {totalPages}
                 </span>
                 <button
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={safePage === totalPages}
+                  onClick={() => navigate(page + 1, pageSize)}
+                  disabled={page === totalPages}
                   className="p-1.5 rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                   aria-label="Следующая страница"
                 >

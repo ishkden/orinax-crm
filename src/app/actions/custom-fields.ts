@@ -105,7 +105,8 @@ export async function createCustomField(data: {
       name: data.name.trim(),
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       type: data.type as any,
-      options: data.options && data.options.length > 0 ? data.options : null,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      options: (data.options && data.options.length > 0 ? data.options : null) as any,
       required: data.required ?? false,
       sortOrder: count,
     },

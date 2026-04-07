@@ -1206,39 +1206,36 @@ export default function DealRightDrawer({
   // Scroll-fade: show scrollbar thumb only while actively scrolling
   useEffect(() => {
     if (!open) return;
-    const makeHandler = (el: HTMLDivElement) => {
-      let timer: ReturnType<typeof setTimeout>;
-      const onScroll = () => {
-        el.classList.add("is-scrolling");
-        clearTimeout(timer);
-        timer = setTimeout(() => el.classList.remove("is-scrolling"), 800);
-      };
-      el.addEventListener("scroll", onScroll, { passive: true });
-      return () => { el.removeEventListener("scroll", onScroll); clearTimeout(timer); };
+    const el = contentRef.current;
+    if (!el) return;
+    let timer: ReturnType<typeof setTimeout>;
+    const onScroll = () => {
+      el.classList.add("is-scrolling");
+      clearTimeout(timer);
+      timer = setTimeout(() => el.classList.remove("is-scrolling"), 800);
     };
-    const cleanups: (() => void)[] = [];
-    if (leftColRef.current) cleanups.push(makeHandler(leftColRef.current));
-    if (rightColRef.current) cleanups.push(makeHandler(rightColRef.current));
-    return () => cleanups.forEach(fn => fn());
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => { el.removeEventListener("scroll", onScroll); clearTimeout(timer); };
   }, [open]);
 
-  // Scroll back to top (scroll to tabs) when a new deal is opened
+  // Scroll to tabs (top of content) when a new deal is opened
   useEffect(() => {
     if (!deal) return;
     requestAnimationFrame(() => {
       contentRef.current?.scrollTo({ top: 0, behavior: "smooth" });
-      leftColRef.current?.scrollTo({ top: 0, behavior: "smooth" });
-      rightColRef.current?.scrollTo({ top: 0, behavior: "smooth" });
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deal?.id]);
 
-  // Scroll back to top when switching tabs
+  // Scroll to tabs when switching tabs
   useEffect(() => {
     requestAnimationFrame(() => {
-      contentRef.current?.scrollTo({ top: 0, behavior: "smooth" });
-      leftColRef.current?.scrollTo({ top: 0, behavior: "smooth" });
-      rightColRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+      if (!contentRef.current) return;
+      const tabsEl = tabsRef.current;
+      if (!tabsEl) return;
+      // Scroll so tabs are at the top (header scrolled away)
+      const headerHeight = tabsEl.offsetTop - (contentRef.current.offsetTop ?? 0);
+      contentRef.current.scrollTo({ top: headerHeight, behavior: "smooth" });
     });
   }, [activeTab]);
 
@@ -1406,37 +1403,42 @@ export default function DealRightDrawer({
             initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }}
             transition={{ type: "spring", damping: 30, stiffness: 340 }}>
 
-            {/* ── Header ── */}
-            <div className="shrink-0 border-b border-gray-100 px-5 pt-4 pb-3">
-              <div className="flex items-start justify-between gap-3 mb-2">
-                <h2 className="text-lg font-semibold text-gray-900 leading-tight line-clamp-2">{deal.title}</h2>
-                <button type="button" onClick={onClose} className="shrink-0 mt-0.5 p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"><X size={18} /></button>
-              </div>
-              <div className="mb-3">
-                <PipelineSelector pipelines={pipelines} currentPipelineId={currentPipelineId} onSelect={handlePipelineSelect} loading={stageChanging} />
-              </div>
-              <StageKanban stages={currentStages} currentStageId={currentStageId} onStageChange={handleStageChange} loading={stageChanging} />
-            </div>
+            {/* ── Single scroll container — header scrolls away, tabs stick ── */}
+            <div ref={contentRef} className="flex-1 min-h-0 overflow-y-auto drawer-col-scroll">
 
-            {/* ── Tabs nav ── */}
-            <div ref={tabsRef} className="shrink-0 flex border-b border-gray-100 px-4 gap-0">
-              {TABS.map(tab => (
-                <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium border-b-2 transition-colors ${activeTab === tab.id ? "border-brand-600 text-brand-600" : "border-transparent text-gray-500 hover:text-gray-700"}`}>
-                  {tab.icon}{tab.label}
+              {/* Header — scrolls away */}
+              <div className="px-5 pt-4 pb-3 border-b border-gray-100">
+                <div className="flex items-start justify-between gap-3 mb-2">
+                  <h2 className="text-lg font-semibold text-gray-900 leading-tight line-clamp-2">{deal.title}</h2>
+                </div>
+                <div className="mb-3">
+                  <PipelineSelector pipelines={pipelines} currentPipelineId={currentPipelineId} onSelect={handlePipelineSelect} loading={stageChanging} />
+                </div>
+                <StageKanban stages={currentStages} currentStageId={currentStageId} onStageChange={handleStageChange} loading={stageChanging} />
+              </div>
+
+              {/* ── Tabs nav — sticky ── */}
+              <div ref={tabsRef} className="sticky top-0 z-10 bg-white border-b border-gray-100 flex items-center px-4 gap-0">
+                {TABS.map(tab => (
+                  <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)}
+                    className={`flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium border-b-2 transition-colors ${activeTab === tab.id ? "border-brand-600 text-brand-600" : "border-transparent text-gray-500 hover:text-gray-700"}`}>
+                    {tab.icon}{tab.label}
+                  </button>
+                ))}
+                {/* Close button always visible in sticky bar */}
+                <button type="button" onClick={onClose} className="ml-auto p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors shrink-0">
+                  <X size={18} />
                 </button>
-              ))}
-            </div>
+              </div>
 
-            {/* ── Tab content ── */}
-            <div ref={contentRef} className={`flex-1 min-h-0 ${activeTab === "chat" ? "overflow-hidden" : "overflow-y-auto"}`}>
+              {/* ── Tab content ── */}
               <AnimatePresence mode="wait" initial={false}>
                 {activeTab === "general" && (
                   <motion.div key="general"
                     initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
                     transition={{ duration: 0.14, ease: "easeOut" }}
-                    className="grid grid-cols-5 divide-x divide-gray-100 h-full">
-                    <div ref={leftColRef} className="col-span-2 overflow-y-auto p-4 drawer-col-scroll">
+                    className="grid grid-cols-5 divide-x divide-gray-100 min-h-[calc(100vh-200px)]">
+                    <div ref={leftColRef} className="col-span-2 p-4">
                       <DetailsLeft
                         deal={deal}
                         customFields={customFields}
@@ -1453,7 +1455,7 @@ export default function DealRightDrawer({
                         onChooseSection={() => setChooseSectionOpen(true)}
                       />
                     </div>
-                    <div ref={rightColRef} className="col-span-3 overflow-y-auto p-4 drawer-col-scroll">
+                    <div ref={rightColRef} className="col-span-3 p-4">
                       <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Лента активности</p>
                       <ActivityFeed dealId={deal.id} />
                     </div>
@@ -1463,16 +1465,20 @@ export default function DealRightDrawer({
                   <motion.div key="tasks"
                     initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
                     transition={{ duration: 0.14, ease: "easeOut" }}
-                    className="p-4">
+                    className="p-4 min-h-[calc(100vh-200px)]">
                     <TaskList dealId={deal.id} />
                   </motion.div>
                 )}
-                {activeTab === "chat" && <ChatPanel dealId={deal.id} />}
+                {activeTab === "chat" && (
+                  <div key="chat" className="min-h-[calc(100vh-120px)]">
+                    <ChatPanel dealId={deal.id} />
+                  </div>
+                )}
                 {activeTab === "docs" && (
                   <motion.div key="docs"
                     initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
                     transition={{ duration: 0.14, ease: "easeOut" }}
-                    className="flex flex-col items-center justify-center h-full text-gray-400 gap-3">
+                    className="flex flex-col items-center justify-center min-h-[400px] text-gray-400 gap-3">
                     <FileText size={40} strokeWidth={1.25} className="opacity-30" />
                     <p className="text-sm">Документы — в разработке</p>
                   </motion.div>

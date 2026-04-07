@@ -370,7 +370,7 @@ export default function DealDetailView({ deal }: { deal: FullDeal }) {
       {/* Sidebar info + main content */}
       <div className="flex flex-1 min-h-0 overflow-hidden">
         {/* Left sidebar - contact + company */}
-        <div className="w-72 border-r border-zinc-800 p-4 overflow-y-auto space-y-4 shrink-0">
+        <div className="w-72 border-r border-zinc-800 p-4 overflow-y-auto space-y-4 shrink-0 deal-scroll">
           {deal.contact && (
             <div>
               <p className="text-xs text-zinc-500 mb-2 uppercase tracking-wider">Основной контакт</p>
@@ -439,7 +439,7 @@ export default function DealDetailView({ deal }: { deal: FullDeal }) {
         {/* Main content */}
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           {/* Tabs */}
-          <div className="flex border-b border-zinc-800 px-4 gap-1 overflow-x-auto shrink-0">
+          <div className="flex border-b border-zinc-800 px-4 gap-1 overflow-x-auto shrink-0 deal-scroll">
             {TABS.map(({ key, label, icon: Icon }) => (
               <button
                 key={key}
@@ -456,7 +456,7 @@ export default function DealDetailView({ deal }: { deal: FullDeal }) {
           </div>
 
           {/* Tab content */}
-          <div className="flex-1 overflow-y-auto p-4">
+          <div className="flex-1 overflow-y-auto p-4 deal-scroll">
             {activeTab === "details" && <DetailsTab deal={deal} />}
             {activeTab === "contacts" && <ContactsTab deal={deal} onOpenContact={openContactDrawer} />}
             {activeTab === "activities" && <ActivitiesTab activities={deal.activities} />}

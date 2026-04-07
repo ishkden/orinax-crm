@@ -160,6 +160,7 @@ export async function saveDealCustomFieldValues(
   const orgId = await getOrgId();
   await prisma.deal.update({
     where: { id: dealId, orgId },
-    data: { customFieldValues: values },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    data: { customFieldValues: values as any },
   });
 }

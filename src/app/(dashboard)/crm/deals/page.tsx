@@ -13,7 +13,7 @@ export default async function DealsPage() {
   try {
     [initialPipelines, customFields] = await Promise.all([
       getPipelines(),
-      getCustomFields(),
+      getCustomFields("DEAL"),
     ]);
     const allStageIds = initialPipelines.flatMap((p) => p.stages.map((s) => s.id));
     if (allStageIds.length > 0) {

@@ -6,6 +6,8 @@ import { authOptions } from "@/lib/auth";
 
 // ─── Public types ─────────────────────────────────────────────────────────────
 
+export type CustomFieldEntityType = "DEAL" | "CONTACT" | "COMPANY" | "LEAD";
+
 export type CustomFieldType =
   | "STRING"
   | "TEXT"
@@ -25,6 +27,7 @@ export type CustomFieldDef = {
   code: string;
   name: string;
   type: CustomFieldType;
+  entityType: CustomFieldEntityType;
   options: string[] | null;
   required: boolean;
   sortOrder: number;
@@ -56,6 +59,7 @@ function mapField(f: {
   code: string;
   name: string;
   type: string;
+  entityType: string;
   options: unknown;
   required: boolean;
   sortOrder: number;
@@ -65,6 +69,7 @@ function mapField(f: {
     code: f.code,
     name: f.name,
     type: f.type as CustomFieldType,
+    entityType: f.entityType as CustomFieldEntityType,
     options: Array.isArray(f.options) ? (f.options as string[]) : null,
     required: f.required,
     sortOrder: f.sortOrder,
@@ -73,10 +78,13 @@ function mapField(f: {
 
 // ─── Server Actions ───────────────────────────────────────────────────────────
 
-export async function getCustomFields(): Promise<CustomFieldDef[]> {
+export async function getCustomFields(entityType?: CustomFieldEntityType): Promise<CustomFieldDef[]> {
   const orgId = await getOrgId();
   const rows = await prisma.customField.findMany({
-    where: { orgId },
+    where: {
+      orgId,
+      ...(entityType ? { entityType } : {}),
+    },
     orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
   });
   return rows.map(mapField);
@@ -85,6 +93,7 @@ export async function getCustomFields(): Promise<CustomFieldDef[]> {
 export async function createCustomField(data: {
   name: string;
   type: string;
+  entityType: CustomFieldEntityType;
   options?: string[];
   required?: boolean;
 }): Promise<CustomFieldDef> {
@@ -97,7 +106,7 @@ export async function createCustomField(data: {
     if (++attempt > 10) throw new Error("Failed to generate unique code");
   }
 
-  const count = await prisma.customField.count({ where: { orgId } });
+  const count = await prisma.customField.count({ where: { orgId, entityType: data.entityType } });
   const field = await prisma.customField.create({
     data: {
       orgId,
@@ -105,6 +114,8 @@ export async function createCustomField(data: {
       name: data.name.trim(),
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       type: data.type as any,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      entityType: data.entityType as any,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       options: (data.options && data.options.length > 0 ? data.options : null) as any,
       required: data.required ?? false,
@@ -160,6 +171,42 @@ export async function saveDealCustomFieldValues(
   const orgId = await getOrgId();
   await prisma.deal.update({
     where: { id: dealId, orgId },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    data: { customFieldValues: values as any },
+  });
+}
+
+export async function saveContactCustomFieldValues(
+  contactId: string,
+  values: Record<string, unknown>
+): Promise<void> {
+  const orgId = await getOrgId();
+  await prisma.contact.update({
+    where: { id: contactId, orgId },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    data: { customFieldValues: values as any },
+  });
+}
+
+export async function saveCompanyCustomFieldValues(
+  companyId: string,
+  values: Record<string, unknown>
+): Promise<void> {
+  const orgId = await getOrgId();
+  await prisma.company.update({
+    where: { id: companyId, orgId },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    data: { customFieldValues: values as any },
+  });
+}
+
+export async function saveLeadCustomFieldValues(
+  leadId: string,
+  values: Record<string, unknown>
+): Promise<void> {
+  const orgId = await getOrgId();
+  await prisma.lead.update({
+    where: { id: leadId, orgId },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     data: { customFieldValues: values as any },
   });

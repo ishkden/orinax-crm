@@ -7,6 +7,8 @@ import {
   ArrowLeft, Building2, User, Phone, Mail, Globe, MapPin, Hash,
   Briefcase, Calendar,
 } from "lucide-react";
+import { getCustomFields } from "@/app/actions/custom-fields";
+import CompanyCustomFields from "@/components/crm/companies/CompanyCustomFields";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -58,10 +60,13 @@ export default async function CompanyDetailPage({ params }: Props) {
 
   if (!company) notFound();
 
-  const customFields = company.customFields as Record<string, unknown> | null;
-  const customEntries = customFields
-    ? Object.entries(customFields).filter(([, v]) => v != null && v !== "")
+  const bitrixCustomFields = company.customFields as Record<string, unknown> | null;
+  const customEntries = bitrixCustomFields
+    ? Object.entries(bitrixCustomFields).filter(([, v]) => v != null && v !== "")
     : [];
+
+  const crmCustomFields = await getCustomFields("COMPANY").catch(() => []);
+  const crmCustomFieldValues = (company.customFieldValues as Record<string, unknown> | null) ?? {};
 
   return (
     <div className="flex flex-col h-full bg-zinc-950 text-white">
@@ -140,7 +145,7 @@ export default async function CompanyDetailPage({ params }: Props) {
 
           {customEntries.length > 0 && (
             <div>
-              <p className="text-xs text-zinc-500 mb-2 uppercase tracking-wider">Поля</p>
+              <p className="text-xs text-zinc-500 mb-2 uppercase tracking-wider">Поля Bitrix</p>
               <div className="space-y-1.5">
                 {customEntries.map(([key, val]) => (
                   <div key={key} className="text-xs">
@@ -151,6 +156,12 @@ export default async function CompanyDetailPage({ params }: Props) {
               </div>
             </div>
           )}
+
+          <CompanyCustomFields
+            companyId={company.id}
+            fields={crmCustomFields}
+            initialValues={crmCustomFieldValues}
+          />
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-6">

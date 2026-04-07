@@ -141,10 +141,11 @@ model Company {
   address  String?
   inn      String?
 
-  customFields    Json?
-  isDeleted       Boolean   @default(false)
-  syncedAt        DateTime?
-  bitrixUpdatedAt DateTime?
+  customFields      Json?
+  customFieldValues Json?
+  isDeleted         Boolean   @default(false)
+  syncedAt          DateTime?
+  bitrixUpdatedAt   DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -175,10 +176,11 @@ model Contact {
   sourceId         String?
   connectorChatIds String[]
   primaryIM        String?
-  customFields     Json?
-  isDeleted        Boolean   @default(false)
-  syncedAt         DateTime?
-  bitrixUpdatedAt  DateTime?
+  customFields      Json?
+  customFieldValues Json?
+  isDeleted         Boolean   @default(false)
+  syncedAt          DateTime?
+  bitrixUpdatedAt   DateTime?
 
   companyId  String?
   assignedId String?
@@ -588,6 +590,13 @@ enum ConversationStatus {
 
 // ─── Custom Fields ────────────────────────────────────────────────────────────
 
+enum CustomFieldEntityType {
+  DEAL
+  CONTACT
+  COMPANY
+  LEAD
+}
+
 enum CustomFieldType {
   STRING
   TEXT
@@ -608,8 +617,9 @@ model CustomField {
   orgId     String
   code      String          @unique
   name      String
-  type      CustomFieldType
-  options   Json?
+  type       CustomFieldType
+  entityType CustomFieldEntityType @default(DEAL)
+  options    Json?
   required  Boolean         @default(false)
   sortOrder Int             @default(0)
   createdAt DateTime        @default(now())
@@ -618,6 +628,7 @@ model CustomField {
   org Org @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
   @@index([orgId])
+  @@index([orgId, entityType])
 }
 
 // ─── SYSTEM SETTINGS (key-value store for admin config) ──────────────────────
@@ -652,6 +663,8 @@ model Lead {
   sourceDescription    String?
   dateCreate           DateTime?
   dateModify           DateTime?
+
+  customFieldValues Json?
 
   isDeleted       Boolean   @default(false)
   syncedAt        DateTime?

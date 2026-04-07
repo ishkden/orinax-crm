@@ -7,6 +7,8 @@ import {
   ArrowLeft, Phone, Mail, Building2, User, Briefcase, Tag,
   Calendar, MessageSquare, FileText, Clock,
 } from "lucide-react";
+import { getCustomFields } from "@/app/actions/custom-fields";
+import ContactCustomFields from "@/components/crm/contacts/ContactCustomFields";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -77,6 +79,9 @@ export default async function ContactDetailPage({ params }: Props) {
   });
 
   if (!contact) notFound();
+
+  const customFields = await getCustomFields("CONTACT").catch(() => []);
+  const customFieldValues = (contact.customFieldValues as Record<string, unknown> | null) ?? {};
 
   const allDeals = [
     ...contact.deals.map((d) => ({ ...d, relation: "primary" as const })),
@@ -175,6 +180,12 @@ export default async function ContactDetailPage({ params }: Props) {
               <p className="text-sm text-zinc-400 whitespace-pre-wrap">{contact.notes}</p>
             </div>
           )}
+
+          <ContactCustomFields
+            contactId={contact.id}
+            fields={customFields}
+            initialValues={customFieldValues}
+          />
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-6">

@@ -74,7 +74,7 @@ export default async function LeadsPage() {
                   {leads.map((lead) => (
                     <tr key={lead.id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-6 py-3">
-                        <span className="font-medium text-gray-900">{lead.title || `Лид #${lead.sourceId || lead.id.slice(-6)}`}</span>
+                        <Link href={`/crm/leads/${lead.id}`} className="font-medium text-gray-900 hover:text-indigo-600">{lead.title || `Лид #${lead.sourceId || lead.id.slice(-6)}`}</Link>
                       </td>
                       <td className="px-6 py-3 text-gray-600">
                         {lead.contact ? `${lead.contact.firstName} ${lead.contact.lastName}` : "—"}

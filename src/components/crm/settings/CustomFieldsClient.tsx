@@ -22,6 +22,10 @@ import {
   Hash,
   CalendarRange,
   Copy,
+  Handshake,
+  User,
+  Building2,
+  UserCheck,
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -30,7 +34,47 @@ import {
   deleteCustomField,
   type CustomFieldDef,
   type CustomFieldType,
+  type CustomFieldEntityType,
 } from "@/app/actions/custom-fields";
+
+// ─── Entity tabs ──────────────────────────────────────────────────────────────
+
+const ENTITY_TABS: {
+  value: CustomFieldEntityType;
+  label: string;
+  icon: React.ReactNode;
+  emptyLabel: string;
+  emptyDesc: string;
+}[] = [
+  {
+    value: "DEAL",
+    label: "Сделки",
+    icon: <Handshake size={14} />,
+    emptyLabel: "Нет полей для сделок",
+    emptyDesc: "Создайте поля — они появятся в карточке каждой сделки",
+  },
+  {
+    value: "CONTACT",
+    label: "Контакты",
+    icon: <User size={14} />,
+    emptyLabel: "Нет полей для контактов",
+    emptyDesc: "Создайте поля — они появятся в карточке каждого контакта",
+  },
+  {
+    value: "COMPANY",
+    label: "Компании",
+    icon: <Building2 size={14} />,
+    emptyLabel: "Нет полей для компаний",
+    emptyDesc: "Создайте поля — они появятся в карточке каждой компании",
+  },
+  {
+    value: "LEAD",
+    label: "Лиды",
+    icon: <UserCheck size={14} />,
+    emptyLabel: "Нет полей для лидов",
+    emptyDesc: "Создайте поля — они появятся в карточке каждого лида",
+  },
+];
 
 // ─── Field type definitions ───────────────────────────────────────────────────
 
@@ -232,11 +276,13 @@ function ListOptionsEditor({
 
 function FieldForm({
   initial,
+  entityType,
   onSave,
   onCancel,
   isPending,
 }: {
   initial?: Partial<CustomFieldDef>;
+  entityType: CustomFieldEntityType;
   onSave: (data: { name: string; type: CustomFieldType; options: string[]; required: boolean }) => void;
   onCancel: () => void;
   isPending: boolean;
@@ -247,6 +293,8 @@ function FieldForm({
   const [required, setRequired] = useState(initial?.required ?? false);
   const isEdit = !!initial?.id;
 
+  const entityTab = ENTITY_TABS.find((e) => e.value === entityType)!;
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) return;
@@ -255,6 +303,12 @@ function FieldForm({
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+      {/* Entity badge */}
+      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-50 border border-gray-100 w-fit text-xs text-gray-500">
+        {entityTab.icon}
+        <span>{entityTab.label}</span>
+      </div>
+
       {/* Name */}
       <div>
         <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">
@@ -405,19 +459,23 @@ export default function CustomFieldsClient({
 }: {
   initialFields: CustomFieldDef[];
 }) {
-  const [fields, setFields] = useState<CustomFieldDef[]>(initialFields);
+  const [activeEntity, setActiveEntity] = useState<CustomFieldEntityType>("DEAL");
+  const [allFields, setAllFields] = useState<CustomFieldDef[]>(initialFields);
   const [showAdd, setShowAdd] = useState(false);
   const [editField, setEditField] = useState<CustomFieldDef | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
+  const fields = allFields.filter((f) => f.entityType === activeEntity);
+  const activeTab = ENTITY_TABS.find((t) => t.value === activeEntity)!;
+
   function handleAdd(data: { name: string; type: CustomFieldType; options: string[]; required: boolean }) {
     setError(null);
     startTransition(async () => {
       try {
-        const created = await createCustomField(data);
-        setFields((prev) => [...prev, created]);
+        const created = await createCustomField({ ...data, entityType: activeEntity });
+        setAllFields((prev) => [...prev, created]);
         setShowAdd(false);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Ошибка создания");
@@ -435,7 +493,7 @@ export default function CustomFieldsClient({
           options: data.options,
           required: data.required,
         });
-        setFields((prev) => prev.map((f) => (f.id === updated.id ? updated : f)));
+        setAllFields((prev) => prev.map((f) => (f.id === updated.id ? updated : f)));
         setEditField(null);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Ошибка обновления");
@@ -448,7 +506,7 @@ export default function CustomFieldsClient({
     startTransition(async () => {
       try {
         await deleteCustomField(id);
-        setFields((prev) => prev.filter((f) => f.id !== id));
+        setAllFields((prev) => prev.filter((f) => f.id !== id));
         setDeleteId(null);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Ошибка удаления");
@@ -477,7 +535,7 @@ export default function CustomFieldsClient({
         <div>
           <h2 className="text-xl font-semibold text-gray-900">Пользовательские поля</h2>
           <p className="text-sm text-gray-500 mt-0.5">
-            Поля привязаны к организации и отображаются в карточке сделки
+            Настройте дополнительные поля для каждого типа сущностей
           </p>
         </div>
         <button
@@ -488,6 +546,35 @@ export default function CustomFieldsClient({
           <Plus size={15} />
           Добавить поле
         </button>
+      </div>
+
+      {/* Entity tabs */}
+      <div className="flex gap-1 mb-5 p-1 bg-gray-100 rounded-xl w-fit">
+        {ENTITY_TABS.map((tab) => {
+          const count = allFields.filter((f) => f.entityType === tab.value).length;
+          return (
+            <button
+              key={tab.value}
+              type="button"
+              onClick={() => { setActiveEntity(tab.value); setShowAdd(false); setEditField(null); }}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                activeEntity === tab.value
+                  ? "bg-white text-gray-900 shadow-sm"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              {tab.icon}
+              {tab.label}
+              {count > 0 && (
+                <span className={`text-[11px] px-1.5 py-0.5 rounded-full ${
+                  activeEntity === tab.value ? "bg-brand-100 text-brand-700" : "bg-gray-200 text-gray-500"
+                }`}>
+                  {count}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       {error && (
@@ -505,9 +592,9 @@ export default function CustomFieldsClient({
                 <div className="w-12 h-12 rounded-2xl bg-teal-50 flex items-center justify-center mb-3">
                   <Hash size={20} className="text-teal-500" />
                 </div>
-                <p className="text-sm font-medium text-gray-700 mb-1">Нет пользовательских полей</p>
+                <p className="text-sm font-medium text-gray-700 mb-1">{activeTab.emptyLabel}</p>
                 <p className="text-xs text-gray-400 max-w-xs">
-                  Создайте поля любого типа — они появятся в карточке каждой сделки
+                  {activeTab.emptyDesc}
                 </p>
                 <button
                   type="button"
@@ -557,6 +644,7 @@ export default function CustomFieldsClient({
               </div>
               <FieldForm
                 initial={editField ?? undefined}
+                entityType={activeEntity}
                 onSave={editField ? handleEdit : handleAdd}
                 onCancel={() => { setShowAdd(false); setEditField(null); }}
                 isPending={isPending}
@@ -572,7 +660,7 @@ export default function CustomFieldsClient({
           <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
             <h3 className="text-base font-semibold text-gray-900 mb-2">Удалить поле?</h3>
             <p className="text-sm text-gray-500 mb-5">
-              Значения этого поля во всех сделках будут удалены. Это действие нельзя отменить.
+              Значения этого поля во всех записях будут удалены. Это действие нельзя отменить.
             </p>
             <div className="flex gap-2">
               <button

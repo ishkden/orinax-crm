@@ -9,7 +9,7 @@ import {
   FileText, ChevronDown, Plus, FolderOpen,
   Type, List, Clock, MapPin, Link2, Paperclip,
   DollarSign, ToggleLeft, Hash, CalendarRange, ChevronRight,
-  Trash2, Search, Layers,
+  Trash2, Search, Layers, Settings,
 } from "lucide-react";
 import Link from "next/link";
 import { formatCurrency, formatDate, contrastTextOnHex } from "@/lib/utils";
@@ -643,18 +643,26 @@ function CustomFieldInput({ field, value, onChange, onImmediateSave }: {
   }
 }
 
-// ─── Custom Field Row ─────────────────────────────────────────────────────────
+// ─── Custom Field Row ──────────────────────────────────────────────────────────────
 
-function CustomFieldRow({ field, value, onSave, onRemove }: {
+function CustomFieldRow({ field, value, onSave, onRemove, onUpdate }: {
   field: CustomFieldDef;
   value: unknown;
   onSave: (code: string, v: unknown) => Promise<void>;
   onRemove: (fieldId: string) => Promise<void>;
+  onUpdate: (fieldId: string, data: { name?: string; options?: string[] }) => Promise<void>;
 }) {
   const [editing, setEditing] = useState(false);
+  const [configOpen, setConfigOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [draft, setDraft] = useState<unknown>(value);
   const [saving, setSaving] = useState(false);
   const [removing, setRemoving] = useState(false);
+
+  const [configName, setConfigName] = useState(field.name);
+  const [configOptions, setConfigOptions] = useState<string[]>(field.options ?? []);
+  const [optionDraft, setOptionDraft] = useState("");
+  const [configSaving, setConfigSaving] = useState(false);
 
   const isList = field.type === "LIST";
   const isBool = field.type === "BOOLEAN";
@@ -672,29 +680,140 @@ function CustomFieldRow({ field, value, onSave, onRemove }: {
   function cancel() { setDraft(value); setEditing(false); }
 
   async function handleRemove() {
-    if (!confirm(`Убрать поле «${field.name}» из раздела?`)) return;
     setRemoving(true);
     await onRemove(field.id);
     setRemoving(false);
   }
 
+  function openConfig() {
+    setConfigName(field.name);
+    setConfigOptions(field.options ?? []);
+    setOptionDraft("");
+    setConfigOpen(true);
+    setMenuOpen(false);
+  }
+
+  async function saveConfig() {
+    setConfigSaving(true);
+    await onUpdate(field.id, {
+      name: configName.trim() || field.name,
+      ...(isList ? { options: configOptions } : {}),
+    });
+    setConfigSaving(false);
+    setConfigOpen(false);
+  }
+
   const displayValue = formatFieldValue(value, field.type);
   const isEmpty = displayValue === "—";
+
+  const gearMenu = (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); setMenuOpen(v => !v); }}
+        className="p-1 rounded text-gray-300 hover:text-gray-500 hover:bg-gray-100 transition-colors opacity-0 group-hover:opacity-100"
+        title="Настройки поля"
+      >
+        <Settings size={12} />
+      </button>
+      {menuOpen && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
+          <div className="absolute right-0 top-full mt-1 z-20 bg-white rounded-xl shadow-lg border border-gray-100 py-1 min-w-[110px]">
+            <button
+              type="button"
+              onClick={() => { setMenuOpen(false); handleRemove(); }}
+              disabled={removing}
+              className="w-full text-left px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+            >
+              Скрыть
+            </button>
+            <button
+              type="button"
+              onClick={openConfig}
+              className="w-full text-left px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+            >
+              Настроить
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+
+  const configPanel = !configOpen ? null : (
+    <div className="mt-1 mb-1 p-3 rounded-lg bg-gray-50 border border-gray-100 space-y-3">
+      <div>
+        <label className="block text-xs text-gray-400 mb-1">Название поля</label>
+        <input
+          type="text"
+          value={configName}
+          onChange={e => setConfigName(e.target.value)}
+          className="w-full rounded-lg border border-gray-200 px-2.5 py-1.5 text-sm outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+        />
+      </div>
+      {isList && (
+        <div>
+          <label className="block text-xs text-gray-400 mb-1.5">Варианты ответа</label>
+          <div className="space-y-1 mb-2">
+            {configOptions.map((opt, i) => (
+              <div key={i} className="flex items-center gap-2 px-2.5 py-1.5 bg-white rounded-lg border border-gray-100">
+                <span className="flex-1 text-sm text-gray-700">{opt}</span>
+                <button type="button" onClick={() => setConfigOptions(prev => prev.filter((_, idx) => idx !== i))} className="text-gray-400 hover:text-red-500 transition-colors">
+                  <X size={11} />
+                </button>
+              </div>
+            ))}
+          </div>
+          <div className="flex gap-1.5">
+            <input
+              type="text"
+              value={optionDraft}
+              onChange={e => setOptionDraft(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  const v = optionDraft.trim();
+                  if (v && !configOptions.includes(v)) { setConfigOptions(prev => [...prev, v]); setOptionDraft(""); }
+                }
+              }}
+              placeholder="Новый вариант..."
+              className="flex-1 rounded-lg border border-gray-200 px-2.5 py-1.5 text-sm outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+            />
+            <button
+              type="button"
+              onClick={() => { const v = optionDraft.trim(); if (v && !configOptions.includes(v)) { setConfigOptions(prev => [...prev, v]); setOptionDraft(""); } }}
+              className="px-2.5 py-1.5 rounded-lg bg-brand-50 text-brand-600 hover:bg-brand-100 transition-colors"
+            >
+              <Plus size={13} />
+            </button>
+          </div>
+        </div>
+      )}
+      <div className="flex gap-2">
+        <button type="button" onClick={saveConfig} disabled={configSaving}
+          className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-brand-600 text-white text-xs hover:bg-brand-700 disabled:opacity-50 transition-colors">
+          <Check size={11} /> {configSaving ? "Сохранение..." : "Сохранить"}
+        </button>
+        <button type="button" onClick={() => setConfigOpen(false)}
+          className="px-3 py-1.5 rounded-lg border border-gray-200 text-xs text-gray-500 hover:bg-gray-50 transition-colors">
+          Отмена
+        </button>
+      </div>
+    </div>
+  );
 
   if (isBool) {
     return (
       <div className="py-2.5 group">
         <div className="flex items-center justify-between mb-1">
           <p className="text-xs text-gray-400">{field.name}</p>
-          <button type="button" onClick={handleRemove} disabled={removing}
-            className="p-1 rounded text-gray-300 hover:text-red-400 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100"
-            title="Убрать из раздела">
-            <Trash2 size={12} />
-          </button>
+          {gearMenu}
         </div>
         <button type="button" onClick={() => onSave(field.code, !value)} className={`relative w-9 h-5 rounded-full transition-colors ${value ? "bg-brand-600" : "bg-gray-200"}`}>
           <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${value ? "translate-x-4" : ""}`} />
         </button>
+        {configPanel}
       </div>
     );
   }
@@ -705,15 +824,12 @@ function CustomFieldRow({ field, value, onSave, onRemove }: {
 
     if (editing) {
       return (
-        <div className="py-2.5">
+        <div className="py-2.5 group">
           <div className="flex items-center justify-between mb-2">
             <p className="text-xs text-gray-500 font-medium">{field.name}</p>
             <div className="flex items-center gap-1">
               <button type="button" onClick={cancel} className="text-xs text-gray-400 hover:text-gray-600 px-2 py-0.5 rounded hover:bg-gray-100 transition-colors">Отмена</button>
-              <button type="button" onClick={handleRemove} disabled={removing}
-                className="p-1 rounded text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors" title="Убрать из раздела">
-                <Trash2 size={12} />
-              </button>
+              {gearMenu}
             </div>
           </div>
           <div className="space-y-1">
@@ -729,25 +845,26 @@ function CustomFieldRow({ field, value, onSave, onRemove }: {
             ))}
             {options.length === 0 && <p className="text-xs text-gray-400 italic px-1">Нет значений в списке</p>}
           </div>
+          {configPanel}
         </div>
       );
     }
 
     return (
-      <div className="flex items-center justify-between py-2.5 group">
-        <div className="flex-1 min-w-0">
-          <p className="text-xs text-gray-400 mb-0.5">{field.name}</p>
-          <p className={`text-sm ${isEmpty ? "text-gray-300 italic" : "text-gray-900"}`}>{saving ? "Сохранение..." : displayValue}</p>
+      <div className="group">
+        <div className="flex items-center justify-between py-2.5">
+          <div className="flex-1 min-w-0">
+            <p className="text-xs text-gray-400 mb-0.5">{field.name}</p>
+            <p className={`text-sm ${isEmpty ? "text-gray-300 italic" : "text-gray-900"}`}>{saving ? "Сохранение..." : displayValue}</p>
+          </div>
+          <div className="flex items-center gap-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button type="button" onClick={startEdit} className="p-1.5 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors" title="Редактировать">
+              <Pencil size={12} />
+            </button>
+            {gearMenu}
+          </div>
         </div>
-        <div className="flex items-center gap-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button type="button" onClick={startEdit} className="p-1.5 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors" title="Редактировать">
-            <Pencil size={12} />
-          </button>
-          <button type="button" onClick={handleRemove} disabled={removing}
-            className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors" title="Убрать из раздела">
-            <Trash2 size={12} />
-          </button>
-        </div>
+        {configPanel}
       </div>
     );
   }
@@ -761,10 +878,7 @@ function CustomFieldRow({ field, value, onSave, onRemove }: {
             <button type="button" onClick={startEdit} className="p-1 rounded text-gray-300 hover:text-indigo-600 hover:bg-indigo-50 transition-colors" title="Редактировать">
               <Pencil size={12} />
             </button>
-            <button type="button" onClick={handleRemove} disabled={removing}
-              className="p-1 rounded text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors" title="Убрать из раздела">
-              <Trash2 size={12} />
-            </button>
+            {gearMenu}
           </div>
         )}
       </div>
@@ -778,10 +892,6 @@ function CustomFieldRow({ field, value, onSave, onRemove }: {
               <Check size={11} /> {saving ? "Сохранение..." : "Сохранить"}
             </button>
             <button type="button" onClick={cancel} className="px-2.5 py-1 rounded-lg border border-gray-200 text-xs text-gray-500 hover:bg-gray-50 transition-colors">Отмена</button>
-            <button type="button" onClick={handleRemove} disabled={removing}
-              className="ml-auto flex items-center gap-1 px-2.5 py-1 rounded-lg border border-red-200 text-xs text-red-500 hover:bg-red-50 transition-colors">
-              <Trash2 size={11} /> Убрать из раздела
-            </button>
           </div>
         </div>
       ) : (
@@ -789,6 +899,7 @@ function CustomFieldRow({ field, value, onSave, onRemove }: {
           <span className={`text-sm leading-relaxed ${isEmpty ? "text-gray-300 italic" : "text-gray-900"}`}>{saving ? "Сохранение..." : displayValue}</span>
         </button>
       )}
+      {configPanel}
     </div>
   );
 }
@@ -911,6 +1022,7 @@ function DetailsLeft({
   pendingSections,
   onFieldSave,
   onFieldRemove,
+  onFieldUpdate,
   onFieldAssign,
   onOpenContact,
   onAddField,
@@ -924,6 +1036,7 @@ function DetailsLeft({
   pendingSections: string[];
   onFieldSave: (code: string, value: unknown) => Promise<void>;
   onFieldRemove: (fieldId: string) => Promise<void>;
+  onFieldUpdate: (fieldId: string, data: { name?: string; options?: string[] }) => Promise<void>;
   onFieldAssign: (field: CustomFieldDef, sectionName: string) => Promise<void>;
   onOpenContact: (contactCuid: string) => void;
   onAddField: (sectionName: string) => void;
@@ -1003,6 +1116,7 @@ function DetailsLeft({
                         value={deal.customFieldValues?.[f.code] ?? null}
                         onSave={onFieldSave}
                         onRemove={onFieldRemove}
+                        onUpdate={onFieldUpdate}
                       />
                     ))}
                   </div>
@@ -1077,6 +1191,7 @@ export default function DealRightDrawer({
   const leftColRef = useRef<HTMLDivElement>(null);
   const rightColRef = useRef<HTMLDivElement>(null);
   const tabsRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const [drawerContact, setDrawerContact] = useState<ContactDetail | null>(null);
 
   // Empty sections created before any field is added
@@ -1107,12 +1222,13 @@ export default function DealRightDrawer({
     return () => cleanups.forEach(fn => fn());
   }, [open]);
 
-  // Scroll back to top (so tabs are visible) when a new deal is opened
+  // Scroll back to top (scroll to tabs) when a new deal is opened
   useEffect(() => {
     if (!deal) return;
     requestAnimationFrame(() => {
-      if (leftColRef.current) leftColRef.current.scrollTop = 0;
-      if (rightColRef.current) rightColRef.current.scrollTop = 0;
+      contentRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+      leftColRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+      rightColRef.current?.scrollTo({ top: 0, behavior: "smooth" });
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deal?.id]);
@@ -1120,8 +1236,9 @@ export default function DealRightDrawer({
   // Scroll back to top when switching tabs
   useEffect(() => {
     requestAnimationFrame(() => {
-      if (leftColRef.current) leftColRef.current.scrollTop = 0;
-      if (rightColRef.current) rightColRef.current.scrollTop = 0;
+      contentRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+      leftColRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+      rightColRef.current?.scrollTo({ top: 0, behavior: "smooth" });
     });
   }, [activeTab]);
 
@@ -1191,6 +1308,13 @@ export default function DealRightDrawer({
       if (onFieldUpdated) onFieldUpdated(updated);
     } catch (e) { console.error("Failed to remove field from section", e); }
   }, [customFields, onFieldUpdated]);
+
+  const handleFieldUpdate = useCallback(async (fieldId: string, data: { name?: string; options?: string[] }) => {
+    try {
+      const updated = await updateCustomField(fieldId, data);
+      if (onFieldUpdated) onFieldUpdated(updated);
+    } catch (e) { console.error("Failed to update field", e); }
+  }, [onFieldUpdated]);
 
   const handleFieldAssign = useCallback(async (field: CustomFieldDef, sectionName: string) => {
     try {
@@ -1305,39 +1429,55 @@ export default function DealRightDrawer({
             </div>
 
             {/* ── Tab content ── */}
-            <div className={`flex-1 min-h-0 ${activeTab === "chat" ? "overflow-hidden" : "overflow-y-auto"}`}>
-              {activeTab === "general" && (
-                <div className="grid grid-cols-5 divide-x divide-gray-100 h-full">
-                  <div ref={leftColRef} className="col-span-2 overflow-y-auto p-4 drawer-col-scroll">
-                    <DetailsLeft
-                      deal={deal}
-                      customFields={customFields}
-                      currentPipelineId={currentPipelineId}
-                      pendingSections={pendingSections}
-                      onFieldSave={handleFieldSave}
-                      onFieldRemove={handleFieldRemove}
-                      onFieldAssign={handleFieldAssign}
-                      onOpenContact={openContactDrawer}
-                      onAddField={(sec) => setAddFieldSection(sec)}
-                      onSelectField={(sec) => setSelectFieldSection(sec)}
-                      onCreateSection={() => setCreateSectionOpen(true)}
-                      onChooseSection={() => setChooseSectionOpen(true)}
-                    />
-                  </div>
-                  <div ref={rightColRef} className="col-span-3 overflow-y-auto p-4 drawer-col-scroll">
-                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Лента активности</p>
-                    <ActivityFeed dealId={deal.id} />
-                  </div>
-                </div>
-              )}
-              {activeTab === "tasks" && <div className="p-4"><TaskList dealId={deal.id} /></div>}
-              {activeTab === "chat" && <ChatPanel dealId={deal.id} />}
-              {activeTab === "docs" && (
-                <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-3">
-                  <FileText size={40} strokeWidth={1.25} className="opacity-30" />
-                  <p className="text-sm">Документы — в разработке</p>
-                </div>
-              )}
+            <div ref={contentRef} className={`flex-1 min-h-0 ${activeTab === "chat" ? "overflow-hidden" : "overflow-y-auto"}`}>
+              <AnimatePresence mode="wait" initial={false}>
+                {activeTab === "general" && (
+                  <motion.div key="general"
+                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                    transition={{ duration: 0.14, ease: "easeOut" }}
+                    className="grid grid-cols-5 divide-x divide-gray-100 h-full">
+                    <div ref={leftColRef} className="col-span-2 overflow-y-auto p-4 drawer-col-scroll">
+                      <DetailsLeft
+                        deal={deal}
+                        customFields={customFields}
+                        currentPipelineId={currentPipelineId}
+                        pendingSections={pendingSections}
+                        onFieldSave={handleFieldSave}
+                        onFieldRemove={handleFieldRemove}
+                        onFieldUpdate={handleFieldUpdate}
+                        onFieldAssign={handleFieldAssign}
+                        onOpenContact={openContactDrawer}
+                        onAddField={(sec) => setAddFieldSection(sec)}
+                        onSelectField={(sec) => setSelectFieldSection(sec)}
+                        onCreateSection={() => setCreateSectionOpen(true)}
+                        onChooseSection={() => setChooseSectionOpen(true)}
+                      />
+                    </div>
+                    <div ref={rightColRef} className="col-span-3 overflow-y-auto p-4 drawer-col-scroll">
+                      <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Лента активности</p>
+                      <ActivityFeed dealId={deal.id} />
+                    </div>
+                  </motion.div>
+                )}
+                {activeTab === "tasks" && (
+                  <motion.div key="tasks"
+                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                    transition={{ duration: 0.14, ease: "easeOut" }}
+                    className="p-4">
+                    <TaskList dealId={deal.id} />
+                  </motion.div>
+                )}
+                {activeTab === "chat" && <ChatPanel dealId={deal.id} />}
+                {activeTab === "docs" && (
+                  <motion.div key="docs"
+                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                    transition={{ duration: 0.14, ease: "easeOut" }}
+                    className="flex flex-col items-center justify-center h-full text-gray-400 gap-3">
+                    <FileText size={40} strokeWidth={1.25} className="opacity-30" />
+                    <p className="text-sm">Документы — в разработке</p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </motion.div>
 

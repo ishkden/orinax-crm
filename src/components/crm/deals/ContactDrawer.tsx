@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X,
@@ -35,6 +36,8 @@ const TOOLBAR_ICONS = [
 export default function ContactDrawer({ deal, onClose }: ContactDrawerProps) {
   const open = deal !== null;
   const { left, right } = useCrmDrawerInset();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -51,14 +54,14 @@ export default function ContactDrawer({ deal, onClose }: ContactDrawerProps) {
     return () => { document.body.style.overflow = ""; };
   }, [open]);
 
-  return (
+  const content = (
     <AnimatePresence>
       {deal && (
         <>
           <motion.button
             type="button"
             aria-label="Закрыть"
-            className="fixed inset-0 z-[80] bg-black/50"
+            className="fixed inset-0 z-[80] bg-black/65"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -161,4 +164,6 @@ export default function ContactDrawer({ deal, onClose }: ContactDrawerProps) {
       )}
     </AnimatePresence>
   );
+  if (!mounted) return null;
+  return createPortal(content, document.body);
 }

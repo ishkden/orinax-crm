@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useTransition, useRef } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X, Banknote, Calendar, CheckSquare, MessageSquare,
@@ -292,6 +293,8 @@ export default function DealRightDrawer({ deal, stages, pipelines, customFields 
   const [currentPipelineId, setCurrentPipelineId] = useState<string | null>(null);
   const [currentStageId, setCurrentStageId] = useState<string | null>(null);
   const [stageChanging, setStageChanging] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     if (deal) {
@@ -355,11 +358,11 @@ export default function DealRightDrawer({ deal, stages, pipelines, customFields 
     finally { setStageChanging(false); }
   }
 
-  return (
+  const content = (
     <AnimatePresence>
       {deal && (
         <>
-          <motion.div className="fixed inset-0 z-[80] bg-black/50" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} />
+          <motion.div className="fixed inset-0 z-[80] bg-black/65" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} />
 
           <motion.div key="deal-right-drawer" role="dialog" aria-modal="true"
             className="fixed top-0 bottom-0 z-[90] bg-white shadow-2xl flex flex-col overflow-hidden"
@@ -426,4 +429,6 @@ export default function DealRightDrawer({ deal, stages, pipelines, customFields 
       )}
     </AnimatePresence>
   );
+  if (!mounted) return null;
+  return createPortal(content, document.body);
 }

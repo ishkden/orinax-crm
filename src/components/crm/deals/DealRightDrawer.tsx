@@ -683,20 +683,18 @@ function CustomFieldRow({ field, value, onSave, onRemove }: {
 
   if (isBool) {
     return (
-      <div className="flex items-center justify-between py-2.5 group">
-        <div className="flex items-center gap-2 min-w-0">
-          <p className="text-xs text-gray-500 truncate">{field.name}</p>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <button type="button" onClick={() => onSave(field.code, !value)} className={`relative w-9 h-5 rounded-full transition-colors ${value ? "bg-brand-600" : "bg-gray-200"}`}>
-            <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${value ? "translate-x-4" : ""}`} />
-          </button>
+      <div className="py-2.5 group">
+        <div className="flex items-center justify-between mb-1">
+          <p className="text-xs text-gray-400">{field.name}</p>
           <button type="button" onClick={handleRemove} disabled={removing}
             className="p-1 rounded text-gray-300 hover:text-red-400 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100"
             title="Убрать из раздела">
             <Trash2 size={12} />
           </button>
         </div>
+        <button type="button" onClick={() => onSave(field.code, !value)} className={`relative w-9 h-5 rounded-full transition-colors ${value ? "bg-brand-600" : "bg-gray-200"}`}>
+          <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${value ? "translate-x-4" : ""}`} />
+        </button>
       </div>
     );
   }
@@ -1076,6 +1074,9 @@ export default function DealRightDrawer({
   const [stageChanging, setStageChanging] = useState(false);
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
+  const leftColRef = useRef<HTMLDivElement>(null);
+  const rightColRef = useRef<HTMLDivElement>(null);
+  const tabsRef = useRef<HTMLDivElement>(null);
   const [drawerContact, setDrawerContact] = useState<ContactDetail | null>(null);
 
   // Empty sections created before any field is added
@@ -1086,6 +1087,43 @@ export default function DealRightDrawer({
   const [selectFieldSection, setSelectFieldSection] = useState<string | null>(null);
   const [createSectionOpen, setCreateSectionOpen] = useState(false);
   const [chooseSectionOpen, setChooseSectionOpen] = useState(false);
+
+  // Scroll-fade: show scrollbar thumb only while actively scrolling
+  useEffect(() => {
+    if (!open) return;
+    const makeHandler = (el: HTMLDivElement) => {
+      let timer: ReturnType<typeof setTimeout>;
+      const onScroll = () => {
+        el.classList.add("is-scrolling");
+        clearTimeout(timer);
+        timer = setTimeout(() => el.classList.remove("is-scrolling"), 800);
+      };
+      el.addEventListener("scroll", onScroll, { passive: true });
+      return () => { el.removeEventListener("scroll", onScroll); clearTimeout(timer); };
+    };
+    const cleanups: (() => void)[] = [];
+    if (leftColRef.current) cleanups.push(makeHandler(leftColRef.current));
+    if (rightColRef.current) cleanups.push(makeHandler(rightColRef.current));
+    return () => cleanups.forEach(fn => fn());
+  }, [open]);
+
+  // Scroll back to top (so tabs are visible) when a new deal is opened
+  useEffect(() => {
+    if (!deal) return;
+    requestAnimationFrame(() => {
+      if (leftColRef.current) leftColRef.current.scrollTop = 0;
+      if (rightColRef.current) rightColRef.current.scrollTop = 0;
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deal?.id]);
+
+  // Scroll back to top when switching tabs
+  useEffect(() => {
+    requestAnimationFrame(() => {
+      if (leftColRef.current) leftColRef.current.scrollTop = 0;
+      if (rightColRef.current) rightColRef.current.scrollTop = 0;
+    });
+  }, [activeTab]);
 
   const openContactDrawer = useCallback(async (contactCuid: string) => {
     const data = await getContactByCuid(contactCuid);
@@ -1257,7 +1295,7 @@ export default function DealRightDrawer({
             </div>
 
             {/* ── Tabs nav ── */}
-            <div className="shrink-0 flex border-b border-gray-100 px-4 gap-0">
+            <div ref={tabsRef} className="shrink-0 flex border-b border-gray-100 px-4 gap-0">
               {TABS.map(tab => (
                 <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)}
                   className={`flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium border-b-2 transition-colors ${activeTab === tab.id ? "border-brand-600 text-brand-600" : "border-transparent text-gray-500 hover:text-gray-700"}`}>
@@ -1270,7 +1308,7 @@ export default function DealRightDrawer({
             <div className={`flex-1 min-h-0 ${activeTab === "chat" ? "overflow-hidden" : "overflow-y-auto"}`}>
               {activeTab === "general" && (
                 <div className="grid grid-cols-5 divide-x divide-gray-100 h-full">
-                  <div className="col-span-2 overflow-y-auto p-4">
+                  <div ref={leftColRef} className="col-span-2 overflow-y-auto p-4 drawer-col-scroll">
                     <DetailsLeft
                       deal={deal}
                       customFields={customFields}
@@ -1286,7 +1324,7 @@ export default function DealRightDrawer({
                       onChooseSection={() => setChooseSectionOpen(true)}
                     />
                   </div>
-                  <div className="col-span-3 overflow-y-auto p-4">
+                  <div ref={rightColRef} className="col-span-3 overflow-y-auto p-4 drawer-col-scroll">
                     <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Лента активности</p>
                     <ActivityFeed dealId={deal.id} />
                   </div>

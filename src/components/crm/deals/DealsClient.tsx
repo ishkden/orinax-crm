@@ -433,6 +433,7 @@ export default function DealsClient({
       <ContactDrawer deal={contactDeal} onClose={() => setContactDeal(null)} />
 
       <DealRightDrawer
+        pipelines={pipelines}
         deal={selectedDeal}
         stages={activeStages}
         customFields={customFields}

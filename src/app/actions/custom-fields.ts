@@ -3,9 +3,22 @@
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { CustomFieldType } from "@prisma/client";
 
 // ─── Public types ─────────────────────────────────────────────────────────────
+
+export type CustomFieldType =
+  | "STRING"
+  | "TEXT"
+  | "LIST"
+  | "DATETIME"
+  | "DATE"
+  | "RESOURCE"
+  | "ADDRESS"
+  | "URL"
+  | "FILE"
+  | "MONEY"
+  | "BOOLEAN"
+  | "NUMBER";
 
 export type CustomFieldDef = {
   id: string;
@@ -16,8 +29,6 @@ export type CustomFieldDef = {
   required: boolean;
   sortOrder: number;
 };
-
-export type { CustomFieldType };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -44,7 +55,7 @@ function mapField(f: {
   id: string;
   code: string;
   name: string;
-  type: CustomFieldType;
+  type: string;
   options: unknown;
   required: boolean;
   sortOrder: number;
@@ -53,7 +64,7 @@ function mapField(f: {
     id: f.id,
     code: f.code,
     name: f.name,
-    type: f.type,
+    type: f.type as CustomFieldType,
     options: Array.isArray(f.options) ? (f.options as string[]) : null,
     required: f.required,
     sortOrder: f.sortOrder,
@@ -73,7 +84,7 @@ export async function getCustomFields(): Promise<CustomFieldDef[]> {
 
 export async function createCustomField(data: {
   name: string;
-  type: CustomFieldType;
+  type: string;
   options?: string[];
   required?: boolean;
 }): Promise<CustomFieldDef> {
@@ -92,7 +103,8 @@ export async function createCustomField(data: {
       orgId,
       code,
       name: data.name.trim(),
-      type: data.type,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      type: data.type as any,
       options: data.options && data.options.length > 0 ? data.options : null,
       required: data.required ?? false,
       sortOrder: count,

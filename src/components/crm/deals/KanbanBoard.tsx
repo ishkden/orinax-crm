@@ -156,7 +156,7 @@ export default function KanbanBoard({
   }, []);
 
   const dealSensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+    useSensor(PointerSensor, { activationConstraint: { distance: 3 } })
   );
 
   const stageSensors = useSensors(

@@ -109,7 +109,7 @@ export default function DealCard({ deal, onContactClick, onDealClick }: DealCard
         if (el.closest("[data-contact-link]")) return;
         onDealClick?.(deal);
       }}
-      className="group flex cursor-grab flex-col border text-left touch-pan-y active:cursor-grabbing transition-all duration-150"
+      className="group flex cursor-grab select-none flex-col border text-left touch-none active:cursor-grabbing transition-all duration-150"
       onMouseEnter={(e) => {
         const el = e.currentTarget;
         el.style.borderColor = s.card.hoverBorderColor;
@@ -154,7 +154,6 @@ export default function DealCard({ deal, onContactClick, onDealClick }: DealCard
           <button
             type="button"
             data-contact-link
-            onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => {
               e.stopPropagation();
               onContactClick?.(deal);

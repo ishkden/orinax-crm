@@ -91,29 +91,43 @@ export default function DealsClient({
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
   const [, startTransition] = useTransition();
 
-  // Restore selected deal from URL on mount
+  // Restore selected deal if page loaded at /crm/deals/:id
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    const params = new URLSearchParams(window.location.search);
-    const dealSN = params.get("deal");
-    if (dealSN) {
-      const found = deals.find((d) => String(d.serialNumber) === dealSN);
-      if (found) setSelectedDeal(found);
+    const match = window.location.pathname.match(/\/crm\/deals\/(\d+)/);
+    if (match && deals.length > 0) {
+      const found = deals.find((d) => String(d.serialNumber) === match[1]);
+      if (found) {
+        setSelectedDeal(found);
+        window.history.replaceState({ dealSN: found.serialNumber }, "", window.location.href);
+      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Sync URL with selected deal
+  // Handle browser back/forward: sync drawer with URL
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    const url = new URL(window.location.href);
-    if (selectedDeal) {
-      url.searchParams.set("deal", String(selectedDeal.serialNumber));
-    } else {
-      url.searchParams.delete("deal");
+    function onPopState() {
+      const match = window.location.pathname.match(/\/crm\/deals\/(\d+)/);
+      if (match) {
+        const found = deals.find((d) => String(d.serialNumber) === match[1]);
+        setSelectedDeal(found ?? null);
+      } else {
+        setSelectedDeal(null);
+      }
     }
-    window.history.replaceState({}, "", url.toString());
-  }, [selectedDeal]);
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, [deals]);
+
+  const handleDealClick = useCallback((deal: Deal) => {
+    setSelectedDeal(deal);
+    window.history.pushState({ dealSN: deal.serialNumber }, "", `/crm/deals/${deal.serialNumber}`);
+  }, []);
+
+  const handleDrawerClose = useCallback(() => {
+    setSelectedDeal(null);
+    window.history.replaceState({}, "", "/crm/deals");
+  }, []);
 
   const openCreateDeal = useCallback(() => {
     setModalStage(null);
@@ -388,7 +402,7 @@ export default function DealsClient({
               onStageReorder={handleStageReorder}
               onAddStageAfter={handleAddStageAfter}
               onContactClick={setContactDeal}
-              onDealClick={setSelectedDeal}
+              onDealClick={handleDealClick}
             />
           </div>
         ) : (
@@ -396,7 +410,7 @@ export default function DealsClient({
             <DealsListView
               deals={filteredDeals}
               stages={activeStages}
-              onDealClick={setSelectedDeal}
+              onDealClick={handleDealClick}
             />
           </div>
         )}
@@ -418,7 +432,7 @@ export default function DealsClient({
       <DealRightDrawer
         deal={selectedDeal}
         stages={activeStages}
-        onClose={() => setSelectedDeal(null)}
+        onClose={handleDrawerClose}
       />
     </>
   );

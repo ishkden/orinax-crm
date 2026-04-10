@@ -4,7 +4,10 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 // crm-app (аналитика) слушает на порту 3000
-const CRM_APP_BASE = process.env.CRM_APP_INTERNAL_URL ?? "http://localhost:3000";
+const CRM_APP_BASE =
+  process.env.ORINAX_ANALYTICS_INTERNAL_URL ??
+  process.env.CRM_APP_INTERNAL_URL ??
+  "http://127.0.0.1:3000";
 const INTERNAL_SECRET = process.env.CONNECTOR_API_SECRET ?? "";
 
 async function getExternalOrgId(): Promise<string | null> {

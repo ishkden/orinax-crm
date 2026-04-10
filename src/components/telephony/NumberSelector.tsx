@@ -154,16 +154,16 @@ export default function NumberSelector() {
     const defaultCity: City = { code: "495", name: "Москва", mcnCityId: "643_495" };
     setSelectedCity(defaultCity);
     setCities([
-      { code: "495", name: "Москва",          mcnCityId: "643_495" },
-      { code: "812", name: "Санкт-Петербург", mcnCityId: "643_812" },
-      { code: "343", name: "Екатеринбург",    mcnCityId: "643_343" },
-      { code: "383", name: "Новосибирск",     mcnCityId: "643_383" },
-      { code: "843", name: "Казань",          mcnCityId: "643_843" },
-      { code: "831", name: "Нижний Новгород", mcnCityId: "643_831" },
-      { code: "846", name: "Самара",          mcnCityId: "643_846" },
-      { code: "863", name: "Ростов-на-Дону",  mcnCityId: "643_863" },
-      { code: "861", name: "Краснодар",       mcnCityId: "643_861" },
-      { code: "347", name: "Уфа",            mcnCityId: "643_347" },
+      { code: "495", name: "Москва",          mcnCityId: "495" },
+      { code: "812", name: "Санкт-Петербург", mcnCityId: "812" },
+      { code: "343", name: "Екатеринбург",    mcnCityId: "343" },
+      { code: "383", name: "Новосибирск",     mcnCityId: "383" },
+      { code: "843", name: "Казань",          mcnCityId: "843" },
+      { code: "831", name: "Нижний Новгород", mcnCityId: "831" },
+      { code: "846", name: "Самара",          mcnCityId: "846" },
+      { code: "863", name: "Ростов-на-Дону",  mcnCityId: "863" },
+      { code: "861", name: "Краснодар",       mcnCityId: "861" },
+      { code: "347", name: "Уфа",            mcnCityId: "347" },
     ]);
   }, []);
 

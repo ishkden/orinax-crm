@@ -5,6 +5,10 @@ import type { MigrationBatch, LeadPayload } from "@/lib/migration/types";
 
 export const dynamic = "force-dynamic";
 
+function maybeDate(v?: string | null): Date | undefined {
+  return v ? new Date(v) : undefined;
+}
+
 export async function POST(request: NextRequest) {
   if (!validateMigrationKey(request)) return unauthorized();
 
@@ -22,55 +26,62 @@ export async function POST(request: NextRequest) {
   if (!internalOrgId) return badRequest("Org not found for externalId: " + orgId);
   if (!Array.isArray(data) || data.length === 0) return badRequest("data must be a non-empty array");
 
-  const invalid = data.find((l) => !l.sourceId);
-  if (invalid) return badRequest("Each lead must have sourceId");
-
   try {
-    const contactSourceIds = [
-      ...new Set(data.map((l) => l.contactSourceId).filter(Boolean) as string[]),
-    ];
-    const contacts =
+    const contactSourceIds = [...new Set(data.map((l) => l.contactSourceId).filter(Boolean) as string[])];
+    const companySourceIds = [...new Set(data.map((l) => l.companySourceId).filter(Boolean) as string[])];
+
+    const [contacts, companies] = await Promise.all([
       contactSourceIds.length > 0
-        ? await prisma.contact.findMany({
-            where: { orgId: internalOrgId, sourceId: { in: contactSourceIds } },
-            select: { id: true, sourceId: true },
-          })
-        : [];
+        ? prisma.contact.findMany({ where: { orgId: internalOrgId, sourceId: { in: contactSourceIds } }, select: { id: true, sourceId: true } })
+        : [],
+      companySourceIds.length > 0
+        ? prisma.company.findMany({ where: { orgId: internalOrgId, sourceId: { in: companySourceIds } }, select: { id: true, sourceId: true } })
+        : [],
+    ]);
+
     const contactMap = new Map(contacts.map((c) => [c.sourceId!, c.id]));
+    const companyMap = new Map(companies.map((c) => [c.sourceId!, c.id]));
 
     const results = await prisma.$transaction(
       data.map((lead) => {
-        const contactId = lead.contactSourceId
-          ? (contactMap.get(lead.contactSourceId) ?? null)
-          : null;
+        const contactId = lead.contactSourceId ? (contactMap.get(lead.contactSourceId) ?? null) : null;
+        const companyId = lead.companySourceId ? (companyMap.get(lead.companySourceId) ?? null) : null;
+
+        const shared = {
+          title: lead.title ?? null,
+          statusId: lead.statusId ?? null,
+          statusSemantic: lead.statusSemantic ?? null,
+          value: lead.value ?? 0,
+          currency: lead.currency ?? "RUB",
+          description: lead.description ?? null,
+          tags: lead.tags ?? [],
+          contactSourceId: lead.contactSourceId ?? null,
+          companySourceId: lead.companySourceId ?? null,
+          rawPayload: (lead.rawPayload as any) ?? undefined,
+          assignedByExternalId: lead.assignedByExternalId ?? null,
+          createdById: lead.createdById ?? null,
+          modifyById: lead.modifyById ?? null,
+          sourceDescription: lead.sourceDescription ?? null,
+          dateCreate: maybeDate(lead.dateCreate),
+          dateModify: maybeDate(lead.dateModify),
+          isDeleted: lead.isDeleted ?? false,
+          syncedAt: lead.syncedFromBitrixAt ? new Date(lead.syncedFromBitrixAt) : new Date(),
+        };
 
         return prisma.lead.upsert({
           where: { orgId_sourceId: { orgId: internalOrgId, sourceId: lead.sourceId } },
           create: {
             orgId: internalOrgId,
             sourceId: lead.sourceId,
-            title: lead.title ?? null,
-            statusId: lead.statusId ?? null,
-            statusSemantic: lead.statusSemantic ?? null,
-            value: lead.value ?? 0,
-            currency: lead.currency ?? "RUB",
-            description: lead.description ?? null,
-            tags: lead.tags ?? [],
-            contactSourceId: lead.contactSourceId ?? null,
-            companySourceId: lead.companySourceId ?? null,
             contactId,
+            companyId,
+            ...shared,
             ...(lead.createdAt ? { createdAt: new Date(lead.createdAt) } : {}),
           },
           update: {
-            title: lead.title ?? undefined,
-            statusId: lead.statusId ?? undefined,
-            statusSemantic: lead.statusSemantic ?? undefined,
-            value: lead.value ?? undefined,
-            currency: lead.currency ?? undefined,
-            description: lead.description ?? undefined,
-            contactSourceId: lead.contactSourceId ?? undefined,
-            companySourceId: lead.companySourceId ?? undefined,
+            ...shared,
             ...(contactId ? { contactId } : {}),
+            ...(companyId ? { companyId } : {}),
           },
           select: { id: true, sourceId: true },
         });

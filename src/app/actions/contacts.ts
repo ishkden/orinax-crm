@@ -1,0 +1,170 @@
+"use server";
+
+import { prisma } from "@/lib/prisma";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+
+export interface ContactDetail {
+  id: string;
+  serialNumber: number;
+  firstName: string;
+  lastName: string;
+  phone: string | null;
+  email: string | null;
+  company: string | null;
+  position: string | null;
+  primaryIM: string | null;
+  notes: string | null;
+  source: string;
+  status: string;
+  companyRel: { id: string; name: string } | null;
+  channels: Array<{ id: string; type: string; value: string; isPrimary: boolean }>;
+  deals: Array<{
+    id: string;
+    title: string;
+    value: number;
+    currency: string;
+    serialNumber: number;
+    stageRel: { name: string; color: string | null } | null;
+  }>;
+}
+
+async function getOrgId() {
+  const session = await getServerSession(authOptions);
+  const userId = (session?.user as { id?: string } | undefined)?.id;
+  if (!userId) return null;
+  const member = await prisma.orgMember.findFirst({ where: { userId }, select: { orgId: true } });
+  return member?.orgId ?? null;
+}
+
+export async function getContactBySerialNumber(serialNumber: number): Promise<ContactDetail | null> {
+  const orgId = await getOrgId();
+  if (!orgId) return null;
+
+  const contact = await prisma.contact.findFirst({
+    where: { serialNumber, orgId },
+    include: {
+      companyRel: { select: { id: true, name: true } },
+      channels: { where: { isDeleted: false }, orderBy: { isPrimary: "desc" } },
+      deals: {
+        where: { isDeleted: false },
+        orderBy: { createdAt: "desc" },
+        take: 20,
+        include: { stageRel: { select: { name: true, color: true } } },
+      },
+    },
+  });
+
+  if (!contact) return null;
+
+  return {
+    id: contact.id,
+    serialNumber: contact.serialNumber,
+    firstName: contact.firstName,
+    lastName: contact.lastName,
+    phone: contact.phone,
+    email: contact.email,
+    company: contact.company,
+    position: contact.position,
+    primaryIM: contact.primaryIM,
+    notes: contact.notes,
+    source: String(contact.source),
+    status: String(contact.status),
+    companyRel: contact.companyRel,
+    channels: contact.channels.map((ch) => ({
+      id: ch.id,
+      type: String(ch.type),
+      value: ch.value,
+      isPrimary: ch.isPrimary,
+    })),
+    deals: contact.deals.map((d) => ({
+      id: d.id,
+      title: d.title,
+      value: d.value ?? 0,
+      currency: d.currency ?? "RUB",
+      serialNumber: d.serialNumber,
+      stageRel: d.stageRel ? { name: d.stageRel.name, color: d.stageRel.color } : null,
+    })),
+  };
+}
+
+export async function getContactsList(page: number, pageSize: number) {
+  const orgId = await getOrgId();
+  if (!orgId) return { contacts: [], total: 0 };
+
+  const where = { orgId, isDeleted: false };
+
+  const [contacts, total] = await Promise.all([
+    prisma.contact.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      take: pageSize,
+      skip: (page - 1) * pageSize,
+      select: {
+        id: true,
+        serialNumber: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        company: true,
+        position: true,
+        status: true,
+        createdAt: true,
+      },
+    }),
+    prisma.contact.count({ where }),
+  ]);
+
+  return { contacts, total };
+}
+
+export async function getContactByCuid(id: string): Promise<ContactDetail | null> {
+  const orgId = await getOrgId();
+  if (!orgId) return null;
+
+  const contact = await prisma.contact.findFirst({
+    where: { id, orgId },
+    include: {
+      companyRel: { select: { id: true, name: true } },
+      channels: { where: { isDeleted: false }, orderBy: { isPrimary: "desc" } },
+      deals: {
+        where: { isDeleted: false },
+        orderBy: { createdAt: "desc" },
+        take: 20,
+        include: { stageRel: { select: { name: true, color: true } } },
+      },
+    },
+  });
+
+  if (!contact) return null;
+
+  return {
+    id: contact.id,
+    serialNumber: contact.serialNumber,
+    firstName: contact.firstName,
+    lastName: contact.lastName,
+    phone: contact.phone,
+    email: contact.email,
+    company: contact.company,
+    position: contact.position,
+    primaryIM: contact.primaryIM,
+    notes: contact.notes,
+    source: String(contact.source),
+    status: String(contact.status),
+    companyRel: contact.companyRel,
+    channels: contact.channels.map((ch) => ({
+      id: ch.id,
+      type: String(ch.type),
+      value: ch.value,
+      isPrimary: ch.isPrimary,
+    })),
+    deals: contact.deals.map((d) => ({
+      id: d.id,
+      title: d.title,
+      value: d.value ?? 0,
+      currency: d.currency ?? "RUB",
+      serialNumber: d.serialNumber,
+      stageRel: d.stageRel ? { name: d.stageRel.name, color: d.stageRel.color } : null,
+    })),
+  };
+}

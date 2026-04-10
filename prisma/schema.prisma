@@ -23,17 +23,21 @@ model Org {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  members       OrgMember[]
-  companies     Company[]
-  contacts      Contact[]
-  deals         Deal[]
-  tasks         Task[]
-  activities    Activity[]
-  comments      Comment[]
-  conversations Conversation[]
-  leads         Lead[]
-  pipelines     Pipeline[]
-  stages        Stage[]
+  members        OrgMember[]
+  companies      Company[]
+  contacts       Contact[]
+  deals          Deal[]
+  tasks          Task[]
+  activities     Activity[]
+  comments       Comment[]
+  conversations  Conversation[]
+  leads          Lead[]
+  pipelines      Pipeline[]
+  stages         Stage[]
+  dealContacts   DealContact[]
+  channels       CommunicationChannel[]
+  stageHistories StageHistory[]
+  customFields   CustomField[]
 }
 
 // Связь User ↔ Org через промежуточную таблицу (один user — много org)
@@ -62,6 +66,19 @@ model User {
   role          UserRole  @default(AGENT)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+
+  orgId                String?
+  lastName             String?
+  patronymic           String?
+  phone                String?
+  internalPhone        String?
+  department           String?
+  birthDate            DateTime? @db.Date
+  gender               String?
+  city                 String?
+  notificationLanguage String?   @default("ru")
+  position             String?
+  lastSeenAt           DateTime?
 
   accounts   Account[]
   sessions   Session[]
@@ -113,26 +130,37 @@ model VerificationToken {
 // ─── CRM CORE ─────────────────────────────────────────────────────────────────
 
 model Company {
-  id       String   @id @default(cuid())
+  id       String  @id @default(cuid())
   orgId    String
-  sourceId String?  // ID в Битрикс24 (из сервиса Аналитики)
+  sourceId String?
   name     String
   industry String?
   phone    String?
   email    String?
   website  String?
   address  String?
+  inn      String?
+
+  customFields      Json?
+  customFieldValues Json?
+  isDeleted         Boolean   @default(false)
+  syncedAt          DateTime?
+  bitrixUpdatedAt   DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  org      Org       @relation(fields: [orgId], references: [id])
+  org      Org                    @relation(fields: [orgId], references: [id])
   contacts Contact[]
+  deals    Deal[]                 @relation("CompanyDeals")
+  leads    Lead[]
+  channels CommunicationChannel[] @relation("CompanyChannels")
 
   @@unique([orgId, sourceId])
 }
 
 model Contact {
+  serialNumber Int    @unique @default(autoincrement())
   id        String        @id @default(cuid())
   orgId     String
   firstName String
@@ -146,24 +174,31 @@ model Contact {
   notes     String?       @db.Text
   tags      String[]
 
-  // Маппинг внешних источников
-  sourceId         String?  // ID в Битрикс24 (из сервиса Аналитики)
-  connectorChatIds String[] // ID чатов в сервисе Коннектора
+  sourceId         String?
+  connectorChatIds String[]
+  primaryIM        String?
+  customFields      Json?
+  customFieldValues Json?
+  isDeleted         Boolean   @default(false)
+  syncedAt          DateTime?
+  bitrixUpdatedAt   DateTime?
 
   companyId  String?
   assignedId String?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  org           Org            @relation(fields: [orgId], references: [id])
-  companyRel    Company?       @relation(fields: [companyId], references: [id])
-  assigned      User?          @relation("AssignedContacts", fields: [assignedId], references: [id])
+  org           Org                    @relation(fields: [orgId], references: [id])
+  companyRel    Company?               @relation(fields: [companyId], references: [id])
+  assigned      User?                  @relation("AssignedContacts", fields: [assignedId], references: [id])
   deals         Deal[]
   tasks         Task[]
-  activities    Activity[]     @relation("ContactActivities")
+  activities    Activity[]             @relation("ContactActivities")
   comments      Comment[]
   conversations Conversation[]
   leads         Lead[]
+  dealContacts  DealContact[]
+  channels      CommunicationChannel[] @relation("ContactChannels")
 
   @@unique([orgId, sourceId])
 }
@@ -174,12 +209,14 @@ model Pipeline {
   sourceId  String?
   name      String
   sortOrder Int      @default(0)
+  section   String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  org    Org     @relation(fields: [orgId], references: [id])
-  stages Stage[]
-  deals  Deal[]
+  org          Org           @relation(fields: [orgId], references: [id])
+  stages       Stage[]
+  deals        Deal[]
+  customFields CustomField[]
 
   @@unique([orgId, sourceId])
 }
@@ -194,6 +231,7 @@ model Stage {
   sortOrder  Int      @default(0)
   isFinal    Boolean  @default(false)
   isWon      Boolean  @default(false)
+  semantics  String?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
@@ -201,44 +239,149 @@ model Stage {
   pipeline Pipeline @relation(fields: [pipelineId], references: [id])
   deals    Deal[]
 
+  stageHistoriesFrom StageHistory[] @relation("StageFrom")
+  stageHistoriesTo   StageHistory[] @relation("StageTo")
+
   @@unique([orgId, sourceId])
 }
 
 model Deal {
-  id          String    @id @default(cuid())
-  orgId       String
-  title       String
+  id           String @id @default(cuid())
+  serialNumber Int    @unique @default(autoincrement())
+  orgId        String
+  title        String
   value       Float     @default(0)
   currency    String    @default("RUB")
   stage       DealStage @default(LEAD)
   priority    Priority  @default(MEDIUM)
   contactId   String?
+  companyId   String?
   assignedId  String?
   closeDate   DateTime?
   description String?   @db.Text
   tags        String[]
 
-  // Маппинг внешних источников
-  sourceId String? // ID в Битрикс24 (из сервиса Аналитики)
+  sourceId String?
 
-  // Динамические воронки и стадии (из Аналитики / Битрикса)
   pipelineId String?
   stageId    String?
+
+  rawPayload           Json?
+  currencyId           String?
+  assignedByExternalId String?
+  createdById          String?
+  modifyById           String?
+  stageSemanticId      String?
+  sourceDescription    String?
+  beginDate            DateTime?
+  movedTime            DateTime?
+  lastActivityTime     DateTime?
+  lastActivityBy       String?
+  dateCreate           DateTime?
+  dateModify           DateTime?
+
+  customFieldValues Json?
+
+  isDeleted       Boolean   @default(false)
+  syncedAt        DateTime?
+  bitrixUpdatedAt DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  org        Org        @relation(fields: [orgId], references: [id])
-  contact    Contact?   @relation(fields: [contactId], references: [id])
-  assigned   User?      @relation("AssignedDeals", fields: [assignedId], references: [id])
-  pipeline   Pipeline?  @relation(fields: [pipelineId], references: [id])
-  stageRel   Stage?     @relation(fields: [stageId], references: [id])
-  tasks      Task[]
-  activities Activity[] @relation("DealActivities")
-  comments   Comment[]
+  org          Org            @relation(fields: [orgId], references: [id])
+  contact      Contact?       @relation(fields: [contactId], references: [id])
+  company      Company?       @relation("CompanyDeals", fields: [companyId], references: [id])
+  assigned     User?          @relation("AssignedDeals", fields: [assignedId], references: [id])
+  pipeline     Pipeline?      @relation(fields: [pipelineId], references: [id])
+  stageRel     Stage?         @relation(fields: [stageId], references: [id])
+  tasks        Task[]
+  activities   Activity[]     @relation("DealActivities")
+  comments     Comment[]
+  dealContacts DealContact[]
+  stageHistory StageHistory[]
 
   @@unique([orgId, sourceId])
+  @@index([pipelineId])
+  @@index([stageId])
 }
+
+// ─── Deal-Contact Junction (Bitrix deals can have multiple contacts) ─────────
+
+model DealContact {
+  id        String  @id @default(cuid())
+  orgId     String
+  dealId    String
+  contactId String
+  isPrimary Boolean @default(false)
+
+  isDeleted       Boolean   @default(false)
+  syncedAt        DateTime?
+  bitrixUpdatedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  org     Org     @relation(fields: [orgId], references: [id])
+  deal    Deal    @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  contact Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@unique([dealId, contactId])
+  @@index([dealId])
+  @@index([contactId])
+}
+
+// ─── Communication Channels (multiple phones/emails/IM per contact/company) ──
+
+model CommunicationChannel {
+  id        String      @id @default(cuid())
+  orgId     String
+  contactId String?
+  companyId String?
+  type      ChannelKind
+  value     String
+  isPrimary Boolean     @default(false)
+
+  messengerType String?
+  sourceId      String?
+
+  isDeleted       Boolean   @default(false)
+  syncedAt        DateTime?
+  bitrixUpdatedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  org     Org      @relation(fields: [orgId], references: [id])
+  contact Contact? @relation("ContactChannels", fields: [contactId], references: [id], onDelete: Cascade)
+  company Company? @relation("CompanyChannels", fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([contactId])
+  @@index([companyId])
+}
+
+// ─── Stage History (deal stage transitions) ──────────────────────────────────
+
+model StageHistory {
+  id          String   @id @default(cuid())
+  orgId       String
+  dealId      String
+  fromStageId String?
+  toStageId   String
+  movedAt     DateTime @default(now())
+  sourceId    String?
+
+  createdAt DateTime @default(now())
+
+  org       Org    @relation(fields: [orgId], references: [id])
+  deal      Deal   @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  fromStage Stage? @relation("StageFrom", fields: [fromStageId], references: [id])
+  toStage   Stage  @relation("StageTo", fields: [toStageId], references: [id])
+
+  @@index([dealId])
+}
+
+// ─── Tasks ───────────────────────────────────────────────────────────────────
 
 model Task {
   id          String     @id @default(cuid())
@@ -251,8 +394,11 @@ model Task {
   contactId   String?
   dealId      String?
   assignedId  String?
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+
+  sourceId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   org      Org       @relation(fields: [orgId], references: [id])
   contact  Contact?  @relation(fields: [contactId], references: [id])
@@ -261,39 +407,59 @@ model Task {
   comments Comment[]
 }
 
+// ─── Activities ──────────────────────────────────────────────────────────────
+
 model Activity {
   id        String       @id @default(cuid())
   orgId     String
   type      ActivityType
   title     String
   body      String?      @db.Text
-  userId    String
+  userId    String?
   contactId String?
   dealId    String?
-  createdAt DateTime     @default(now())
+
+  sourceId     String?
+  direction    String?
+  duration     Int?
+  recordingUrl String?
+  metadata     Json?
+
+  createdAt DateTime @default(now())
 
   org     Org      @relation(fields: [orgId], references: [id])
-  user    User     @relation(fields: [userId], references: [id])
+  user    User?    @relation(fields: [userId], references: [id])
   contact Contact? @relation("ContactActivities", fields: [contactId], references: [id])
   deal    Deal?    @relation("DealActivities", fields: [dealId], references: [id])
+
+  @@index([dealId])
+  @@index([contactId])
+  @@index([orgId, sourceId])
 }
+
+// ─── Comments ────────────────────────────────────────────────────────────────
 
 model Comment {
   id        String   @id @default(cuid())
   orgId     String
   body      String   @db.Text
-  userId    String
+  userId    String?
   contactId String?
   dealId    String?
   taskId    String?
+
+  sourceId String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   org     Org      @relation(fields: [orgId], references: [id])
-  user    User     @relation(fields: [userId], references: [id])
+  user    User?    @relation(fields: [userId], references: [id])
   contact Contact? @relation(fields: [contactId], references: [id])
   deal    Deal?    @relation(fields: [dealId], references: [id])
   task    Task?    @relation(fields: [taskId], references: [id])
+
+  @@index([dealId])
 }
 
 // ─── ЧАТЫ / КОННЕКТОР ─────────────────────────────────────────────────────────
@@ -303,7 +469,7 @@ model Conversation {
   orgId      String
   contactId  String?
   channel    ConversationChannel
-  externalId String?             // ID чата в сервисе Коннектора
+  externalId String?
   status     ConversationStatus  @default(OPEN)
   createdAt  DateTime            @default(now())
   updatedAt  DateTime            @updatedAt
@@ -319,11 +485,11 @@ model Conversation {
 model Message {
   id             String   @id @default(cuid())
   conversationId String
-  sourceId       String?  // ID в Битрикс24 (из сервиса Аналитики)
-  authorId       String?  // User.id, null если сообщение от клиента
-  fromExternal   Boolean  @default(false) // true = от клиента, false = от агента
+  sourceId       String?
+  authorId       String?
+  fromExternal   Boolean  @default(false)
   body           String?  @db.Text
-  metadata       Json?    // Служебная инфа от коннектора: типы вложений, messageId и т.д.
+  metadata       Json?
   createdAt      DateTime @default(now())
 
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
@@ -393,11 +559,19 @@ enum ActivityType {
   CALL
   EMAIL
   MEETING
+  SMS
+  TASK_BITRIX
   DEAL_CREATED
   DEAL_STAGE_CHANGED
   CONTACT_CREATED
   TASK_CREATED
   TASK_COMPLETED
+}
+
+enum ChannelKind {
+  PHONE
+  EMAIL
+  IM
 }
 
 enum ConversationChannel {
@@ -415,6 +589,53 @@ enum ConversationStatus {
   PENDING
   RESOLVED
   CLOSED
+}
+
+// ─── Custom Fields ────────────────────────────────────────────────────────────
+
+enum CustomFieldEntityType {
+  DEAL
+  CONTACT
+  COMPANY
+  LEAD
+}
+
+enum CustomFieldType {
+  STRING
+  TEXT
+  LIST
+  DATETIME
+  DATE
+  RESOURCE
+  ADDRESS
+  URL
+  FILE
+  MONEY
+  BOOLEAN
+  NUMBER
+}
+
+model CustomField {
+  id         String                @id @default(cuid())
+  orgId      String
+  code       String                @unique
+  name       String
+  type       CustomFieldType
+  entityType CustomFieldEntityType @default(DEAL)
+  options    Json?
+  required   Boolean               @default(false)
+  sortOrder  Int                   @default(0)
+  section    String?
+  pipelineId String?
+  createdAt  DateTime              @default(now())
+  updatedAt  DateTime              @updatedAt
+
+  org      Org       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  pipeline Pipeline? @relation(fields: [pipelineId], references: [id], onDelete: SetNull)
+
+  @@index([orgId])
+  @@index([orgId, entityType])
+  @@index([pipelineId])
 }
 
 // ─── SYSTEM SETTINGS (key-value store for admin config) ──────────────────────
@@ -435,16 +656,33 @@ model Lead {
   value           Float    @default(0)
   currency        String   @default("RUB")
   contactId       String?
+  companyId       String?
   assignedId      String?
   description     String?  @db.Text
   tags            String[]
   contactSourceId String?
   companySourceId String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+
+  rawPayload           Json?
+  assignedByExternalId String?
+  createdById          String?
+  modifyById           String?
+  sourceDescription    String?
+  dateCreate           DateTime?
+  dateModify           DateTime?
+
+  customFieldValues Json?
+
+  isDeleted       Boolean   @default(false)
+  syncedAt        DateTime?
+  bitrixUpdatedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   org     Org      @relation(fields: [orgId], references: [id])
   contact Contact? @relation(fields: [contactId], references: [id])
+  company Company? @relation(fields: [companyId], references: [id])
 
   @@unique([orgId, sourceId])
 }

@@ -1,31 +1,14 @@
 import type { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { validateMigrationKey, resolveOrgId, unauthorized, badRequest, internalError } from "@/lib/migration/auth";
-import type { MigrationBatch } from "@/lib/migration/types";
+import type { MigrationBatch, ContactPayload } from "@/lib/migration/types";
 
 export const dynamic = "force-dynamic";
-
-// Расширенный payload с учётом того, что Аналитика шлёт primaryPhone/primaryEmail/fullName
-interface ContactPayloadExtended {
-  sourceId: string;
-  firstName?: string | null;
-  lastName?: string | null;
-  fullName?: string | null;
-  email?: string | null;
-  phone?: string | null;
-  primaryEmail?: string | null;
-  primaryPhone?: string | null;
-  position?: string | null;
-  notes?: string | null;
-  tags?: string[];
-  companySourceId?: string | null;
-  createdAt?: string;
-}
 
 export async function POST(request: NextRequest) {
   if (!validateMigrationKey(request)) return unauthorized();
 
-  let body: MigrationBatch<ContactPayloadExtended>;
+  let body: MigrationBatch<ContactPayload>;
   try {
     body = await request.json();
   } catch {
@@ -39,15 +22,8 @@ export async function POST(request: NextRequest) {
   if (!internalOrgId) return badRequest("Org not found for externalId: " + orgId);
   if (!Array.isArray(data) || data.length === 0) return badRequest("data must be a non-empty array");
 
-  const invalid = data.find((c) => !c.sourceId);
-  if (invalid) return badRequest("Each contact must have sourceId");
-
   try {
-    // Resolve companySourceIds → internal Company.id in a single query
-    const companySourceIds = [
-      ...new Set(data.map((c) => c.companySourceId).filter(Boolean) as string[]),
-    ];
-
+    const companySourceIds = [...new Set(data.map((c) => c.companySourceId).filter(Boolean) as string[])];
     const companies =
       companySourceIds.length > 0
         ? await prisma.company.findMany({
@@ -55,20 +31,13 @@ export async function POST(request: NextRequest) {
             select: { id: true, sourceId: true },
           })
         : [];
-
     const companyMap = new Map(companies.map((c) => [c.sourceId!, c.id]));
 
     const results = await prisma.$transaction(
       data.map((contact) => {
-        const companyId = contact.companySourceId
-          ? (companyMap.get(contact.companySourceId) ?? null)
-          : null;
-
-        // Поддержка как firstName/lastName, так и fullName из Аналитики
+        const companyId = contact.companySourceId ? (companyMap.get(contact.companySourceId) ?? null) : null;
         const firstName = contact.firstName || (contact.fullName ? contact.fullName.split(" ")[0] : "") || "—";
         const lastName = contact.lastName || (contact.fullName ? contact.fullName.split(" ").slice(1).join(" ") : "") || "";
-
-        // Поддержка как email/phone, так и primaryEmail/primaryPhone из Аналитики
         const email = contact.email ?? contact.primaryEmail ?? null;
         const phone = contact.phone ?? contact.primaryPhone ?? null;
 
@@ -85,7 +54,11 @@ export async function POST(request: NextRequest) {
             notes: contact.notes ?? null,
             tags: contact.tags ?? [],
             source: "ORINAX_ANALYTICS",
+            primaryIM: contact.primaryIM ?? null,
+            customFields: (contact.customFields as any) ?? undefined,
+            isDeleted: contact.isDeleted ?? false,
             companyId,
+            syncedAt: contact.syncedFromBitrixAt ? new Date(contact.syncedFromBitrixAt) : new Date(),
             ...(contact.createdAt ? { createdAt: new Date(contact.createdAt) } : {}),
           },
           update: {
@@ -93,10 +66,14 @@ export async function POST(request: NextRequest) {
             lastName,
             email,
             phone,
-            position: contact.position ?? null,
-            notes: contact.notes ?? null,
+            position: contact.position ?? undefined,
+            notes: contact.notes ?? undefined,
             tags: contact.tags ?? [],
+            primaryIM: contact.primaryIM ?? undefined,
+            customFields: (contact.customFields as any) ?? undefined,
+            isDeleted: contact.isDeleted ?? false,
             ...(companyId ? { companyId } : {}),
+            syncedAt: contact.syncedFromBitrixAt ? new Date(contact.syncedFromBitrixAt) : new Date(),
           },
           select: { id: true, sourceId: true },
         });

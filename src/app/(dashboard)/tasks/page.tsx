@@ -1,12 +1,24 @@
 import { prisma } from "@/lib/prisma";
-import Header from "@/components/layout/Header";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { formatDate } from "@/lib/utils";
 import Badge from "@/components/ui/Badge";
 import { Plus } from "lucide-react";
 import Link from "next/link";
 
 async function getTasks() {
+  const session = await getServerSession(authOptions);
+  const userId = (session?.user as { id?: string } | undefined)?.id;
+  if (!userId) return [];
+
+  const member = await prisma.orgMember.findFirst({
+    where: { userId },
+    select: { orgId: true },
+  });
+  if (!member) return [];
+
   return prisma.task.findMany({
+    where: { orgId: member.orgId },
     orderBy: [{ status: "asc" }, { dueDate: "asc" }],
     include: { contact: true, assigned: true },
   });
@@ -32,7 +44,6 @@ export default async function TasksPage() {
 
   return (
     <>
-      <Header title="Задачи" />
       <div className="flex-1 overflow-auto p-6">
         <div className="bg-white rounded-xl border border-gray-200">
           <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">

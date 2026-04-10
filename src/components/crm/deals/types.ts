@@ -4,27 +4,29 @@
 
 export interface Deal {
   id: string;
+  serialNumber: number;
   title: string;
   value: number;
   currency: string;
-  /** Prisma DealStage enum value, e.g. "LEAD" | "QUALIFIED" | … */
+  /** Dynamic Stage.id or fallback DealStage enum value */
   stage: string;
   priority: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
   contactId: string | null;
-  /** Derived: contact.firstName + " " + contact.lastName */
+  contactSerialNumber: number | null;
   contactName: string;
   contactPhone: string | null;
   contactEmail: string | null;
-  /** Derived: contact.company */
   company: string | null;
   assignedId: string | null;
-  /** Derived: assigned.name */
   assignee: string | null;
-  /** Maps from Prisma Deal.closeDate */
   dueDate: string | null;
   description: string | null;
   tags: string[];
   createdAt: string;
+  stageId: string | null;
+  pipelineId: string | null;
+  lastActivityTime: string | null;
+  customFieldValues: Record<string, unknown>;
 }
 
 export interface CreateDealInput {

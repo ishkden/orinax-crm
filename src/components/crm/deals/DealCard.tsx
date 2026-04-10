@@ -16,6 +16,26 @@ interface DealCardProps {
 }
 
 const lineHeightMap = { tight: 1.25, snug: 1.375, normal: 1.5, relaxed: 1.625 };
+
+const MONTHS = ["января","февраля","марта","апреля","мая","июня","июля","августа","сентября","октября","ноября","декабря"];
+
+function formatCreatedAt(isoString: string): string {
+  const now = new Date();
+  const date = new Date(isoString);
+  const diffMinutes = Math.floor((now.getTime() - date.getTime()) / 60000);
+  if (diffMinutes < 1) return "только что";
+  if (diffMinutes < 60) return `${diffMinutes} мин. назад`;
+  const isToday =
+    date.getDate() === now.getDate() &&
+    date.getMonth() === now.getMonth() &&
+    date.getFullYear() === now.getFullYear();
+  if (isToday) {
+    const h = String(date.getHours()).padStart(2, "0");
+    const m = String(date.getMinutes()).padStart(2, "0");
+    return `сегодня, ${h}:${m}`;
+  }
+  return `${date.getDate()} ${MONTHS[date.getMonth()]} ${date.getFullYear()}`;
+}
 const shadowMap = {
   none: "none",
   sm: "0 1px 2px 0 rgb(0 0 0 / 0.05)",
@@ -52,6 +72,7 @@ export default function DealCard({ deal, onContactClick, onDealClick }: DealCard
       ref={setNodeRef}
       style={{
         ...style,
+        ...(s.card.width > 0 ? { width: s.card.width, maxWidth: s.card.width } : { width: "100%" }),
         minHeight: s.card.minHeight,
         borderRadius: s.card.borderRadius,
         backgroundColor: s.card.backgroundColor,
@@ -88,7 +109,7 @@ export default function DealCard({ deal, onContactClick, onDealClick }: DealCard
         if (el.closest("[data-contact-link]")) return;
         onDealClick?.(deal);
       }}
-      className="group flex cursor-grab flex-col border text-left touch-pan-y active:cursor-grabbing transition-all duration-150"
+      className="group flex cursor-grab select-none flex-col border text-left touch-none active:cursor-grabbing transition-all duration-150"
       onMouseEnter={(e) => {
         const el = e.currentTarget;
         el.style.borderColor = s.card.hoverBorderColor;
@@ -133,7 +154,6 @@ export default function DealCard({ deal, onContactClick, onDealClick }: DealCard
           <button
             type="button"
             data-contact-link
-            onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => {
               e.stopPropagation();
               onContactClick?.(deal);
@@ -154,6 +174,21 @@ export default function DealCard({ deal, onContactClick, onDealClick }: DealCard
           >
             <span className="min-w-0 break-words">{deal.contactName}</span>
           </button>
+        )}
+
+        {s.cardCreatedAt.show && deal.createdAt && (
+          <span
+            style={{
+              fontSize: s.cardCreatedAt.fontSize,
+              fontWeight: s.cardCreatedAt.fontWeight,
+              color: s.cardCreatedAt.textColor,
+              marginTop: s.cardCreatedAt.marginTop,
+              textAlign: s.cardCreatedAt.textAlign,
+              display: "block",
+            }}
+          >
+            {formatCreatedAt(deal.createdAt)}
+          </span>
         )}
 
         {s.cardFooter.show && (deal.dueDate || deal.assignee) && (

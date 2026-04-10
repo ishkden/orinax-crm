@@ -22,6 +22,7 @@ import {
   Eye,
   EyeOff,
   Check,
+  Rows3,
 } from "lucide-react";
 import {
   type KanbanStyles,
@@ -73,6 +74,14 @@ const sections: {
   fields: FieldDef[];
 }[] = [
   {
+    key: "layout",
+    label: "Макет (навигация)",
+    icon: Rows3,
+    fields: [
+      { key: "subNavHeight", label: "Высота панели вкладок", type: "number", min: 28, max: 80, step: 1, unit: "px" },
+    ],
+  },
+  {
     key: "board",
     label: "Доска",
     icon: LayoutGrid,
@@ -81,7 +90,7 @@ const sections: {
       { key: "minHeight", label: "Мин. высота", type: "number", min: 200, max: 600, step: 10, unit: "px" },
       { key: "columnGap", label: "Отступ между колонками", type: "number", min: 0, max: 40, step: 1, unit: "px" },
       { key: "paddingX", label: "Отступ слева/справа", type: "number", min: 0, max: 60, step: 2, unit: "px" },
-      { key: "paddingTop", label: "Отступ сверху", type: "number", min: 0, max: 40, step: 2, unit: "px" },
+      { key: "paddingTop", label: "Отступ контента сверху", type: "number", min: 0, max: 80, step: 2, unit: "px" },
       { key: "paddingBottom", label: "Отступ снизу", type: "number", min: 0, max: 40, step: 2, unit: "px" },
     ],
   },
@@ -113,6 +122,8 @@ const sections: {
       { key: "countBadgeFontSize", label: "Размер бейджа кол-ва", type: "number", min: 6, max: 16, step: 1, unit: "px" },
       { key: "countBadgePaddingX", label: "Отступ X бейджа", type: "number", min: 0, max: 16, step: 1, unit: "px" },
       { key: "countBadgePaddingY", label: "Отступ Y бейджа", type: "number", min: 0, max: 8, step: 1, unit: "px" },
+      { key: "countBadgeLeft", label: "Отступ бейджа от левого края", type: "number", min: 0, max: 80, step: 1, unit: "px" },
+      { key: "countBadgeGap", label: "Расстояние от бейджа до названия", type: "number", min: 0, max: 40, step: 1, unit: "px" },
     ],
   },
   {
@@ -131,6 +142,7 @@ const sections: {
     label: "Карточка сделки",
     icon: CreditCard,
     fields: [
+      { key: "width", label: "Ширина карточки (0 = на всю ширину)", type: "number", min: 0, max: 400, step: 4, unit: "px" },
       { key: "minHeight", label: "Мин. высота", type: "number", min: 80, max: 400, step: 4, unit: "px" },
       { key: "borderRadius", label: "Скругление углов", type: "number", min: 0, max: 24, step: 1, unit: "px" },
       { key: "backgroundColor", label: "Фон карточки", type: "color" },
@@ -176,6 +188,23 @@ const sections: {
       { key: "textColor", label: "Цвет текста", type: "color" },
       { key: "hoverTextColor", label: "Цвет при наведении", type: "color" },
       { key: "marginTop", label: "Отступ сверху", type: "number", min: 0, max: 20, step: 1, unit: "px" },
+    ],
+  },
+  {
+    key: "cardCreatedAt",
+    label: "Дата создания сделки",
+    icon: Calendar,
+    fields: [
+      { key: "show", label: "Показывать", type: "toggle" },
+      { key: "fontSize", label: "Размер текста", type: "number", min: 8, max: 18, step: 1, unit: "px" },
+      { key: "fontWeight", label: "Жирность шрифта", type: "select", options: fontWeightOptions },
+      { key: "textColor", label: "Цвет текста", type: "color" },
+      { key: "marginTop", label: "Отступ сверху", type: "number", min: 0, max: 20, step: 1, unit: "px" },
+      { key: "textAlign", label: "Выравнивание", type: "select", options: [
+        { value: "left", label: "По левому краю" },
+        { value: "center", label: "По центру" },
+        { value: "right", label: "По правому краю" },
+      ]},
     ],
   },
   {
@@ -547,7 +576,7 @@ export default function AdminStylesPage() {
               Стиль канбан-доски
             </h2>
             <p className="text-xs text-gray-500 mt-0.5">
-              14 секций · {sections.reduce((a, s) => a + s.fields.length, 0)} параметров
+              {sections.length} секций · {sections.reduce((a, s) => a + s.fields.length, 0)} параметров
             </p>
           </div>
           <div className="flex items-center gap-2">

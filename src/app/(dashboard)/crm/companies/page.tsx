@@ -16,7 +16,7 @@ async function getCompanies() {
   if (!member) return [];
 
   return prisma.company.findMany({
-    where: { orgId: member.orgId },
+    where: { orgId: member.orgId, isDeleted: false },
     orderBy: { createdAt: "desc" },
   });
 }

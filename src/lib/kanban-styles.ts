@@ -1,4 +1,7 @@
 export interface KanbanStyles {
+  layout: {
+    subNavHeight: number;
+  };
   board: {
     maxHeight: number;
     minHeight: number;
@@ -26,6 +29,8 @@ export interface KanbanStyles {
     countBadgeFontSize: number;
     countBadgePaddingX: number;
     countBadgePaddingY: number;
+    countBadgeLeft: number;
+    countBadgeGap: number;
   };
   stageTotal: {
     fontSize: number;
@@ -34,6 +39,7 @@ export interface KanbanStyles {
     show: boolean;
   };
   card: {
+    width: number;
     minHeight: number;
     borderRadius: number;
     backgroundColor: string;
@@ -64,6 +70,14 @@ export interface KanbanStyles {
     hoverTextColor: string;
     marginTop: number;
     show: boolean;
+  };
+  cardCreatedAt: {
+    show: boolean;
+    fontSize: number;
+    fontWeight: number;
+    textColor: string;
+    marginTop: number;
+    textAlign: "left" | "center" | "right";
   };
   cardFooter: {
     borderColor: string;
@@ -107,8 +121,11 @@ export interface KanbanStyles {
 }
 
 export const defaultKanbanStyles: KanbanStyles = {
+  layout: {
+    subNavHeight: 48,
+  },
   board: {
-    maxHeight: 720,
+    maxHeight: 9999,
     minHeight: 320,
     columnGap: 12,
     paddingX: 24,
@@ -134,6 +151,8 @@ export const defaultKanbanStyles: KanbanStyles = {
     countBadgeFontSize: 10,
     countBadgePaddingX: 6,
     countBadgePaddingY: 2,
+    countBadgeLeft: 28,
+    countBadgeGap: 4,
   },
   stageTotal: {
     fontSize: 16,
@@ -142,6 +161,7 @@ export const defaultKanbanStyles: KanbanStyles = {
     show: true,
   },
   card: {
+    width: 0,
     minHeight: 202,
     borderRadius: 8,
     backgroundColor: "#FFFFFF",
@@ -172,6 +192,14 @@ export const defaultKanbanStyles: KanbanStyles = {
     hoverTextColor: "#4338CA",
     marginTop: 6,
     show: true,
+  },
+  cardCreatedAt: {
+    show: true,
+    fontSize: 10,
+    fontWeight: 400,
+    textColor: "#9CA3AF",
+    marginTop: 4,
+    textAlign: "left",
   },
   cardFooter: {
     borderColor: "#F3F4F6",

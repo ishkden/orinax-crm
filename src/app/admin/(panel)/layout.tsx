@@ -12,9 +12,9 @@ export default async function AdminPanelLayout({
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 flex">
+    <div className="h-full bg-gray-950 flex">
       <AdminSidebar />
-      <main className="flex-1 overflow-auto">{children}</main>
+      <main className="flex-1 min-h-0 overflow-auto">{children}</main>
     </div>
   );
 }

@@ -1,8 +1,9 @@
 @import "tailwindcss";
+@source "../../node_modules/@orinax/ui/src";
 
 @theme {
   /* Fonts */
-  --font-sans: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+  --font-sans: var(--font-nunito), system-ui, -apple-system, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 
   /* Brand — Indigo */
@@ -78,4 +79,79 @@ body {
 ::selection {
   background-color: #C7D2FE;
   color: #312E81;
+}
+
+/* Kanban column scrollbar — hidden by default, visible on hover */
+.kanban-scroll::-webkit-scrollbar {
+  width: 0 !important;
+}
+.kanban-scroll:hover::-webkit-scrollbar {
+  width: 5px !important;
+}
+.kanban-scroll::-webkit-scrollbar-thumb {
+  background: transparent !important;
+}
+.kanban-scroll:hover::-webkit-scrollbar-thumb {
+  background: #D1D5DB !important;
+  border-radius: 999px !important;
+}
+.kanban-scroll:hover::-webkit-scrollbar-thumb:hover {
+  background: #9CA3AF !important;
+}
+.kanban-scroll {
+  scrollbar-width: none;
+}
+
+/* Deal card scrollbar — hidden by default, visible on hover/scroll */
+.deal-scroll::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+}
+.deal-scroll:hover::-webkit-scrollbar {
+  width: 5px !important;
+  height: 5px !important;
+}
+.deal-scroll::-webkit-scrollbar-thumb {
+  background: transparent !important;
+}
+.deal-scroll:hover::-webkit-scrollbar-thumb {
+  background: #3f3f46 !important;
+  border-radius: 999px !important;
+}
+.deal-scroll:hover::-webkit-scrollbar-thumb:hover {
+  background: #52525b !important;
+}
+.deal-scroll {
+  scrollbar-width: none;
+}
+.deal-scroll:hover {
+  scrollbar-width: thin;
+  scrollbar-color: #3f3f46 transparent;
+}
+
+/* Drawer column scrollbars — hidden by default, visible only while actively scrolling */
+.drawer-col-scroll::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+.drawer-col-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.drawer-col-scroll::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 999px;
+  transition: background 0.2s;
+}
+.drawer-col-scroll.is-scrolling::-webkit-scrollbar-thumb {
+  background: #D1D5DB;
+}
+.drawer-col-scroll.is-scrolling::-webkit-scrollbar-thumb:hover {
+  background: #9CA3AF;
+}
+.drawer-col-scroll {
+  scrollbar-width: none;
+}
+.drawer-col-scroll.is-scrolling {
+  scrollbar-width: thin;
+  scrollbar-color: #D1D5DB transparent;
 }

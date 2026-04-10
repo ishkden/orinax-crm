@@ -11,16 +11,29 @@ import { useCrmHeaderAction } from "@/components/crm/CrmHeaderActionContext";
 import { useCrmDealPipeline } from "@/components/crm/CrmDealPipelineContext";
 import type { DbPipeline } from "@/app/actions/deals";
 import type { Deal, CreateDealInput, Stage, Pipeline } from "./types";
-import { updateDealStage, createDeal, deleteStage } from "@/app/actions/deals";
+import type { CustomFieldDef } from "@/app/actions/custom-fields";
+import {
+  updateDealStage,
+  createDeal,
+  deleteStage,
+  getDealsPage,
+  reorderStages,
+  createStage,
+} from "@/app/actions/deals";
+import { updateStageSettings } from "@/app/actions/pipeline-settings";
 
-const STAGE_OVERRIDES_KEY = "crm-kanban-stage-overrides";
 const DEFAULT_STAGE_COLOR = "#6B7280";
 
-type StageOverrides = Record<string, Record<string, { label?: string; color?: string }>>;
+export type StagePaginationState = Record<
+  string,
+  { page: number; total: number; loading: boolean }
+>;
 
 interface DealsClientProps {
-  initialDeals: Deal[];
+  initialDealsByStage: Record<string, { items: Deal[]; total: number }>;
   initialPipelines: DbPipeline[];
+  serverStageTotals?: Record<string, { amount: number; currency: string }>;
+  customFields?: CustomFieldDef[];
 }
 
 function mapDbToUiPipelines(dbPipelines: DbPipeline[]): Pipeline[] {
@@ -35,24 +48,90 @@ function mapDbToUiPipelines(dbPipelines: DbPipeline[]): Pipeline[] {
   }));
 }
 
-export default function DealsClient({ initialDeals, initialPipelines }: DealsClientProps) {
+export default function DealsClient({
+  initialDealsByStage,
+  initialPipelines,
+  serverStageTotals: initialServerStageTotals = {},
+  customFields: initialCustomFields = [],
+}: DealsClientProps) {
   const { setHeaderAction } = useCrmHeaderAction();
   const { setPipeline } = useCrmDealPipeline();
 
-  const pipelines = useMemo(() => mapDbToUiPipelines(initialPipelines), [initialPipelines]);
+  const [pipelines, setPipelines] = useState(() => mapDbToUiPipelines(initialPipelines));
+  const [customFields, setCustomFields] = useState(initialCustomFields);
 
-  const [deals, setDeals] = useState<Deal[]>(initialDeals);
-  const [activePipelineId, setActivePipelineId] = useState(pipelines[0]?.id ?? "");
+  const [deals, setDeals] = useState<Deal[]>(() =>
+    Object.values(initialDealsByStage).flatMap(({ items }) => items)
+  );
+
+  const [stagePagination, setStagePagination] = useState<StagePaginationState>(() =>
+    Object.fromEntries(
+      Object.entries(initialDealsByStage).map(([stageId, { items, total }]) => [
+        stageId,
+        { page: 1, total, loading: false },
+      ])
+    )
+  );
+
+  const [stageTotals, setStageTotals] = useState<Record<string, { amount: number; currency: string }>>(
+    initialServerStageTotals
+  );
+
+  const [activePipelineId, setActivePipelineId] = useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("crm_active_pipeline_id");
+      if (saved && pipelines.some((p) => p.id === saved)) return saved;
+    }
+    return pipelines[0]?.id ?? "";
+  });
   const [viewMode, setViewMode] = useState<ViewMode>("kanban");
   const [searchQuery, setSearchQuery] = useState("");
   const [filterAssignee, setFilterAssignee] = useState<string | null>(null);
   const [filterPriority, setFilterPriority] = useState<Deal["priority"] | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalStage, setModalStage] = useState<string | null>(null);
-  const [stageOverrides, setStageOverrides] = useState<StageOverrides>({});
+  const [stageOrderMap, setStageOrderMap] = useState<Record<string, string[]>>({});
   const [contactDeal, setContactDeal] = useState<Deal | null>(null);
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
   const [, startTransition] = useTransition();
+
+  // Restore selected deal if page loaded at /crm/deals/:id
+  useEffect(() => {
+    const match = window.location.pathname.match(/\/crm\/deals\/(\d+)/);
+    if (match && deals.length > 0) {
+      const found = deals.find((d) => String(d.serialNumber) === match[1]);
+      if (found) {
+        setSelectedDeal(found);
+        window.history.replaceState({ dealSN: found.serialNumber }, "", window.location.href);
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Handle browser back/forward: sync drawer with URL
+  useEffect(() => {
+    function onPopState() {
+      const match = window.location.pathname.match(/\/crm\/deals\/(\d+)/);
+      if (match) {
+        const found = deals.find((d) => String(d.serialNumber) === match[1]);
+        setSelectedDeal(found ?? null);
+      } else {
+        setSelectedDeal(null);
+      }
+    }
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, [deals]);
+
+  const handleDealClick = useCallback((deal: Deal) => {
+    setSelectedDeal(deal);
+    window.history.pushState({ dealSN: deal.serialNumber }, "", `/crm/deals/${deal.serialNumber}`);
+  }, []);
+
+  const handleDrawerClose = useCallback(() => {
+    setSelectedDeal(null);
+    window.history.replaceState({}, "", "/crm/deals");
+  }, []);
 
   const openCreateDeal = useCallback(() => {
     setModalStage(null);
@@ -65,34 +144,29 @@ export default function DealsClient({ initialDeals, initialPipelines }: DealsCli
   }, [setHeaderAction, openCreateDeal]);
 
   useEffect(() => {
+    if (activePipelineId) {
+      localStorage.setItem("crm_active_pipeline_id", activePipelineId);
+    }
+  }, [activePipelineId]);
+
+  useEffect(() => {
     if (pipelines.length > 0) {
       setPipeline({ pipelines, activePipelineId, onPipelineChange: setActivePipelineId });
     }
     return () => setPipeline(null);
   }, [setPipeline, pipelines, activePipelineId]);
 
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STAGE_OVERRIDES_KEY);
-      if (raw) setStageOverrides(JSON.parse(raw) as StageOverrides);
-    } catch {
-      // ignore
-    }
-  }, []);
-
-  const activePipelineWithOverrides = useMemo((): Pipeline => {
+  const activePipeline = useMemo((): Pipeline => {
     const p = pipelines.find((x) => x.id === activePipelineId) ?? pipelines[0];
     if (!p) return { id: "", label: "", stages: [] };
-    const ov = stageOverrides[p.id] ?? {};
-    return {
-      ...p,
-      stages: p.stages.map((s) => ({
-        ...s,
-        label: ov[s.id]?.label ?? s.label,
-        color: ov[s.id]?.color ?? s.color,
-      })),
-    };
-  }, [pipelines, activePipelineId, stageOverrides]);
+    const localOrder = stageOrderMap[p.id];
+    let stages = [...p.stages];
+    if (localOrder) {
+      const stageById = Object.fromEntries(stages.map((s) => [s.id, s]));
+      stages = localOrder.map((id) => stageById[id]).filter(Boolean) as Stage[];
+    }
+    return { ...p, stages };
+  }, [pipelines, activePipelineId, stageOrderMap]);
 
   const assignees = useMemo(() => {
     const seen = new Set<string>();
@@ -126,23 +200,59 @@ export default function DealsClient({ initialDeals, initialPipelines }: DealsCli
     return result;
   }, [deals, searchQuery, filterAssignee, filterPriority]);
 
+  const handleLoadMore = useCallback(async (stageId: string) => {
+    const p = stagePagination[stageId];
+    if (!p || p.loading) return;
+    const loadedCount = deals.filter((d) => d.stage === stageId).length;
+    if (loadedCount >= p.total) return;
+
+    setStagePagination((prev) => ({
+      ...prev,
+      [stageId]: { ...prev[stageId], loading: true },
+    }));
+
+    try {
+      const nextPage = p.page + 1;
+      const result = await getDealsPage(stageId, nextPage, 20);
+      setDeals((prev) => {
+        const existingIds = new Set(prev.map((d) => d.id));
+        const newItems = result.items.filter((d) => !existingIds.has(d.id));
+        return [...prev, ...newItems];
+      });
+      setStagePagination((prev) => ({
+        ...prev,
+        [stageId]: { page: nextPage, total: result.total, loading: false },
+      }));
+    } catch {
+      setStagePagination((prev) => ({
+        ...prev,
+        [stageId]: { ...prev[stageId], loading: false },
+      }));
+    }
+  }, [stagePagination, deals]);
+
   const handleStageUpdate = useCallback(
     (stageId: string, updates: { label?: string; color?: string }) => {
-      setStageOverrides((prev) => {
-        const pid = activePipelineId;
-        const next: StageOverrides = {
-          ...prev,
-          [pid]: { ...prev[pid], [stageId]: { ...prev[pid]?.[stageId], ...updates } },
-        };
-        try {
-          localStorage.setItem(STAGE_OVERRIDES_KEY, JSON.stringify(next));
-        } catch {
-          // ignore
-        }
-        return next;
+      setPipelines((prev) =>
+        prev.map((p) => ({
+          ...p,
+          stages: p.stages.map((s) =>
+            s.id === stageId
+              ? { ...s, label: updates.label ?? s.label, color: updates.color ?? s.color }
+              : s
+          ),
+        }))
+      );
+      startTransition(() => {
+        const dbUpdates: { name?: string; color?: string } = {};
+        if (updates.label) dbUpdates.name = updates.label;
+        if (updates.color) dbUpdates.color = updates.color;
+        updateStageSettings(stageId, dbUpdates).catch(() => {
+          setPipelines(mapDbToUiPipelines(initialPipelines));
+        });
       });
     },
-    [activePipelineId]
+    [initialPipelines]
   );
 
   function handleMoveDeal(dealId: string, newStage: string) {
@@ -153,11 +263,38 @@ export default function DealsClient({ initialDeals, initialPipelines }: DealsCli
 
   function handleStageCommit(dealId: string, newStage: string, previousStage: string) {
     if (newStage === previousStage) return;
+    const deal = deals.find((d) => d.id === dealId);
+    const dealValue = deal?.value ?? 0;
+    const dealCurrency = deal?.currency ?? "RUB";
+
+    setStageTotals((prev) => {
+      const result = { ...prev };
+      if (result[previousStage]) {
+        result[previousStage] = { ...result[previousStage], amount: result[previousStage].amount - dealValue };
+      }
+      if (result[newStage]) {
+        result[newStage] = { ...result[newStage], amount: result[newStage].amount + dealValue };
+      } else {
+        result[newStage] = { amount: dealValue, currency: dealCurrency };
+      }
+      return result;
+    });
+
     startTransition(() => {
       updateDealStage(dealId, newStage).catch(() => {
         setDeals((prev) =>
           prev.map((d) => (d.id === dealId ? { ...d, stage: previousStage } : d))
         );
+        setStageTotals((prev) => {
+          const result = { ...prev };
+          if (result[newStage]) {
+            result[newStage] = { ...result[newStage], amount: result[newStage].amount - dealValue };
+          }
+          if (result[previousStage]) {
+            result[previousStage] = { ...result[previousStage], amount: result[previousStage].amount + dealValue };
+          }
+          return result;
+        });
       });
     });
   }
@@ -166,10 +303,35 @@ export default function DealsClient({ initialDeals, initialPipelines }: DealsCli
     startTransition(async () => {
       try {
         await deleteStage(stageId);
-        // Reload the page to get fresh pipelines from the server
         window.location.reload();
       } catch (err) {
         console.error("Failed to delete stage:", err);
+      }
+    });
+  }
+
+  function handleStageReorder(newStageIds: string[]) {
+    const previousOrder = stageOrderMap[activePipelineId] ??
+      (pipelines.find((p) => p.id === activePipelineId)?.stages.map((s) => s.id) ?? []);
+    setStageOrderMap((prev) => ({ ...prev, [activePipelineId]: newStageIds }));
+    startTransition(() => {
+      reorderStages(newStageIds).catch(() => {
+        setStageOrderMap((prev) => ({ ...prev, [activePipelineId]: previousOrder }));
+      });
+    });
+  }
+
+  function handleAddStageAfter(afterStageId: string) {
+    const pipeline = initialPipelines.find((p) => p.id === activePipelineId);
+    if (!pipeline) return;
+    const afterStage = pipeline.stages.find((s) => s.id === afterStageId);
+    if (!afterStage) return;
+    startTransition(async () => {
+      try {
+        await createStage(pipeline.id, afterStage.sortOrder, "Новая стадия", DEFAULT_STAGE_COLOR);
+        window.location.reload();
+      } catch (err) {
+        console.error("Failed to create stage:", err);
       }
     });
   }
@@ -184,6 +346,23 @@ export default function DealsClient({ initialDeals, initialPipelines }: DealsCli
     try {
       const newDeal = await createDeal({ ...input, stage: stageToUse });
       setDeals((prev) => [newDeal, ...prev]);
+      if (newDeal.stage) {
+        setStagePagination((prev) => {
+          const cur = prev[newDeal.stage];
+          if (!cur) return prev;
+          return { ...prev, [newDeal.stage]: { ...cur, total: cur.total + 1 } };
+        });
+        setStageTotals((prev) => {
+          const cur = prev[newDeal.stage];
+          return {
+            ...prev,
+            [newDeal.stage]: {
+              amount: (cur?.amount ?? 0) + newDeal.value,
+              currency: cur?.currency ?? newDeal.currency ?? "RUB",
+            },
+          };
+        });
+      }
     } catch (err) {
       console.error("Failed to create deal:", err);
     }
@@ -191,42 +370,51 @@ export default function DealsClient({ initialDeals, initialPipelines }: DealsCli
     setModalStage(null);
   }
 
-  const activeStages: Stage[] = activePipelineWithOverrides.stages;
+  const activeStages: Stage[] = activePipeline.stages;
 
   return (
     <>
       <div className="flex w-full min-w-0 flex-col">
-        <DealsToolbar
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          viewMode={viewMode}
-          onViewModeChange={setViewMode}
-          filterAssignee={filterAssignee}
-          onFilterAssignee={setFilterAssignee}
-          filterPriority={filterPriority}
-          onFilterPriority={setFilterPriority}
-          totalDeals={filteredDeals.length}
-          assignees={assignees}
-        />
+        <div className={viewMode === "kanban" ? "bg-white" : ""}>
+          <DealsToolbar
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            filterAssignee={filterAssignee}
+            onFilterAssignee={setFilterAssignee}
+            filterPriority={filterPriority}
+            onFilterPriority={setFilterPriority}
+            totalDeals={filteredDeals.length}
+            assignees={assignees}
+          />
+        </div>
 
         {viewMode === "kanban" ? (
-          <KanbanBoard
-            stages={activeStages}
-            deals={filteredDeals}
-            onMoveDeal={handleMoveDeal}
-            onStageCommit={handleStageCommit}
-            onAddDeal={handleAddDeal}
-            onStageUpdate={handleStageUpdate}
-            onStageDelete={handleStageDelete}
-            onContactClick={setContactDeal}
-            onDealClick={setSelectedDeal}
-          />
+          <div className="sticky z-10" style={{ top: 0, height: "calc(100dvh - 48px)" }}>
+            <KanbanBoard
+              stages={activeStages}
+              deals={filteredDeals}
+              stagePagination={stagePagination}
+              serverStageTotals={stageTotals}
+              onLoadMore={handleLoadMore}
+              onMoveDeal={handleMoveDeal}
+              onStageCommit={handleStageCommit}
+              onAddDeal={handleAddDeal}
+              onStageUpdate={handleStageUpdate}
+              onStageDelete={handleStageDelete}
+              onStageReorder={handleStageReorder}
+              onAddStageAfter={handleAddStageAfter}
+              onContactClick={setContactDeal}
+              onDealClick={handleDealClick}
+            />
+          </div>
         ) : (
           <div className="flex min-w-0 flex-col">
             <DealsListView
               deals={filteredDeals}
               stages={activeStages}
-              onDealClick={setSelectedDeal}
+              onDealClick={handleDealClick}
             />
           </div>
         )}
@@ -238,7 +426,7 @@ export default function DealsClient({ initialDeals, initialPipelines }: DealsCli
           setModalOpen(false);
           setModalStage(null);
         }}
-        pipeline={activePipelineWithOverrides}
+        pipeline={activePipeline}
         initialStage={modalStage ?? activeStages[0]?.id ?? ""}
         onSave={handleCreateDeal}
       />
@@ -246,9 +434,17 @@ export default function DealsClient({ initialDeals, initialPipelines }: DealsCli
       <ContactDrawer deal={contactDeal} onClose={() => setContactDeal(null)} />
 
       <DealRightDrawer
+        pipelines={pipelines}
         deal={selectedDeal}
         stages={activeStages}
-        onClose={() => setSelectedDeal(null)}
+        customFields={customFields}
+        onClose={handleDrawerClose}
+        onDealUpdate={(updated) => {
+          setDeals((prev) => prev.map((d) => (d.id === updated.id ? updated : d)));
+          setSelectedDeal(updated);
+        }}
+        onFieldCreated={(field) => setCustomFields((prev) => [...prev, field])}
+        onFieldUpdated={(field) => setCustomFields((prev) => prev.map((f) => (f.id === field.id ? field : f)))}
       />
     </>
   );

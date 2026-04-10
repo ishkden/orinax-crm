@@ -22,55 +22,51 @@ export async function POST(request: NextRequest) {
   if (!internalOrgId) return badRequest("Org not found for externalId: " + orgId);
   if (!Array.isArray(data) || data.length === 0) return badRequest("data must be a non-empty array");
 
-  const invalid = data.find((s) => !s.sourceId || !s.name || !s.pipelineSourceId);
-  if (invalid) return badRequest("Each stage must have sourceId, name and pipelineSourceId");
-
   try {
-    // Resolve all referenced pipelineSourceIds → internal Pipeline.id in one query
     const pipelineSourceIds = [...new Set(data.map((s) => s.pipelineSourceId))];
-
     const pipelines = await prisma.pipeline.findMany({
       where: { orgId: internalOrgId, sourceId: { in: pipelineSourceIds } },
       select: { id: true, sourceId: true },
     });
-
     const pipelineMap = new Map(pipelines.map((p) => [p.sourceId!, p.id]));
 
-    const missing = pipelineSourceIds.find((sid) => !pipelineMap.has(sid));
-    if (missing) {
-      return badRequest(`Pipeline with sourceId "${missing}" not found for this org. Import pipelines first.`);
+    let upserted = 0;
+    let skipped = 0;
+
+    for (const stage of data) {
+      const pipelineId = pipelineMap.get(stage.pipelineSourceId);
+      if (!pipelineId) { skipped++; continue; }
+
+      const isFinal = stage.semantics === "F" || stage.semantics === "S" || stage.isFinal === true;
+      const isWon = stage.semantics === "S" || stage.isWon === true;
+
+      await prisma.stage.upsert({
+        where: { orgId_sourceId: { orgId: internalOrgId, sourceId: stage.sourceId } },
+        create: {
+          orgId: internalOrgId,
+          pipelineId,
+          sourceId: stage.sourceId,
+          name: stage.name,
+          color: stage.color ?? (isWon ? "#22c55e" : isFinal ? "#ef4444" : "#6366f1"),
+          sortOrder: stage.sortOrder ?? 0,
+          isFinal,
+          isWon,
+          semantics: stage.semantics ?? null,
+        },
+        update: {
+          pipelineId,
+          name: stage.name,
+          color: stage.color ?? (isWon ? "#22c55e" : isFinal ? "#ef4444" : undefined),
+          sortOrder: stage.sortOrder ?? 0,
+          isFinal,
+          isWon,
+          semantics: stage.semantics ?? null,
+        },
+      });
+      upserted++;
     }
 
-    const results = await prisma.$transaction(
-      data.map((stage) => {
-        const pipelineId = pipelineMap.get(stage.pipelineSourceId)!;
-
-        return prisma.stage.upsert({
-          where: { orgId_sourceId: { orgId: internalOrgId, sourceId: stage.sourceId } },
-          create: {
-            orgId: internalOrgId,
-            pipelineId,
-            sourceId: stage.sourceId,
-            name: stage.name,
-            color: stage.color ?? null,
-            sortOrder: stage.sortOrder ?? 0,
-            isFinal: stage.isFinal ?? false,
-            isWon: stage.isWon ?? false,
-          },
-          update: {
-            pipelineId,
-            name: stage.name,
-            color: stage.color ?? null,
-            sortOrder: stage.sortOrder ?? 0,
-            isFinal: stage.isFinal ?? false,
-            isWon: stage.isWon ?? false,
-          },
-          select: { id: true, sourceId: true },
-        });
-      })
-    );
-
-    return Response.json({ upserted: results.length, ids: results.map((r) => r.id) });
+    return Response.json({ upserted, skipped });
   } catch (err) {
     console.error("[migration/stages]", err);
     return internalError("Failed to upsert stages");

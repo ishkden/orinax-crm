@@ -8,6 +8,26 @@ import type { Deal } from "./types";
 
 const lineHeightMap = { tight: 1.25, snug: 1.375, normal: 1.5, relaxed: 1.625 };
 
+const MONTHS = ["января","февраля","марта","апреля","мая","июня","июля","августа","сентября","октября","ноября","декабря"];
+
+function formatCreatedAt(isoString: string): string {
+  const now = new Date();
+  const date = new Date(isoString);
+  const diffMinutes = Math.floor((now.getTime() - date.getTime()) / 60000);
+  if (diffMinutes < 1) return "только что";
+  if (diffMinutes < 60) return `${diffMinutes} мин. назад`;
+  const isToday =
+    date.getDate() === now.getDate() &&
+    date.getMonth() === now.getMonth() &&
+    date.getFullYear() === now.getFullYear();
+  if (isToday) {
+    const h = String(date.getHours()).padStart(2, "0");
+    const m = String(date.getMinutes()).padStart(2, "0");
+    return `сегодня, ${h}:${m}`;
+  }
+  return `${date.getDate()} ${MONTHS[date.getMonth()]} ${date.getFullYear()}`;
+}
+
 export default function DealCardStatic({
   deal,
   onContactClick,
@@ -26,6 +46,7 @@ export default function DealCardStatic({
   return (
     <div
       style={{
+        ...(s.card.width > 0 ? { width: s.card.width, maxWidth: s.card.width } : { width: "100%" }),
         minHeight: s.card.minHeight,
         borderRadius: s.card.borderRadius,
         backgroundColor: s.card.backgroundColor,
@@ -81,6 +102,21 @@ export default function DealCardStatic({
           >
             <span className="min-w-0 break-words">{deal.contactName}</span>
           </button>
+        )}
+
+        {s.cardCreatedAt.show && deal.createdAt && (
+          <span
+            style={{
+              fontSize: s.cardCreatedAt.fontSize,
+              fontWeight: s.cardCreatedAt.fontWeight,
+              color: s.cardCreatedAt.textColor,
+              marginTop: s.cardCreatedAt.marginTop,
+              textAlign: s.cardCreatedAt.textAlign,
+              display: "block",
+            }}
+          >
+            {formatCreatedAt(deal.createdAt)}
+          </span>
         )}
 
         {s.cardFooter.show && (deal.dueDate || deal.assignee) && (

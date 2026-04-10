@@ -4,13 +4,20 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
   useState,
   type ReactNode,
 } from "react";
 
 const STORAGE_KEY = "orinax-sidebar-collapsed";
+const COOKIE_KEY = "orinax-sidebar-collapsed";
+const COOKIE_MAX_AGE = 60 * 60 * 24 * 365; // 1 year
+
+function persistCollapsed(value: boolean) {
+  const v = value ? "1" : "0";
+  try { localStorage.setItem(STORAGE_KEY, v); } catch {}
+  try { document.cookie = `${COOKIE_KEY}=${v};path=/;max-age=${COOKIE_MAX_AGE};samesite=lax`; } catch {}
+}
 
 type SidebarContextValue = {
   collapsed: boolean;
@@ -24,25 +31,19 @@ const SidebarContext = createContext<SidebarContextValue | null>(null);
 const EXPANDED_PX = 240;
 const COLLAPSED_PX = 64;
 
-export function SidebarProvider({ children }: { children: ReactNode }) {
-  const [collapsed, setCollapsed] = useState(false);
-
-  useEffect(() => {
-    try {
-      if (localStorage.getItem(STORAGE_KEY) === "1") setCollapsed(true);
-    } catch {
-      // ignore
-    }
-  }, []);
+export function SidebarProvider({
+  children,
+  initialCollapsed = false,
+}: {
+  children: ReactNode;
+  initialCollapsed?: boolean;
+}) {
+  const [collapsed, setCollapsed] = useState(initialCollapsed);
 
   const toggleSidebar = useCallback(() => {
     setCollapsed((c) => {
       const next = !c;
-      try {
-        localStorage.setItem(STORAGE_KEY, next ? "1" : "0");
-      } catch {
-        // ignore
-      }
+      persistCollapsed(next);
       return next;
     });
   }, []);

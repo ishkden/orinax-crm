@@ -22,9 +22,6 @@ export async function POST(request: NextRequest) {
   if (!internalOrgId) return badRequest("Org not found for externalId: " + orgId);
   if (!Array.isArray(data) || data.length === 0) return badRequest("data must be a non-empty array");
 
-  const invalid = data.find((c) => !c.sourceId || !c.name);
-  if (invalid) return badRequest("Each company must have sourceId and name");
-
   try {
     const results = await prisma.$transaction(
       data.map((company) =>
@@ -39,14 +36,22 @@ export async function POST(request: NextRequest) {
             email: company.email ?? null,
             website: company.website ?? null,
             address: company.address ?? null,
+            inn: company.inn ?? null,
+            customFields: (company.customFields as any) ?? undefined,
+            isDeleted: company.isDeleted ?? false,
+            syncedAt: company.syncedFromBitrixAt ? new Date(company.syncedFromBitrixAt) : new Date(),
           },
           update: {
             name: company.name,
-            industry: company.industry ?? null,
-            phone: company.phone ?? null,
-            email: company.email ?? null,
-            website: company.website ?? null,
-            address: company.address ?? null,
+            industry: company.industry ?? undefined,
+            phone: company.phone ?? undefined,
+            email: company.email ?? undefined,
+            website: company.website ?? undefined,
+            address: company.address ?? undefined,
+            inn: company.inn ?? undefined,
+            customFields: (company.customFields as any) ?? undefined,
+            isDeleted: company.isDeleted ?? false,
+            syncedAt: company.syncedFromBitrixAt ? new Date(company.syncedFromBitrixAt) : new Date(),
           },
           select: { id: true, sourceId: true },
         })

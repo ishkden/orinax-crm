@@ -1,9 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useSession } from "next-auth/react";
-import { getInitials } from "@/lib/utils";
-import { Bell, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useCrmHeaderAction } from "./CrmHeaderActionContext";
 
 const ROUTE_TITLES: { prefix: string; title: string }[] = [
@@ -15,18 +13,16 @@ const ROUTE_TITLES: { prefix: string; title: string }[] = [
 
 export default function CrmHeader() {
   const pathname = usePathname();
-  const { data: session } = useSession();
   const { headerAction } = useCrmHeaderAction();
-  const name = session?.user?.name || session?.user?.email || "User";
 
   const title =
     ROUTE_TITLES.find((r) => pathname === r.prefix || pathname.startsWith(r.prefix + "/"))
       ?.title ?? "CRM";
 
   return (
-    <header className="shrink-0 border-b border-gray-100 bg-white px-6 py-2 min-h-[3.5rem] flex items-center justify-between gap-4">
+    <div className="shrink-0 border-b border-gray-100 bg-white px-6 py-2 flex items-center gap-4">
       <div className="flex min-w-0 flex-1 items-center gap-2">
-        <h1 className="shrink-0 text-xl font-semibold tracking-tight text-gray-900 sm:text-2xl">
+        <h1 className="shrink-0 text-sm font-semibold tracking-tight text-gray-900">
           {title}
         </h1>
         {headerAction && (
@@ -62,22 +58,6 @@ export default function CrmHeader() {
           </div>
         )}
       </div>
-
-      <div className="flex items-center gap-3 shrink-0">
-        <button
-          type="button"
-          className="relative w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-colors duration-150"
-        >
-          <Bell size={16} />
-        </button>
-
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 bg-brand-100 rounded-full flex items-center justify-center shrink-0">
-            <span className="text-brand-600 font-semibold text-xs">{getInitials(name)}</span>
-          </div>
-          <span className="hidden sm:block text-sm font-medium text-gray-700">{name}</span>
-        </div>
-      </div>
-    </header>
+    </div>
   );
 }

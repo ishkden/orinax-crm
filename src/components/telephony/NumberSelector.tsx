@@ -5,6 +5,8 @@ import {
   Phone,
   Search,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   CheckCircle2,
   AlertCircle,
   Loader2,
@@ -13,8 +15,6 @@ import {
   Smartphone,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-// ─── Типы ─────────────────────────────────────────────────────────────────────
 
 interface AvailableNumber {
   number: string;
@@ -73,7 +73,7 @@ const NDC_TYPES = [
   { value: 2, label: "Виртуальные", icon: Smartphone, hint: "931, 958…" },
 ] as const;
 
-// ─── Утилиты ──────────────────────────────────────────────────────────────────
+const PAGE_SIZE = 10;
 
 function formatPhone(raw: string): string {
   const d = raw.replace(/\D/g, "");
@@ -105,7 +105,83 @@ function BeautiDot({ level }: { level: number }) {
   );
 }
 
-// ─── Компонент ────────────────────────────────────────────────────────────────
+function Pagination({
+  page,
+  total,
+  pageSize,
+  onChange,
+}: {
+  page: number;
+  total: number;
+  pageSize: number;
+  onChange: (p: number) => void;
+}) {
+  const totalPages = Math.ceil(total / pageSize);
+  if (totalPages <= 1) return null;
+
+  // Показываем не более 7 кнопок: 1 ... 4 5 6 ... N
+  const pages: (number | "…")[] = [];
+  if (totalPages <= 7) {
+    for (let i = 1; i <= totalPages; i++) pages.push(i);
+  } else {
+    pages.push(1);
+    if (page > 3) pages.push("…");
+    for (let i = Math.max(2, page - 1); i <= Math.min(totalPages - 1, page + 1); i++) {
+      pages.push(i);
+    }
+    if (page < totalPages - 2) pages.push("…");
+    pages.push(totalPages);
+  }
+
+  return (
+    <div className="flex items-center justify-between px-4 py-2.5 border-t border-gray-50">
+      <span className="text-xs text-gray-400">
+        {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, total)} из {total.toLocaleString("ru-RU")}
+      </span>
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          onClick={() => onChange(page - 1)}
+          disabled={page === 1}
+          className="w-7 h-7 flex items-center justify-center rounded-md text-gray-400 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition"
+        >
+          <ChevronLeft size={14} />
+        </button>
+
+        {pages.map((p, i) =>
+          p === "…" ? (
+            <span key={`ellipsis-${i}`} className="w-7 h-7 flex items-center justify-center text-xs text-gray-400">
+              …
+            </span>
+          ) : (
+            <button
+              key={p}
+              type="button"
+              onClick={() => onChange(p)}
+              className={cn(
+                "w-7 h-7 flex items-center justify-center rounded-md text-xs font-medium transition",
+                p === page
+                  ? "bg-indigo-600 text-white"
+                  : "text-gray-600 hover:bg-gray-100"
+              )}
+            >
+              {p}
+            </button>
+          )
+        )}
+
+        <button
+          type="button"
+          onClick={() => onChange(page + 1)}
+          disabled={page === totalPages}
+          className="w-7 h-7 flex items-center justify-center rounded-md text-gray-400 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition"
+        >
+          <ChevronRight size={14} />
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export default function NumberSelector() {
   const [selectedCity, setSelectedCity] = useState<City>(CITIES[0]);
@@ -113,13 +189,12 @@ export default function NumberSelector() {
   const [beautiLevel, setBeautiLevel] = useState(0);
   const [ndcType, setNdcType] = useState<1 | 2>(1);
   const [searchQuery, setSearchQuery] = useState("");
+  const [page, setPage] = useState(1);
 
   const [available, setAvailable] = useState<AvailableNumber[]>([]);
   const [purchased, setPurchased] = useState<PurchasedNumber[]>([]);
-
   const [loadingSearch, setLoadingSearch] = useState(false);
   const [searchError, setSearchError] = useState("");
-
   const [purchasing, setPurchasing] = useState<string | null>(null);
   const [purchaseSuccess, setPurchaseSuccess] = useState<string | null>(null);
   const [purchaseError, setPurchaseError] = useState<string | null>(null);
@@ -140,12 +215,11 @@ export default function NumberSelector() {
     setLoadingSearch(true);
     setSearchError("");
     setAvailable([]);
+    setPage(1);
     setPurchaseSuccess(null);
     setPurchaseError(null);
     try {
-      const res = await fetch(
-        `/api/mcn/numbers?regionCode=${city.code}&beautiLevel=${level}&ndcType=${type}`
-      );
+      const res = await fetch(`/api/mcn/numbers?regionCode=${city.code}&beautiLevel=${level}&ndcType=${type}`);
       const data = await res.json();
       if (!res.ok) { setSearchError(data.error ?? "Не удалось загрузить номера."); return; }
       setAvailable(data.numbers ?? []);
@@ -159,6 +233,9 @@ export default function NumberSelector() {
   useEffect(() => {
     searchNumbers(selectedCity, beautiLevel, ndcType);
   }, [selectedCity, beautiLevel, ndcType, searchNumbers]);
+
+  // Сброс страницы при изменении поискового запроса
+  useEffect(() => { setPage(1); }, [searchQuery]);
 
   async function handlePurchase(num: AvailableNumber) {
     setPurchasing(num.number);
@@ -197,6 +274,9 @@ export default function NumberSelector() {
     !searchQuery || n.number.includes(searchQuery.replace(/\D/g, ""))
   );
 
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
   return (
     <div className="space-y-4">
 
@@ -212,9 +292,7 @@ export default function NumberSelector() {
                 <div className="flex items-center gap-3">
                   <Phone size={13} className="text-green-500 shrink-0" />
                   <span className="text-sm font-mono text-gray-900">{formatPhone(pn.number)}</span>
-                  {pn.regionName && (
-                    <span className="text-xs text-gray-400">{pn.regionName}</span>
-                  )}
+                  {pn.regionName && <span className="text-xs text-gray-400">{pn.regionName}</span>}
                 </div>
                 <span className="text-xs px-2 py-0.5 rounded-full bg-green-50 text-green-700 font-medium">активен</span>
               </div>
@@ -229,7 +307,7 @@ export default function NumberSelector() {
         {/* Фильтры */}
         <div className="px-4 py-3 border-b border-gray-100 space-y-2.5">
 
-          {/* Строка 1: тип номера */}
+          {/* Тип номера */}
           <div className="flex items-center gap-2">
             <span className="text-xs text-gray-400 shrink-0 w-20">Тип номера</span>
             <div className="flex items-center gap-1 rounded-lg border border-gray-200 bg-gray-50 p-0.5">
@@ -249,10 +327,7 @@ export default function NumberSelector() {
                   >
                     <Icon size={11} />
                     {t.label}
-                    <span className={cn(
-                      "text-[10px]",
-                      ndcType === t.value ? "text-gray-400" : "text-gray-300"
-                    )}>
+                    <span className={cn("text-[10px]", ndcType === t.value ? "text-gray-400" : "text-gray-300")}>
                       {t.hint}
                     </span>
                   </button>
@@ -261,7 +336,7 @@ export default function NumberSelector() {
             </div>
           </div>
 
-          {/* Строка 2: город + красивость + поиск */}
+          {/* Город + красивость + поиск */}
           <div className="flex flex-wrap items-center gap-2">
 
             {/* Город */}
@@ -360,57 +435,58 @@ export default function NumberSelector() {
             {available.length === 0 ? "Нет доступных номеров" : "Нет номеров по фильтру"}
           </div>
         ) : (
-          <div className="divide-y divide-gray-50">
-            {filtered.slice(0, 40).map((num) => (
-              <div
-                key={num.number}
-                className="flex items-center justify-between px-4 py-2 hover:bg-gray-50/60 transition-colors group"
-              >
-                {/* Номер + бейдж */}
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <Phone size={13} className="text-gray-300 group-hover:text-indigo-400 transition-colors shrink-0" />
-                  <span className="text-sm font-mono text-gray-900 tabular-nums">
-                    {formatPhone(num.number)}
-                  </span>
-                  {num.beautiLevel > 0 && <BeautiDot level={num.beautiLevel} />}
-                </div>
-
-                {/* Цена + кнопка */}
-                <div className="flex items-center gap-4 shrink-0">
-                  <div className="text-right hidden sm:block text-xs text-gray-400 leading-tight">
-                    {formatPrice(num.pricePerMonth) && (
-                      <div>{formatPrice(num.pricePerMonth)}/мес</div>
-                    )}
-                    {formatPrice(num.priceSetup) && (
-                      <div>+{formatPrice(num.priceSetup)} подкл.</div>
-                    )}
+          <>
+            <div className="divide-y divide-gray-50">
+              {paginated.map((num) => (
+                <div
+                  key={num.number}
+                  className="flex items-center justify-between px-4 py-2 hover:bg-gray-50/60 transition-colors group"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <Phone size={13} className="text-gray-300 group-hover:text-indigo-400 transition-colors shrink-0" />
+                    <span className="text-sm font-mono text-gray-900 tabular-nums">
+                      {formatPhone(num.number)}
+                    </span>
+                    {num.beautiLevel > 0 && <BeautiDot level={num.beautiLevel} />}
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => handlePurchase(num)}
-                    disabled={!!purchasing}
-                    className={cn(
-                      "h-7 px-3 rounded-lg text-xs font-medium transition-all",
-                      "bg-indigo-600 text-white hover:bg-indigo-700",
-                      "disabled:opacity-40 disabled:cursor-not-allowed",
-                      "focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                    )}
-                  >
-                    {purchasing === num.number
-                      ? <Loader2 size={11} className="animate-spin" />
-                      : "Выбрать"
-                    }
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
 
-        {filtered.length > 40 && (
-          <p className="text-xs text-gray-400 text-center py-3 border-t border-gray-50">
-            Показано 40 из {filtered.length.toLocaleString("ru-RU")} — уточните поиск по цифрам
-          </p>
+                  <div className="flex items-center gap-4 shrink-0">
+                    <div className="text-right hidden sm:block text-xs text-gray-400 leading-tight">
+                      {formatPrice(num.pricePerMonth) && (
+                        <div>{formatPrice(num.pricePerMonth)}/мес</div>
+                      )}
+                      {formatPrice(num.priceSetup) && (
+                        <div>+{formatPrice(num.priceSetup)} подкл.</div>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handlePurchase(num)}
+                      disabled={!!purchasing}
+                      className={cn(
+                        "h-7 px-3 rounded-lg text-xs font-medium transition-all",
+                        "bg-indigo-600 text-white hover:bg-indigo-700",
+                        "disabled:opacity-40 disabled:cursor-not-allowed",
+                        "focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                      )}
+                    >
+                      {purchasing === num.number
+                        ? <Loader2 size={11} className="animate-spin" />
+                        : "Выбрать"
+                      }
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <Pagination
+              page={page}
+              total={filtered.length}
+              pageSize={PAGE_SIZE}
+              onChange={setPage}
+            />
+          </>
         )}
       </div>
     </div>

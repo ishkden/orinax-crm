@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -11,13 +10,11 @@ import {
   Settings,
   BarChart2,
   Plug,
-  LogOut,
   PanelLeftClose,
   PanelLeft,
   ExternalLink,
   Phone,
 } from "lucide-react";
-import { signOut } from "next-auth/react";
 import { useSidebar } from "./SidebarContext";
 
 const navItems = [
@@ -98,7 +95,7 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      <div className="px-2 py-2 border-t border-gray-100 space-y-0.5">
+      <div className="px-2 py-2 border-t border-gray-100">
         <button
           type="button"
           onClick={toggleSidebar}
@@ -110,18 +107,6 @@ export default function Sidebar() {
         >
           {collapsed ? <PanelLeft size={18} /> : <PanelLeftClose size={18} />}
           {!collapsed && <span>Свернуть</span>}
-        </button>
-        <button
-          type="button"
-          onClick={async () => { await signOut({ redirect: false }); window.location.href = "https://my.orinax.ai/login"; }}
-          title="Выйти"
-          className={cn(
-            "flex items-center w-full rounded-lg text-sm text-gray-500 hover:bg-gray-50 hover:text-gray-800 transition-colors duration-150",
-            collapsed ? "justify-center px-2 py-2.5" : "gap-2.5 px-3 py-2"
-          )}
-        >
-          <LogOut size={18} className="shrink-0 text-gray-400" />
-          {!collapsed && "Выйти"}
         </button>
       </div>
     </aside>

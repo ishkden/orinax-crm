@@ -16,6 +16,7 @@ import {
   PanelLeft,
   Database,
   ExternalLink,
+  Phone,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { useSidebar } from "./SidebarContext";
@@ -27,6 +28,7 @@ const navItems = [
   { href: "/tasks", basePath: "/tasks", icon: CheckSquare, label: "Задачи" },
   { href: "/analytics", basePath: "/analytics", icon: BarChart2, label: "Аналитика" },
   { href: "/integrations", basePath: "/integrations", icon: Plug, label: "Интеграции" },
+  { href: "/telephony", basePath: "/telephony", icon: Phone, label: "Телефония" },
   { href: "/settings", basePath: "/settings", icon: Settings, label: "Настройки" },
 ];
 

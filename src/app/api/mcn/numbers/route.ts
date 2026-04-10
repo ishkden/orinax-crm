@@ -31,6 +31,7 @@ export async function GET(req: NextRequest) {
   const params = new URLSearchParams({ orgId: externalOrgId });
   if (searchParams.get("regionCode")) params.set("regionCode", searchParams.get("regionCode")!);
   if (searchParams.get("beautiLevel")) params.set("beautiLevel", searchParams.get("beautiLevel")!);
+  if (searchParams.get("ndcType")) params.set("ndcType", searchParams.get("ndcType")!);
   if (searchParams.get("purchased")) params.set("purchased", searchParams.get("purchased")!);
 
   const res = await fetch(`${CRM_APP_BASE}/api/internal/mcn/numbers?${params}`, {

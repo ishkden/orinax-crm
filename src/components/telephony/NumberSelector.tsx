@@ -9,6 +9,8 @@ import {
   AlertCircle,
   Loader2,
   Star,
+  Building2,
+  Smartphone,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -66,6 +68,11 @@ const BEAUTI_COLORS: Record<number, string> = {
   4: "text-purple-500",
 };
 
+const NDC_TYPES = [
+  { value: 1, label: "Городские", icon: Building2, hint: "495, 499, 812…" },
+  { value: 2, label: "Виртуальные", icon: Smartphone, hint: "931, 958…" },
+] as const;
+
 // ─── Утилиты ──────────────────────────────────────────────────────────────────
 
 function formatPhone(raw: string): string {
@@ -77,6 +84,14 @@ function formatPhone(raw: string): string {
     return `+7 (${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6, 8)}-${d.slice(8, 10)}`;
   }
   return raw;
+}
+
+function formatPrice(kopecks: number): string {
+  if (kopecks <= 0) return "";
+  const rub = kopecks / 100;
+  return rub % 1 === 0
+    ? rub.toLocaleString("ru-RU") + " ₽"
+    : rub.toLocaleString("ru-RU", { minimumFractionDigits: 2 }) + " ₽";
 }
 
 function BeautiDot({ level }: { level: number }) {
@@ -96,6 +111,7 @@ export default function NumberSelector() {
   const [selectedCity, setSelectedCity] = useState<City>(CITIES[0]);
   const [cityOpen, setCityOpen] = useState(false);
   const [beautiLevel, setBeautiLevel] = useState(0);
+  const [ndcType, setNdcType] = useState<1 | 2>(1);
   const [searchQuery, setSearchQuery] = useState("");
 
   const [available, setAvailable] = useState<AvailableNumber[]>([]);
@@ -120,14 +136,16 @@ export default function NumberSelector() {
 
   useEffect(() => { loadPurchased(); }, [loadPurchased]);
 
-  const searchNumbers = useCallback(async (city: City, level: number) => {
+  const searchNumbers = useCallback(async (city: City, level: number, type: 1 | 2) => {
     setLoadingSearch(true);
     setSearchError("");
     setAvailable([]);
     setPurchaseSuccess(null);
     setPurchaseError(null);
     try {
-      const res = await fetch(`/api/mcn/numbers?regionCode=${city.code}&beautiLevel=${level}`);
+      const res = await fetch(
+        `/api/mcn/numbers?regionCode=${city.code}&beautiLevel=${level}&ndcType=${type}`
+      );
       const data = await res.json();
       if (!res.ok) { setSearchError(data.error ?? "Не удалось загрузить номера."); return; }
       setAvailable(data.numbers ?? []);
@@ -139,8 +157,8 @@ export default function NumberSelector() {
   }, []);
 
   useEffect(() => {
-    searchNumbers(selectedCity, beautiLevel);
-  }, [selectedCity, beautiLevel, searchNumbers]);
+    searchNumbers(selectedCity, beautiLevel, ndcType);
+  }, [selectedCity, beautiLevel, ndcType, searchNumbers]);
 
   async function handlePurchase(num: AvailableNumber) {
     setPurchasing(num.number);
@@ -209,68 +227,104 @@ export default function NumberSelector() {
       <div className="rounded-xl border border-gray-100 bg-white overflow-hidden">
 
         {/* Фильтры */}
-        <div className="flex flex-wrap items-center gap-2 px-4 py-3 border-b border-gray-100">
+        <div className="px-4 py-3 border-b border-gray-100 space-y-2.5">
 
-          {/* Город */}
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setCityOpen((v) => !v)}
-              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 hover:border-gray-300 transition-colors"
-            >
-              {selectedCity.name}
-              <ChevronDown size={12} className={cn("text-gray-400 transition-transform", cityOpen && "rotate-180")} />
-            </button>
-            {cityOpen && (
-              <div className="absolute top-full left-0 mt-1 w-48 bg-white rounded-xl border border-gray-200 shadow-lg z-20 py-1">
-                {CITIES.map((city) => (
+          {/* Строка 1: тип номера */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-400 shrink-0 w-20">Тип номера</span>
+            <div className="flex items-center gap-1 rounded-lg border border-gray-200 bg-gray-50 p-0.5">
+              {NDC_TYPES.map((t) => {
+                const Icon = t.icon;
+                return (
                   <button
-                    key={city.code}
+                    key={t.value}
                     type="button"
-                    onClick={() => { setSelectedCity(city); setCityOpen(false); }}
+                    onClick={() => setNdcType(t.value)}
                     className={cn(
-                      "w-full text-left px-3 py-1.5 text-sm transition-colors",
-                      selectedCity.code === city.code
-                        ? "bg-indigo-50 text-indigo-700 font-medium"
-                        : "text-gray-700 hover:bg-gray-50"
+                      "flex items-center gap-1.5 h-7 px-3 rounded-md text-xs font-medium transition-all",
+                      ndcType === t.value
+                        ? "bg-white text-gray-900 shadow-sm border border-gray-200"
+                        : "text-gray-400 hover:text-gray-600"
                     )}
                   >
-                    {city.name}
+                    <Icon size={11} />
+                    {t.label}
+                    <span className={cn(
+                      "text-[10px]",
+                      ndcType === t.value ? "text-gray-400" : "text-gray-300"
+                    )}>
+                      {t.hint}
+                    </span>
                   </button>
-                ))}
-              </div>
-            )}
+                );
+              })}
+            </div>
           </div>
 
-          {/* Уровень */}
-          <div className="flex items-center gap-0.5 rounded-lg border border-gray-200 bg-gray-50 p-0.5 h-8">
-            {BEAUTI_LEVELS.map((bl) => (
+          {/* Строка 2: город + красивость + поиск */}
+          <div className="flex flex-wrap items-center gap-2">
+
+            {/* Город */}
+            <div className="relative">
               <button
-                key={bl.value}
                 type="button"
-                onClick={() => setBeautiLevel(bl.value)}
-                className={cn(
-                  "h-6 px-2.5 rounded-md text-xs font-medium transition-all",
-                  beautiLevel === bl.value
-                    ? "bg-white text-gray-900 shadow-sm border border-gray-200"
-                    : "text-gray-400 hover:text-gray-600"
-                )}
+                onClick={() => setCityOpen((v) => !v)}
+                className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 hover:border-gray-300 transition-colors"
               >
-                {bl.label}
+                {selectedCity.name}
+                <ChevronDown size={12} className={cn("text-gray-400 transition-transform", cityOpen && "rotate-180")} />
               </button>
-            ))}
-          </div>
+              {cityOpen && (
+                <div className="absolute top-full left-0 mt-1 w-48 bg-white rounded-xl border border-gray-200 shadow-lg z-20 py-1">
+                  {CITIES.map((city) => (
+                    <button
+                      key={city.code}
+                      type="button"
+                      onClick={() => { setSelectedCity(city); setCityOpen(false); }}
+                      className={cn(
+                        "w-full text-left px-3 py-1.5 text-sm transition-colors",
+                        selectedCity.code === city.code
+                          ? "bg-indigo-50 text-indigo-700 font-medium"
+                          : "text-gray-700 hover:bg-gray-50"
+                      )}
+                    >
+                      {city.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
 
-          {/* Поиск */}
-          <div className="relative flex-1 min-w-[120px]">
-            <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Поиск по цифрам…"
-              className="w-full h-8 pl-7 pr-3 rounded-lg border border-gray-200 text-sm text-gray-900 placeholder-gray-400 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition"
-            />
+            {/* Красивость */}
+            <div className="flex items-center gap-0.5 rounded-lg border border-gray-200 bg-gray-50 p-0.5 h-8">
+              {BEAUTI_LEVELS.map((bl) => (
+                <button
+                  key={bl.value}
+                  type="button"
+                  onClick={() => setBeautiLevel(bl.value)}
+                  className={cn(
+                    "h-6 px-2.5 rounded-md text-xs font-medium transition-all",
+                    beautiLevel === bl.value
+                      ? "bg-white text-gray-900 shadow-sm border border-gray-200"
+                      : "text-gray-400 hover:text-gray-600"
+                  )}
+                >
+                  {bl.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Поиск */}
+            <div className="relative flex-1 min-w-[120px]">
+              <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Поиск по цифрам…"
+                className="w-full h-8 pl-7 pr-3 rounded-lg border border-gray-200 text-sm text-gray-900 placeholder-gray-400 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition"
+              />
+            </div>
           </div>
         </div>
 
@@ -318,24 +372,18 @@ export default function NumberSelector() {
                   <span className="text-sm font-mono text-gray-900 tabular-nums">
                     {formatPhone(num.number)}
                   </span>
-                  {num.beautiLevel > 0 && (
-                    <BeautiDot level={num.beautiLevel} />
-                  )}
+                  {num.beautiLevel > 0 && <BeautiDot level={num.beautiLevel} />}
                 </div>
 
                 {/* Цена + кнопка */}
                 <div className="flex items-center gap-4 shrink-0">
-                  <div className="text-right hidden sm:block">
-                    {num.pricePerMonth > 0 ? (
-                      <span className="text-xs text-gray-500">
-                        {(num.pricePerMonth / 100).toLocaleString("ru-RU")} ₽/мес
-                      </span>
-                    ) : null}
-                    {num.priceSetup > 0 ? (
-                      <span className="text-xs text-gray-400 ml-2">
-                        +{(num.priceSetup / 100).toLocaleString("ru-RU")} ₽
-                      </span>
-                    ) : null}
+                  <div className="text-right hidden sm:block text-xs text-gray-400 leading-tight">
+                    {formatPrice(num.pricePerMonth) && (
+                      <div>{formatPrice(num.pricePerMonth)}/мес</div>
+                    )}
+                    {formatPrice(num.priceSetup) && (
+                      <div>+{formatPrice(num.priceSetup)} подкл.</div>
+                    )}
                   </div>
                   <button
                     type="button"
@@ -361,7 +409,7 @@ export default function NumberSelector() {
 
         {filtered.length > 40 && (
           <p className="text-xs text-gray-400 text-center py-3 border-t border-gray-50">
-            Показано 40 из {filtered.length.toLocaleString("ru-RU")} — уточните фильтр
+            Показано 40 из {filtered.length.toLocaleString("ru-RU")} — уточните поиск по цифрам
           </p>
         )}
       </div>

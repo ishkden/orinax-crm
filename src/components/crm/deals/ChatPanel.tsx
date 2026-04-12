@@ -9,7 +9,6 @@ import {
   Paperclip,
   Phone,
   WifiOff,
-  ArrowLeft,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -54,28 +53,24 @@ type Message = {
   createdAt: string;
 };
 
-type WriteTarget = {
-  connector: Connector;
-  phone: string;
-};
-
 // ─── Connector metadata ───────────────────────────────────────────────────────
 
 const CONNECTOR_META: Record<
   string,
-  { bg: string; border: string; text: string; label: string }
+  { bg: string; border: string; text: string; label: string; activeBg: string; activeBorder: string }
 > = {
-  MAX: { bg: "bg-indigo-50", border: "border-indigo-200", text: "text-indigo-600", label: "M" },
-  VK: { bg: "bg-blue-50", border: "border-blue-200", text: "text-blue-600", label: "VK" },
-  TELEGRAM: { bg: "bg-sky-50", border: "border-sky-200", text: "text-sky-600", label: "TG" },
-  AVITO: { bg: "bg-emerald-50", border: "border-emerald-200", text: "text-emerald-600", label: "AV" },
-  WHATSAPP: { bg: "bg-green-50", border: "border-green-200", text: "text-green-600", label: "WA" },
-  INSTAGRAM: { bg: "bg-pink-50", border: "border-pink-200", text: "text-pink-600", label: "IN" },
+  MAX:       { bg: "bg-indigo-50",  border: "border-indigo-200",  text: "text-indigo-600",  label: "M",  activeBg: "bg-indigo-100", activeBorder: "border-indigo-400" },
+  VK:        { bg: "bg-blue-50",    border: "border-blue-200",    text: "text-blue-600",    label: "VK", activeBg: "bg-blue-100",   activeBorder: "border-blue-400" },
+  TELEGRAM:  { bg: "bg-sky-50",     border: "border-sky-200",     text: "text-sky-600",     label: "TG", activeBg: "bg-sky-100",    activeBorder: "border-sky-400" },
+  AVITO:     { bg: "bg-emerald-50", border: "border-emerald-200", text: "text-emerald-600", label: "AV", activeBg: "bg-emerald-100",activeBorder: "border-emerald-400" },
+  WHATSAPP:  { bg: "bg-green-50",   border: "border-green-200",   text: "text-green-600",   label: "WA", activeBg: "bg-green-100",  activeBorder: "border-green-400" },
+  INSTAGRAM: { bg: "bg-pink-50",    border: "border-pink-200",    text: "text-pink-600",    label: "IN", activeBg: "bg-pink-100",   activeBorder: "border-pink-400" },
 };
 
 function getMeta(type: string) {
   return CONNECTOR_META[type] ?? {
-    bg: "bg-gray-50", border: "border-gray-200", text: "text-gray-600", label: type[0] ?? "?",
+    bg: "bg-gray-50", border: "border-gray-200", text: "text-gray-600",
+    label: type[0] ?? "?", activeBg: "bg-gray-100", activeBorder: "border-gray-400",
   };
 }
 
@@ -85,9 +80,7 @@ async function connectorApi(path: string, opts: RequestInit = {}) {
   const url = `/api/connector?path=${encodeURIComponent(path)}`;
   const res = await fetch(url, opts);
   const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data?.error || `HTTP ${res.status}`);
-  }
+  if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
   return data;
 }
 
@@ -99,21 +92,13 @@ function formatTime(iso: string): string {
   return new Date(iso).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
 }
 
-function timeAgo(dateStr: string) {
-  const s = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
-  if (s < 60) return "только что";
-  if (s < 3600) return Math.floor(s / 60) + " мин назад";
-  if (s < 86400) return Math.floor(s / 3600) + " ч назад";
-  return Math.floor(s / 86400) + " дн назад";
-}
-
 // ─── Connector icon ───────────────────────────────────────────────────────────
 
 function ConnectorIcon({ type, size = "sm" }: { type: string; size?: "sm" | "md" }) {
   const m = getMeta(type);
   const sz = size === "md"
     ? "w-8 h-8 text-[11px] rounded-lg"
-    : "w-6 h-6 text-[10px] rounded-md";
+    : "w-5 h-5 text-[9px] rounded";
   return (
     <div className={`${sz} flex items-center justify-center font-bold border ${m.bg} ${m.border} ${m.text} shrink-0`}>
       {m.label}
@@ -182,8 +167,8 @@ export default function ChatPanel({ dealId, contactPhone, contactName }: ChatPan
 
   const [connectors, setConnectors] = useState<Connector[]>([]);
   const [matchedConvs, setMatchedConvs] = useState<SearchConversation[]>([]);
-  const [activeConv, setActiveConv] = useState<SearchConversation | null>(null);
-  const [writeTarget, setWriteTarget] = useState<WriteTarget | null>(null);
+  // Selected connector ID — drives everything
+  const [selectedConnId, setSelectedConnId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [msgText, setMsgText] = useState("");
   const [pendingFile, setPendingFile] = useState<File | null>(null);
@@ -197,6 +182,11 @@ export default function ChatPanel({ dealId, contactPhone, contactName }: ChatPan
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
   const activeChatIdRef = useRef<string | null>(null);
+
+  // Derived state
+  const selectedConn = connectors.find((c) => c.id === selectedConnId) ?? null;
+  const activeConv = matchedConvs.find((c) => c.instanceId === selectedConnId) ?? null;
+  const hasConversation = !!activeConv;
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -216,21 +206,28 @@ export default function ChatPanel({ dealId, contactPhone, contactName }: ChatPan
     return [];
   }, []);
 
-  // Load connectors + search conversations by phone
+  // Load connectors + search conversations
   useEffect(() => {
     let cancelled = false;
     async function load() {
       try {
         const data = await connectorApi("/connectors");
         if (cancelled) return;
-        if (Array.isArray(data)) setConnectors(data);
+        const list: Connector[] = Array.isArray(data) ? data : [];
+        setConnectors(list);
 
+        let convs: SearchConversation[] = [];
         if (contactPhone) {
-          const convs = await searchConversations(contactPhone);
-          if (!cancelled) {
-            setMatchedConvs(convs);
-            if (convs.length === 1) selectConv(convs[0]);
-          }
+          convs = await searchConversations(contactPhone);
+          if (!cancelled) setMatchedConvs(convs);
+        }
+
+        // Auto-select: prefer connector with existing conversation, else first connector
+        if (!cancelled && list.length > 0) {
+          const withConv = convs.length > 0
+            ? list.find((c) => convs.some((cv) => cv.instanceId === c.id))
+            : null;
+          setSelectedConnId(withConv?.id ?? list[0].id);
         }
       } catch {
         if (!cancelled) setError("Не удалось загрузить данные");
@@ -243,7 +240,33 @@ export default function ChatPanel({ dealId, contactPhone, contactName }: ChatPan
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contactPhone]);
 
-  // Open SSE for the active conversation's connector
+  // Load messages when activeConv changes
+  useEffect(() => {
+    if (!activeConv) {
+      setMessages([]);
+      return;
+    }
+    let cancelled = false;
+    async function load() {
+      try {
+        const base = connectorBase(activeConv!.instance.type, activeConv!.instanceId);
+        const msgs = await connectorApi(`${base}/conversations/${activeConv!.id}/messages`);
+        if (!cancelled && Array.isArray(msgs)) setMessages(msgs);
+        if (!cancelled && activeConv!.unreadCount > 0) {
+          connectorApi(`${base}/conversations/${activeConv!.id}/read`, { method: "POST" }).catch(() => {});
+          setMatchedConvs((prev) =>
+            prev.map((c) => (c.id === activeConv!.id ? { ...c, unreadCount: 0 } : c)),
+          );
+        }
+      } catch {
+        if (!cancelled) setMessages([]);
+      }
+    }
+    load();
+    return () => { cancelled = true; };
+  }, [activeConv?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // SSE for active conversation
   useEffect(() => {
     if (!activeConv) return;
     eventSourceRef.current?.close();
@@ -271,63 +294,27 @@ export default function ChatPanel({ dealId, contactPhone, contactName }: ChatPan
     });
     eventSourceRef.current = es;
     return () => es.close();
-  }, [activeConv]);
+  }, [activeConv?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const selectConv = useCallback(async (conv: SearchConversation) => {
-    setActiveConv(conv);
-    setWriteTarget(null);
-    setSendError(null);
-    try {
-      const base = connectorBase(conv.instance.type, conv.instanceId);
-      const msgs = await connectorApi(`${base}/conversations/${conv.id}/messages`);
-      if (Array.isArray(msgs)) setMessages(msgs);
-      if (conv.unreadCount > 0) {
-        connectorApi(`${base}/conversations/${conv.id}/read`, { method: "POST" }).catch(() => {});
-        setMatchedConvs((prev) =>
-          prev.map((c) => (c.id === conv.id ? { ...c, unreadCount: 0 } : c)),
-        );
-      }
-    } catch {
-      setMessages([]);
-    }
-  }, []);
-
-  function openWriteComposer(connector: Connector) {
-    if (!contactPhone) return;
-    setActiveConv(null);
+  function selectTab(connId: string) {
+    if (connId === selectedConnId) return;
+    setSelectedConnId(connId);
     setMessages([]);
-    setSendError(null);
-    setWriteTarget({ connector, phone: contactPhone.replace(/[^0-9+]/g, "") });
-    setTimeout(() => textareaRef.current?.focus(), 100);
-  }
-
-  function backToList() {
-    setWriteTarget(null);
-    setActiveConv(null);
-    setMessages([]);
+    setMsgText("");
+    setPendingFile(null);
     setSendError(null);
   }
 
   async function handleSend() {
+    if (!selectedConn || !contactPhone) return;
     const text = msgText.trim();
     const file = pendingFile;
     if (!text && !file) return;
 
     setSendError(null);
 
-    // Determine the target: either an existing conversation or a new write target
-    let base: string;
-    let to: string;
-
-    if (activeConv) {
-      base = connectorBase(activeConv.instance.type, activeConv.instanceId);
-      to = activeConv.externalId;
-    } else if (writeTarget) {
-      base = connectorBase(writeTarget.connector.type, writeTarget.connector.id);
-      to = writeTarget.phone;
-    } else {
-      return;
-    }
+    const base = connectorBase(selectedConn.type, selectedConn.id);
+    const to = activeConv ? activeConv.externalId : contactPhone.replace(/[^0-9+]/g, "");
 
     setMsgText("");
     setPendingFile(null);
@@ -369,22 +356,14 @@ export default function ChatPanel({ dealId, contactPhone, contactName }: ChatPan
         });
       }
 
-      // Mark as sent
       setMessages((prev) =>
         prev.map((m) => (m.id === optimisticId ? { ...m, status: "SENT" } : m)),
       );
 
-      // If this was a "write first" flow, search for the new conversation
-      if (writeTarget && contactPhone) {
+      // If this was a new conversation, reload conversations
+      if (!activeConv && contactPhone) {
         const convs = await searchConversations(contactPhone);
         setMatchedConvs(convs);
-        const newConv = convs.find(
-          (c) => c.instanceId === writeTarget.connector.id,
-        );
-        if (newConv) {
-          setActiveConv(newConv);
-          setWriteTarget(null);
-        }
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Ошибка отправки";
@@ -416,7 +395,6 @@ export default function ChatPanel({ dealId, contactPhone, contactName }: ChatPan
     );
   }
 
-  // ── Error ───────────────────────────────────────────────────────────────────
   if (error) {
     return (
       <div className="h-full flex items-center justify-center px-6">
@@ -428,7 +406,6 @@ export default function ChatPanel({ dealId, contactPhone, contactName }: ChatPan
     );
   }
 
-  // ── No phone on contact ─────────────────────────────────────────────────────
   if (!contactPhone) {
     return (
       <div className="h-full flex flex-col items-center justify-center gap-3 text-gray-400 px-6">
@@ -441,186 +418,49 @@ export default function ChatPanel({ dealId, contactPhone, contactName }: ChatPan
     );
   }
 
-  // ── No connectors ───────────────────────────────────────────────────────────
   if (connectors.length === 0) {
     return (
       <div className="h-full flex flex-col items-center justify-center gap-3 text-gray-400 px-6">
         <WifiOff size={36} strokeWidth={1.5} className="opacity-30" />
         <p className="text-sm font-medium text-gray-500">Нет подключённых линий</p>
         <p className="text-xs text-center text-gray-400 max-w-[240px]">
-          Подключите мессенджер в разделе{" "}
-          <a href="https://connector.orinax.ai" target="_blank" rel="noreferrer" className="text-brand-500 hover:underline">
-            Коннектор
-          </a>{" "}
-          чтобы начать общение.
+          Подключите мессенджер в{" "}
+          <a href="https://connector.orinax.ai" target="_blank" rel="noreferrer" className="text-brand-500 hover:underline">Коннекторе</a>.
         </p>
       </div>
     );
   }
 
-  // ── "Write first" composer mode ─────────────────────────────────────────────
-  if (writeTarget) {
-    const isOnline =
-      (writeTarget.connector.liveStatus || writeTarget.connector.status) === "CONNECTED";
-    const canSend = (!!msgText.trim() || !!pendingFile) && !sending;
+  const canSend = !!contactPhone && !!selectedConn && (!!msgText.trim() || !!pendingFile) && !sending;
 
-    return (
-      <div className="h-full flex flex-col">
-        {/* Header */}
-        <div className="shrink-0 flex items-center gap-2 px-3 py-2.5 border-b border-gray-100">
-          <button onClick={backToList} className="p-1 rounded hover:bg-gray-100 text-gray-400">
-            <ArrowLeft size={16} />
-          </button>
-          <ConnectorIcon type={writeTarget.connector.type} size="md" />
-          <div className="flex-1 min-w-0">
-            <div className="text-xs font-medium text-gray-800 truncate">
-              {writeTarget.connector.name}
-            </div>
-            <div className="flex items-center gap-1 text-[10px] text-gray-400">
-              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isOnline ? "bg-green-500" : "bg-amber-400"}`} />
-              {isOnline ? "Онлайн" : "Офлайн"}
-              <span className="mx-1">·</span>
-              {contactName || writeTarget.phone}
-            </div>
-          </div>
-        </div>
-
-        {/* Empty message area */}
-        <div className="flex-1 overflow-y-auto px-4 py-3 bg-gray-50/40">
-          {messages.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center gap-2 text-gray-400">
-              <MessageSquare size={28} strokeWidth={1.5} className="opacity-25" />
-              <p className="text-sm">Напишите первое сообщение</p>
-              <p className="text-[11px] text-gray-400">
-                {writeTarget.phone}
-              </p>
-            </div>
-          ) : (
-            messages.map((msg, i) => <Bubble key={msg.id ?? i} message={msg} />)
-          )}
-          <div ref={bottomRef} />
-        </div>
-
-        {/* Send error */}
-        {sendError && (
-          <div className="px-4 py-1.5 bg-red-50 border-t border-red-100 text-xs text-red-600">
-            {sendError}
-          </div>
-        )}
-
-        {/* File preview */}
-        {pendingFile && (
-          <div className="flex items-center gap-2 px-4 py-1.5 border-t border-gray-100 text-xs text-gray-500 bg-gray-50">
-            <Paperclip size={12} />
-            <span className="flex-1 truncate">{pendingFile.name}</span>
-            <button onClick={() => setPendingFile(null)} className="text-red-400 hover:text-red-500">✕</button>
-          </div>
-        )}
-
-        {/* Composer */}
-        <div className="shrink-0 border-t border-gray-100 bg-white px-3 py-2">
-          <div className="flex items-end gap-2 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 focus-within:border-brand-400 focus-within:ring-1 focus-within:ring-brand-200 transition-all">
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="shrink-0 p-1 rounded text-gray-400 hover:text-brand-500 transition-colors"
-              title="Прикрепить файл"
-            >
-              <Paperclip size={16} />
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              className="hidden"
-              onChange={(e) => { const f = e.target.files?.[0]; if (f) setPendingFile(f); e.target.value = ""; }}
-            />
-            <textarea
-              ref={textareaRef}
-              rows={1}
-              value={msgText}
-              onChange={(e) => setMsgText(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-              onInput={handleTextareaInput}
-              placeholder="Введите сообщение..."
-              className="flex-1 resize-none bg-transparent text-sm text-gray-800 placeholder:text-gray-400 outline-none max-h-[120px] leading-relaxed"
-            />
-            <button
-              onClick={handleSend}
-              disabled={!canSend}
-              className="shrink-0 p-1.5 rounded-lg text-brand-600 hover:bg-brand-50 disabled:opacity-30 transition-colors"
-            >
-              {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ── No conversations found — show connector list to initiate ────────────────
-  if (matchedConvs.length === 0 && !activeConv) {
-    return (
-      <div className="h-full flex flex-col items-center justify-center gap-4 px-6">
-        <MessageSquare size={32} strokeWidth={1.5} className="text-gray-300" />
-        <div className="text-center">
-          <p className="text-sm font-medium text-gray-600 mb-1">
-            Нет переписки с {contactName || contactPhone}
-          </p>
-          <p className="text-xs text-gray-400">{contactPhone}</p>
-        </div>
-        <div className="w-full max-w-[280px] space-y-2">
-          <p className="text-[11px] text-gray-400 uppercase tracking-wider font-medium text-center">
-            Написать через
-          </p>
+  // ── Main UI — always shows connector tabs + content area ────────────────────
+  return (
+    <div className="h-full flex flex-col">
+      {/* ── Connector tabs ─────────────────────────────────────────────────── */}
+      <div className="shrink-0 border-b border-gray-100 px-2 pt-2 pb-1">
+        <div className="flex gap-1 overflow-x-auto">
           {connectors.map((c) => {
+            const isActive = c.id === selectedConnId;
+            const m = getMeta(c.type);
+            const conv = matchedConvs.find((cv) => cv.instanceId === c.id);
             const status = c.liveStatus || c.status;
             const isOnline = status === "CONNECTED";
+
             return (
               <button
                 key={c.id}
-                onClick={() => openWriteComposer(c)}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 transition-all text-left"
-              >
-                <ConnectorIcon type={c.type} size="md" />
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium text-gray-800 truncate">{c.name}</div>
-                  <div className="flex items-center gap-1 text-[11px] text-gray-400">
-                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isOnline ? "bg-green-500" : "bg-amber-400"}`} />
-                    {isOnline ? "Онлайн" : "Офлайн"}
-                  </div>
-                </div>
-                <Send size={14} className="text-brand-500 shrink-0" />
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    );
-  }
-
-  // ── Conversations found — show list + messages ──────────────────────────────
-  const canSend = !!activeConv && (!!msgText.trim() || !!pendingFile) && !sending;
-
-  return (
-    <div className="h-full flex flex-col">
-      {/* Conversation tabs when multiple */}
-      {matchedConvs.length > 1 && (
-        <div className="shrink-0 flex gap-1 px-3 pt-3 pb-2 border-b border-gray-100 overflow-x-auto">
-          {matchedConvs.map((conv) => {
-            const isActive = activeConv?.id === conv.id;
-            return (
-              <button
-                key={conv.id}
-                onClick={() => selectConv(conv)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium whitespace-nowrap transition-colors ${
+                onClick={() => selectTab(c.id)}
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[11px] font-medium whitespace-nowrap transition-all ${
                   isActive
-                    ? "border-brand-500 bg-brand-50 text-brand-700"
-                    : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+                    ? `${m.activeBg} ${m.activeBorder} ${m.text}`
+                    : `bg-white border-gray-200 text-gray-500 hover:bg-gray-50`
                 }`}
               >
-                <ConnectorIcon type={conv.instance.type} />
-                <span>{conv.title || conv.instance.name}</span>
-                {conv.unreadCount > 0 && (
-                  <span className="bg-brand-600 text-white text-[9px] font-bold min-w-[16px] h-[16px] rounded-full flex items-center justify-center px-1">
+                <ConnectorIcon type={c.type} />
+                <span className="max-w-[80px] truncate">{c.name}</span>
+                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isOnline ? "bg-green-500" : "bg-gray-300"}`} />
+                {conv && conv.unreadCount > 0 && (
+                  <span className="bg-red-500 text-white text-[8px] font-bold min-w-[14px] h-[14px] rounded-full flex items-center justify-center px-0.5">
                     {conv.unreadCount}
                   </span>
                 )}
@@ -628,49 +468,38 @@ export default function ChatPanel({ dealId, contactPhone, contactName }: ChatPan
             );
           })}
         </div>
-      )}
+      </div>
 
-      {/* Single conversation header */}
-      {matchedConvs.length === 1 && activeConv && (
-        <div className="shrink-0 flex items-center gap-2 px-4 py-2.5 border-b border-gray-100">
-          <ConnectorIcon type={activeConv.instance.type} />
-          <div className="flex-1 min-w-0">
-            <div className="text-xs font-medium text-gray-700 truncate">
-              {activeConv.title || activeConv.instance.name}
-            </div>
-            <div className="text-[10px] text-gray-400">
-              {activeConv.instance.type} · {activeConv.lastMessageAt ? timeAgo(activeConv.lastMessageAt) : "—"}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Messages */}
+      {/* ── Messages area ──────────────────────────────────────────────────── */}
       <div className="flex-1 overflow-y-auto px-4 py-3 bg-gray-50/40">
-        {!activeConv ? (
-          <div className="h-full flex flex-col items-center justify-center gap-2 text-gray-400 py-10">
-            <MessageSquare size={28} strokeWidth={1.5} className="opacity-25" />
-            <p className="text-sm">Выберите диалог</p>
-          </div>
-        ) : messages.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center gap-2 text-gray-400 py-10">
+        {hasConversation && messages.length > 0 ? (
+          messages.map((msg, i) => <Bubble key={msg.id ?? i} message={msg} />)
+        ) : hasConversation && messages.length === 0 ? (
+          <div className="h-full flex flex-col items-center justify-center gap-2 text-gray-400">
             <MessageSquare size={28} strokeWidth={1.5} className="opacity-25" />
             <p className="text-sm">Сообщений пока нет</p>
           </div>
         ) : (
-          messages.map((msg, i) => <Bubble key={msg.id ?? i} message={msg} />)
+          <div className="h-full flex flex-col items-center justify-center gap-2 text-gray-400">
+            <Send size={24} strokeWidth={1.5} className="opacity-25" />
+            <p className="text-sm">Нет переписки через {selectedConn?.name}</p>
+            <p className="text-[11px] text-gray-400">
+              Напишите первое сообщение на {contactPhone}
+            </p>
+          </div>
         )}
         <div ref={bottomRef} />
       </div>
 
-      {/* Send error */}
+      {/* ── Send error ─────────────────────────────────────────────────────── */}
       {sendError && (
-        <div className="px-4 py-1.5 bg-red-50 border-t border-red-100 text-xs text-red-600">
-          {sendError}
+        <div className="px-4 py-1.5 bg-red-50 border-t border-red-100 text-xs text-red-600 flex items-center justify-between">
+          <span>{sendError}</span>
+          <button onClick={() => setSendError(null)} className="text-red-400 hover:text-red-600 ml-2">✕</button>
         </div>
       )}
 
-      {/* File preview */}
+      {/* ── File preview ───────────────────────────────────────────────────── */}
       {pendingFile && (
         <div className="flex items-center gap-2 px-4 py-1.5 border-t border-gray-100 text-xs text-gray-500 bg-gray-50">
           <Paperclip size={12} />
@@ -679,43 +508,41 @@ export default function ChatPanel({ dealId, contactPhone, contactName }: ChatPan
         </div>
       )}
 
-      {/* Composer */}
-      {activeConv && (
-        <div className="shrink-0 border-t border-gray-100 bg-white px-3 py-2">
-          <div className="flex items-end gap-2 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 focus-within:border-brand-400 focus-within:ring-1 focus-within:ring-brand-200 transition-all">
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="shrink-0 p-1 rounded text-gray-400 hover:text-brand-500 transition-colors"
-              title="Прикрепить файл"
-            >
-              <Paperclip size={16} />
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              className="hidden"
-              onChange={(e) => { const f = e.target.files?.[0]; if (f) setPendingFile(f); e.target.value = ""; }}
-            />
-            <textarea
-              ref={textareaRef}
-              rows={1}
-              value={msgText}
-              onChange={(e) => setMsgText(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-              onInput={handleTextareaInput}
-              placeholder="Сообщение..."
-              className="flex-1 resize-none bg-transparent text-sm text-gray-800 placeholder:text-gray-400 outline-none max-h-[120px] leading-relaxed"
-            />
-            <button
-              onClick={handleSend}
-              disabled={!canSend}
-              className="shrink-0 p-1.5 rounded-lg text-brand-600 hover:bg-brand-50 disabled:opacity-30 transition-colors"
-            >
-              {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-            </button>
-          </div>
+      {/* ── Composer — always visible ──────────────────────────────────────── */}
+      <div className="shrink-0 border-t border-gray-100 bg-white px-3 py-2">
+        <div className="flex items-end gap-2 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 focus-within:border-brand-400 focus-within:ring-1 focus-within:ring-brand-200 transition-all">
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="shrink-0 p-1 rounded text-gray-400 hover:text-brand-500 transition-colors"
+            title="Прикрепить файл"
+          >
+            <Paperclip size={16} />
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            className="hidden"
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) setPendingFile(f); e.target.value = ""; }}
+          />
+          <textarea
+            ref={textareaRef}
+            rows={1}
+            value={msgText}
+            onChange={(e) => setMsgText(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+            onInput={handleTextareaInput}
+            placeholder={hasConversation ? "Сообщение..." : `Написать на ${contactPhone}...`}
+            className="flex-1 resize-none bg-transparent text-sm text-gray-800 placeholder:text-gray-400 outline-none max-h-[120px] leading-relaxed"
+          />
+          <button
+            onClick={handleSend}
+            disabled={!canSend}
+            className="shrink-0 p-1.5 rounded-lg text-brand-600 hover:bg-brand-50 disabled:opacity-30 transition-colors"
+          >
+            {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+          </button>
         </div>
-      )}
+      </div>
     </div>
   );
 }

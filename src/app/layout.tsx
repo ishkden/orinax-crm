@@ -4,7 +4,7 @@ import "./globals.css";
 import Providers from "@/components/layout/Providers";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { GlobalHeader } from "@orinax/ui";
+import { HeaderGuard } from "@/components/layout/HeaderGuard";
 
 const nunito = Nunito({
   variable: "--font-nunito",
@@ -25,7 +25,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="ru" className={nunito.variable}>
       <body className="font-sans antialiased h-screen overflow-hidden flex flex-col">
         <Providers session={session}>
-          <div className="shrink-0 z-50"><GlobalHeader /></div>
+          <HeaderGuard />
           <div className="flex-1 min-h-0 overflow-hidden">
             {children}
           </div>

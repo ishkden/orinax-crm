@@ -1,13 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generateAdminToken, getAdminCookieName } from "@/lib/admin-auth";
-
-const ADMIN_PASSWORD = "31338123133812";
+import {
+  generateAdminToken,
+  getAdminCookieName,
+  validateAdminCredentials,
+} from "@/lib/admin-auth";
 
 export async function POST(req: NextRequest) {
-  const { password } = await req.json();
+  const { email, password } = await req.json();
 
-  if (password !== ADMIN_PASSWORD) {
-    return NextResponse.json({ error: "Неверный пароль" }, { status: 401 });
+  if (!email || !password || !validateAdminCredentials(email, password)) {
+    return NextResponse.json(
+      { error: "Неверный email или пароль" },
+      { status: 401 },
+    );
   }
 
   const token = generateAdminToken();
@@ -18,7 +23,7 @@ export async function POST(req: NextRequest) {
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    maxAge: 60 * 60 * 24 * 7, // 7 days
+    maxAge: 60 * 60 * 24 * 7,
   });
 
   return res;

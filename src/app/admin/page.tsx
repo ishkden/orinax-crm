@@ -6,6 +6,7 @@ import { Shield } from "lucide-react";
 
 export default function AdminLoginPage() {
   const router = useRouter();
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -19,11 +20,11 @@ export default function AdminLoginPage() {
       const res = await fetch("/api/admin/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({ email, password }),
       });
 
       if (!res.ok) {
-        setError("Неверный пароль");
+        setError("Неверный email или пароль");
         setLoading(false);
         return;
       }
@@ -51,10 +52,23 @@ export default function AdminLoginPage() {
         <div className="bg-gray-900 rounded-2xl border border-gray-800 p-7 shadow-xl">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label
-                htmlFor="password"
-                className="block text-sm font-medium text-gray-400 mb-1.5"
-              >
+              <label htmlFor="email" className="block text-sm font-medium text-gray-400 mb-1.5">
+                Email
+              </label>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="admin@orinax.ai"
+                required
+                autoFocus
+                className="block w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2.5 text-sm text-white placeholder-gray-500 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 transition-colors"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-400 mb-1.5">
                 Пароль
               </label>
               <input
@@ -64,7 +78,6 @@ export default function AdminLoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 required
-                autoFocus
                 className="block w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2.5 text-sm text-white placeholder-gray-500 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 transition-colors"
               />
             </div>
@@ -81,24 +94,9 @@ export default function AdminLoginPage() {
               className="w-full inline-flex items-center justify-center font-medium rounded-lg text-sm px-4 py-2.5 bg-brand-600 text-white hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500/50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {loading ? (
-                <svg
-                  className="animate-spin h-4 w-4 mr-2"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  />
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                  />
+                <svg className="animate-spin h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                 </svg>
               ) : null}
               Войти

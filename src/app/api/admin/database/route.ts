@@ -12,6 +12,19 @@ type ColRow = {
 };
 type CountRow = { count: bigint };
 
+function escIdent(name: string): string {
+  return `"${name.replace(/"/g, '""')}"`;
+}
+
+function isForbiddenTable(name: string): boolean {
+  const lower = name.toLowerCase();
+  return (
+    !name ||
+    lower.startsWith("pg_") ||
+    lower.startsWith("information_schema")
+  );
+}
+
 async function getPublicTables(): Promise<string[]> {
   const rows = await prisma.$queryRaw<TableNameRow[]>`
     SELECT table_name
@@ -19,7 +32,7 @@ async function getPublicTables(): Promise<string[]> {
     WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
     ORDER BY table_name
   `;
-  return rows.map((r) => r.table_name);
+  return rows.map((r) => r.table_name).filter((n) => !isForbiddenTable(n));
 }
 
 function serializeRow(row: Record<string, unknown>): Record<string, unknown> {
@@ -62,7 +75,7 @@ export async function GET(request: Request) {
             WHERE table_schema = 'public' AND table_name = ${name}
           `,
           prisma.$queryRawUnsafe<CountRow[]>(
-            `SELECT COUNT(*) as count FROM "${name}"`
+            `SELECT COUNT(*) as count FROM ${escIdent(name)}`
           ),
         ]);
         return {
@@ -75,7 +88,7 @@ export async function GET(request: Request) {
     return NextResponse.json(result);
   }
 
-  if (!publicTables.includes(table)) {
+  if (!publicTables.includes(table) || isForbiddenTable(table)) {
     return NextResponse.json({ error: "Table not found" }, { status: 404 });
   }
 
@@ -90,12 +103,15 @@ export async function GET(request: Request) {
     return NextResponse.json({ columns });
   }
 
+  const safeTable = escIdent(table);
   const [rows, countResult] = await Promise.all([
     prisma.$queryRawUnsafe<Record<string, unknown>[]>(
-      `SELECT * FROM "${table}" LIMIT ${limit} OFFSET ${offset}`
+      `SELECT * FROM ${safeTable} LIMIT $1 OFFSET $2`,
+      limit,
+      offset,
     ),
     prisma.$queryRawUnsafe<CountRow[]>(
-      `SELECT COUNT(*) as count FROM "${table}"`
+      `SELECT COUNT(*) as count FROM ${safeTable}`
     ),
   ]);
 

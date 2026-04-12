@@ -17,7 +17,7 @@ function slugify(value: string): string {
 // NEXTAUTH_SECRET must be identical on both services.
 // No local login — signIn always redirects to my.orinax.ai.
 export const authOptions: NextAuthOptions = {
-  session: { strategy: "jwt" },
+  session: { strategy: "jwt", maxAge: 8 * 60 * 60 },
   pages: { signIn: "https://my.orinax.ai/login" },
   cookies: {
     sessionToken: {

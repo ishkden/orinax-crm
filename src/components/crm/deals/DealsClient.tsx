@@ -344,7 +344,7 @@ export default function DealsClient({
   async function handleCreateDeal(input: CreateDealInput) {
     const stageToUse = modalStage ?? input.stage;
     try {
-      const newDeal = await createDeal({ ...input, stage: stageToUse });
+      const newDeal = await createDeal({ ...input, stage: stageToUse, pipelineId: activePipelineId });
       setDeals((prev) => [newDeal, ...prev]);
       if (newDeal.stage) {
         setStagePagination((prev) => {
@@ -428,6 +428,7 @@ export default function DealsClient({
         }}
         pipeline={activePipeline}
         initialStage={modalStage ?? activeStages[0]?.id ?? ""}
+        hideStageSelector={!!modalStage}
         onSave={handleCreateDeal}
       />
 

@@ -12,6 +12,7 @@ interface CreateDealModalProps {
   onClose: () => void;
   pipeline: Pipeline;
   initialStage: string;
+  hideStageSelector?: boolean;
   onSave: (input: CreateDealInput) => Promise<void>;
 }
 
@@ -20,6 +21,7 @@ export default function CreateDealModal({
   onClose,
   pipeline,
   initialStage,
+  hideStageSelector,
   onSave,
 }: CreateDealModalProps) {
   const [title, setTitle] = useState("");
@@ -97,6 +99,7 @@ export default function CreateDealModal({
             </div>
           </div>
 
+          {!hideStageSelector && (
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-gray-700">Этап</label>
             <select
@@ -111,6 +114,7 @@ export default function CreateDealModal({
               ))}
             </select>
           </div>
+          )}
 
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-gray-700">Приоритет</label>

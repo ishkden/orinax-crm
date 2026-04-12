@@ -293,15 +293,20 @@ export async function deleteStage(stageId: string): Promise<void> {
 
 export async function createDeal(input: CreateDealInput): Promise<Deal> {
   const orgId = await getOrgId();
+  const ENUM_STAGES = ["LEAD", "QUALIFIED", "PROPOSAL", "NEGOTIATION", "CLOSED_WON", "CLOSED_LOST"];
+  const isEnumStage = ENUM_STAGES.includes(input.stage);
+
   const deal = await prisma.deal.create({
     data: {
       orgId,
       title: input.title || "Новая сделка",
       value: input.value,
       currency: "RUB",
-      stage: input.stage as DealStage,
       priority: input.priority as Priority,
       closeDate: input.dueDate ? new Date(input.dueDate) : null,
+      ...(isEnumStage
+        ? { stage: input.stage as DealStage }
+        : { stageId: input.stage, pipelineId: input.pipelineId ?? null }),
     },
     include: DEAL_INCLUDE,
   });

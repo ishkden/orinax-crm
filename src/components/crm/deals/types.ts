@@ -35,6 +35,7 @@ export interface CreateDealInput {
   stage: string;
   priority: Deal["priority"];
   dueDate: string;
+  pipelineId?: string;
 }
 
 export interface Stage {

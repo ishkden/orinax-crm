@@ -1,5 +1,4 @@
 import { getContactsList } from "@/app/actions/contacts";
-import CrmRegisterPrimaryAction from "@/components/crm/CrmRegisterPrimaryAction";
 import ContactsListClient from "@/components/crm/contacts/ContactsListClient";
 
 const PAGE_SIZE_OPTIONS = [20, 50, 100] as const;
@@ -19,7 +18,6 @@ export default async function ContactsPage({
 
   return (
     <>
-      <CrmRegisterPrimaryAction label="Добавить контакт" href="/crm/contacts/new" />
       <div className="flex-1 overflow-auto p-6">
         <ContactsListClient
           contacts={contacts}

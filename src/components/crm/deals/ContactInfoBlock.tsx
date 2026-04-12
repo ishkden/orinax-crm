@@ -1,11 +1,12 @@
 "use client";
 
-import { User, Briefcase, Building2, Phone, Mail } from "lucide-react";
+import { User, Briefcase, Building2, Phone, Mail, Plus } from "lucide-react";
 import type { Deal } from "./types";
 
 interface ContactInfoBlockProps {
   deal: Deal;
   onOpenContact?: (contactCuid: string) => void;
+  onCreateContact?: () => void;
 }
 
 interface InfoRowProps {
@@ -48,9 +49,31 @@ function InfoRow({ icon, label, value, href, onClick }: InfoRowProps) {
   );
 }
 
-export default function ContactInfoBlock({ deal, onOpenContact }: ContactInfoBlockProps) {
+export default function ContactInfoBlock({ deal, onOpenContact, onCreateContact }: ContactInfoBlockProps) {
+  const hasContact = deal.contactId || deal.contactName !== "\u2014";
+
+  if (!hasContact) {
+    return (
+      <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50/40 p-4">
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Контакт</p>
+        </div>
+        <p className="text-sm text-gray-400 mb-3">Контакт не привязан к сделке</p>
+        {onCreateContact && (
+          <button
+            type="button"
+            onClick={onCreateContact}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-brand-600 bg-brand-50 hover:bg-brand-100 transition-colors"
+          >
+            <Plus size={14} /> Создать контакт
+          </button>
+        )}
+      </div>
+    );
+  }
+
   return (
-    <div className="mx-5 rounded-xl border border-gray-100 bg-gray-50/60 divide-y divide-gray-100 overflow-hidden">
+    <div className="rounded-xl border border-gray-100 bg-gray-50/60 divide-y divide-gray-100 overflow-hidden">
       <InfoRow
         icon={<User size={15} strokeWidth={1.75} />}
         label="Контакт"

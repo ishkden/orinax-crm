@@ -24,6 +24,9 @@ import {
 } from "@/app/actions/custom-fields";
 import { updateDealStage, updateDealPipeline } from "@/app/actions/deals";
 import ContactInfoBlock from "./ContactInfoBlock";
+import CreateContactModal from "@/components/crm/contacts/CreateContactModal";
+import type { CreateContactFormData } from "@/components/crm/contacts/CreateContactModal";
+import { createContact } from "@/app/actions/contacts";
 import { getContactByCuid } from "@/app/actions/contacts";
 import type { ContactDetail } from "@/app/actions/contacts";
 import ContactDetailDrawer from "@/components/crm/contacts/ContactDetailDrawer";
@@ -1029,6 +1032,7 @@ function DetailsLeft({
   onSelectField,
   onCreateSection,
   onChooseSection,
+  onCreateContact,
 }: {
   deal: Deal;
   customFields: CustomFieldDef[];
@@ -1043,6 +1047,7 @@ function DetailsLeft({
   onSelectField: (sectionName: string) => void;
   onCreateSection: () => void;
   onChooseSection: () => void;
+  onCreateContact?: () => void;
 }) {
   // Filter fields for the current pipeline (pipeline-specific + legacy global fields)
   const pipelineFields = customFields.filter(
@@ -1063,7 +1068,7 @@ function DetailsLeft({
 
   return (
     <div className="space-y-4 pb-6">
-      <ContactInfoBlock deal={deal} onOpenContact={onOpenContact} />
+      <ContactInfoBlock deal={deal} onOpenContact={onOpenContact} onCreateContact={onCreateContact} />
 
       <div className="rounded-xl border border-gray-100 bg-gray-50/60 divide-y divide-gray-100 overflow-hidden">
         <div className="flex items-center gap-3 px-4 py-2.5">
@@ -1202,6 +1207,7 @@ export default function DealRightDrawer({
   const [selectFieldSection, setSelectFieldSection] = useState<string | null>(null);
   const [createSectionOpen, setCreateSectionOpen] = useState(false);
   const [chooseSectionOpen, setChooseSectionOpen] = useState(false);
+  const [createContactOpen, setCreateContactOpen] = useState(false);
 
   // Scroll-fade: show scrollbar thumb only while actively scrolling
   useEffect(() => {
@@ -1282,6 +1288,7 @@ export default function DealRightDrawer({
       setSelectFieldSection(null);
       setCreateSectionOpen(false);
       setChooseSectionOpen(false);
+      setCreateContactOpen(false);
       setPendingSections([]);
     }
   }, [open]);
@@ -1369,6 +1376,32 @@ export default function DealRightDrawer({
   }
 
   // Handler: "Choose Section" — clone fields to current pipeline
+  async function handleCreateContact(data: CreateContactFormData) {
+    if (!deal) return;
+    try {
+      const newContact = await createContact({
+        firstName: data.firstName,
+        lastName: data.lastName,
+        phone: data.phone || undefined,
+        email: data.email || undefined,
+        company: data.company || undefined,
+        position: data.position || undefined,
+        dealId: deal.id,
+      });
+      if (onDealUpdate) {
+        onDealUpdate({
+          ...deal,
+          contactId: newContact.id,
+          contactName: `${newContact.firstName} ${newContact.lastName}`.trim(),
+          contactPhone: newContact.phone,
+          contactEmail: newContact.email,
+          company: newContact.company ?? deal.company,
+        });
+      }
+    } catch (e) { console.error("Failed to create contact", e); }
+    setCreateContactOpen(false);
+  }
+
   async function handleChooseSection(section: PipelineSectionInfo) {
     if (!currentPipelineId) return;
     try {
@@ -1453,6 +1486,7 @@ export default function DealRightDrawer({
                         onSelectField={(sec) => setSelectFieldSection(sec)}
                         onCreateSection={() => setCreateSectionOpen(true)}
                         onChooseSection={() => setChooseSectionOpen(true)}
+                        onCreateContact={() => setCreateContactOpen(true)}
                       />
                     </div>
                     <div ref={rightColRef} className="col-span-3 p-4">
@@ -1537,6 +1571,14 @@ export default function DealRightDrawer({
               />
             )}
           </AnimatePresence>
+
+          {/* ── Create Contact Modal ── */}
+          <CreateContactModal
+            open={createContactOpen}
+            onClose={() => setCreateContactOpen(false)}
+            onSave={handleCreateContact}
+            title="Новый контакт для сделки"
+          />
         </>
       )}
     </AnimatePresence>

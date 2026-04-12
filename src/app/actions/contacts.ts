@@ -168,3 +168,70 @@ export async function getContactByCuid(id: string): Promise<ContactDetail | null
     })),
   };
 }
+
+
+// ─── Create Contact ──────────────────────────────────────────────────────────
+
+export interface CreateContactInput {
+  firstName: string;
+  lastName: string;
+  phone?: string;
+  email?: string;
+  company?: string;
+  position?: string;
+  dealId?: string;
+}
+
+export async function createContact(input: CreateContactInput): Promise<ContactDetail> {
+  const orgId = await getOrgId();
+  if (!orgId) throw new Error("Unauthorized");
+
+  const contact = await prisma.contact.create({
+    data: {
+      orgId,
+      firstName: input.firstName.trim() || "Без имени",
+      lastName: input.lastName.trim(),
+      phone: input.phone?.trim() || null,
+      email: input.email?.trim() || null,
+      company: input.company?.trim() || null,
+      position: input.position?.trim() || null,
+      source: "MANUAL",
+      status: "LEAD",
+    },
+  });
+
+  if (input.dealId) {
+    await prisma.$transaction([
+      prisma.deal.update({
+        where: { id: input.dealId, orgId },
+        data: { contactId: contact.id },
+      }),
+      prisma.dealContact.create({
+        data: {
+          orgId,
+          dealId: input.dealId,
+          contactId: contact.id,
+          isPrimary: true,
+        },
+      }),
+    ]);
+  }
+
+  return {
+    id: contact.id,
+    serialNumber: contact.serialNumber,
+    firstName: contact.firstName,
+    lastName: contact.lastName,
+    phone: contact.phone,
+    email: contact.email,
+    company: contact.company,
+    position: contact.position,
+    primaryIM: contact.primaryIM,
+    notes: contact.notes,
+    source: String(contact.source),
+    status: String(contact.status),
+    companyRel: null,
+    channels: [],
+    deals: [],
+  };
+}

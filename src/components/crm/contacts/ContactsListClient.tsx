@@ -1,10 +1,15 @@
 "use client";
 
+import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn, formatDate } from "@/lib/utils";
 import Badge from "@/components/ui/Badge";
 import ContactDetailDrawer from "@/components/crm/contacts/ContactDetailDrawer";
+import CreateContactModal from "@/components/crm/contacts/CreateContactModal";
+import type { CreateContactFormData } from "@/components/crm/contacts/CreateContactModal";
+import { createContact } from "@/app/actions/contacts";
+import { useCrmHeaderAction } from "@/components/crm/CrmHeaderActionContext";
 import type { ContactDetail } from "@/app/actions/contacts";
 
 const PAGE_SIZE_OPTIONS = [20, 50, 100] as const;
@@ -46,6 +51,28 @@ export default function ContactsListClient({
 }: ContactsListClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const { setHeaderAction } = useCrmHeaderAction();
+
+  const openModal = useCallback(() => setCreateModalOpen(true), []);
+
+  useEffect(() => {
+    setHeaderAction({ label: "Добавить контакт", onClick: openModal });
+    return () => setHeaderAction(null);
+  }, [setHeaderAction, openModal]);
+
+  async function handleCreateContact(data: CreateContactFormData) {
+    await createContact({
+      firstName: data.firstName,
+      lastName: data.lastName,
+      phone: data.phone || undefined,
+      email: data.email || undefined,
+      company: data.company || undefined,
+      position: data.position || undefined,
+    });
+    setCreateModalOpen(false);
+    router.refresh();
+  }
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
@@ -67,6 +94,11 @@ export default function ContactsListClient({
   return (
     <>
       <ContactDetailDrawer contact={selectedContact ?? null} onClose={closeDrawer} />
+      <CreateContactModal
+        open={createModalOpen}
+        onClose={() => setCreateModalOpen(false)}
+        onSave={handleCreateContact}
+      />
 
       <div className="bg-white rounded-xl border border-gray-200">
         <div className="px-6 py-4 border-b border-gray-100">

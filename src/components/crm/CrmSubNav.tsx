@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { Briefcase, Users, Building2, UserCheck, Settings, ChevronDown } from "lucide-react";
+import { Briefcase, Users, Building2, UserCheck, Settings, ChevronDown, Plus } from "lucide-react";
 import {
   DndContext,
   closestCenter,
@@ -21,6 +21,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useCrmDealPipeline } from "./CrmDealPipelineContext";
+import { useCrmHeaderAction } from "./CrmHeaderActionContext";
 import { useKanbanStyles } from "@/components/crm/deals/KanbanStyleContext";
 
 const DEFAULT_TABS = [
@@ -150,6 +151,7 @@ export default function CrmSubNav() {
   const [mounted, setMounted] = useState(false);
   const { layout } = useKanbanStyles();
   const navHeight = layout.subNavHeight;
+  const { headerAction } = useCrmHeaderAction();
 
   useEffect(() => {
     try {
@@ -254,6 +256,41 @@ export default function CrmSubNav() {
 
         <div className="flex-1 flex items-center justify-center min-w-0">
           <PipelineInTabsRow />
+        </div>
+
+        <div className="flex shrink-0 items-center pr-4">
+          {headerAction && (
+            <div className="group flex h-8 shrink-0 items-stretch overflow-hidden rounded-lg border border-transparent text-brand-600 transition-colors duration-[600ms] ease-in-out hover:border-gray-200 hover:bg-gray-50/80">
+              <button
+                type="button"
+                onClick={headerAction.onClick}
+                className="flex w-8 shrink-0 items-center justify-center rounded-l-lg transition-colors duration-[600ms] ease-in-out hover:bg-gray-100/80"
+                aria-label={headerAction.label}
+              >
+                <Plus size={14} strokeWidth={2.25} />
+              </button>
+              <div className="flex max-w-0 items-stretch overflow-hidden transition-[max-width] duration-[600ms] ease-in-out group-hover:max-w-[min(100vw-12rem,380px)]">
+                <div className="flex items-stretch border-l border-gray-200/80">
+                  <button
+                    type="button"
+                    onClick={headerAction.onClick}
+                    className="inline-flex items-center whitespace-nowrap px-2 text-[11px] font-medium leading-none text-brand-700 transition-colors duration-[600ms] ease-in-out hover:bg-gray-100/80"
+                  >
+                    {headerAction.label}
+                  </button>
+                  {headerAction.secondary && (
+                    <button
+                      type="button"
+                      onClick={headerAction.secondary.onClick}
+                      className="inline-flex items-center whitespace-nowrap border-l border-gray-200/80 px-2 text-[11px] font-medium leading-none text-brand-700 transition-colors duration-[600ms] ease-in-out hover:bg-gray-100/80"
+                    >
+                      {headerAction.secondary.label}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

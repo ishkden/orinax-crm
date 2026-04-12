@@ -1471,7 +1471,11 @@ export default function DealRightDrawer({
                 )}
                 {activeTab === "chat" && (
                   <div key="chat" className="min-h-[calc(100vh-120px)]">
-                    <ChatPanel dealId={deal.id} />
+                    <ChatPanel
+                      dealId={deal.id}
+                      contactPhone={deal.contactPhone}
+                      contactName={deal.contactName}
+                    />
                   </div>
                 )}
                 {activeTab === "docs" && (

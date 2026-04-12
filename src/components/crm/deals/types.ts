@@ -10,7 +10,6 @@ export interface Deal {
   currency: string;
   /** Dynamic Stage.id or fallback DealStage enum value */
   stage: string;
-  priority: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
   contactId: string | null;
   contactSerialNumber: number | null;
   contactName: string;
@@ -19,7 +18,6 @@ export interface Deal {
   company: string | null;
   assignedId: string | null;
   assignee: string | null;
-  dueDate: string | null;
   description: string | null;
   tags: string[];
   createdAt: string;
@@ -33,8 +31,6 @@ export interface CreateDealInput {
   title: string;
   value: number;
   stage: string;
-  priority: Deal["priority"];
-  dueDate: string;
   pipelineId?: string;
 }
 
@@ -55,9 +51,3 @@ export interface Pipeline {
 /** Stage IDs that represent a closed deal (used for overdue-date styling). */
 export const CLOSED_STAGE_IDS = new Set(["CLOSED_WON", "CLOSED_LOST"]);
 
-export const priorities: { value: Deal["priority"]; label: string; color: string }[] = [
-  { value: "LOW",    label: "Низкий",  color: "#9CA3AF" },
-  { value: "MEDIUM", label: "Средний", color: "#3B82F6" },
-  { value: "HIGH",   label: "Высокий", color: "#F59E0B" },
-  { value: "URGENT", label: "Срочный", color: "#EF4444" },
-];

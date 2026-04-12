@@ -1081,8 +1081,6 @@ function DetailsLeft({
         <div className="flex items-center gap-3 px-4 py-2.5">
           <Calendar size={15} strokeWidth={1.75} className="text-gray-400 shrink-0" />
           <div>
-            <p className="text-[11px] font-medium text-gray-400 uppercase tracking-wide leading-none mb-0.5">Срок закрытия</p>
-            <p className="text-sm text-gray-900">{deal.dueDate ? formatDate(deal.dueDate) : "—"}</p>
           </div>
         </div>
       </div>

@@ -4,7 +4,6 @@ import { useState } from "react";
 import { X, Loader2 } from "lucide-react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
-import { priorities } from "./types";
 import type { Pipeline, CreateDealInput } from "./types";
 
 interface CreateDealModalProps {
@@ -27,8 +26,6 @@ export default function CreateDealModal({
   const [title, setTitle] = useState("");
   const [value, setValue] = useState("");
   const [stage, setStage] = useState(initialStage);
-  const [priority, setPriority] = useState<CreateDealInput["priority"]>("MEDIUM");
-  const [dueDate, setDueDate] = useState("");
   const [saving, setSaving] = useState(false);
 
   if (!open) return null;
@@ -40,15 +37,11 @@ export default function CreateDealModal({
         title: title.trim() || "Новая сделка",
         value: Number(value) || 0,
         stage,
-        priority,
-        dueDate,
       });
       // Reset form
       setTitle("");
       setValue("");
       setStage(initialStage);
-      setPriority("MEDIUM");
-      setDueDate("");
     } finally {
       setSaving(false);
     }
@@ -80,24 +73,13 @@ export default function CreateDealModal({
             onChange={(e) => setTitle(e.target.value)}
           />
 
-          <div className="grid grid-cols-2 gap-4">
-            <Input
-              label="Сумма (₽)"
-              type="number"
-              placeholder="0"
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-            />
-            <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium text-gray-700">Срок</label>
-              <input
-                type="date"
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-                className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-              />
-            </div>
-          </div>
+          <Input
+            label="Сумма (₽)"
+            type="number"
+            placeholder="0"
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+          />
 
           {!hideStageSelector && (
           <div className="flex flex-col gap-1">
@@ -115,21 +97,6 @@ export default function CreateDealModal({
             </select>
           </div>
           )}
-
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-700">Приоритет</label>
-            <select
-              value={priority}
-              onChange={(e) => setPriority(e.target.value as CreateDealInput["priority"])}
-              className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-            >
-              {priorities.map((p) => (
-                <option key={p.value} value={p.value}>
-                  {p.label}
-                </option>
-              ))}
-            </select>
-          </div>
         </div>
 
         <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100 bg-gray-50/50">

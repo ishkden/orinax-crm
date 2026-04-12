@@ -101,7 +101,6 @@ function mapDeal(d: PrismaDeaWithRelations): Deal {
     value: d.value,
     currency: d.currency,
     stage: d.stageId || d.stage as string,
-    priority: d.priority as Deal["priority"],
     contactId: d.contactId,
     contactSerialNumber: d.contact?.serialNumber ?? null,
     contactName: d.contact
@@ -112,7 +111,6 @@ function mapDeal(d: PrismaDeaWithRelations): Deal {
     company: d.company?.name ?? d.contact?.company ?? null,
     assignedId: d.assignedId,
     assignee: d.assigned?.name ?? null,
-    dueDate: d.closeDate ? d.closeDate.toISOString() : null,
     description: d.description,
     tags: d.tags,
     createdAt: d.createdAt.toISOString(),
@@ -302,8 +300,6 @@ export async function createDeal(input: CreateDealInput): Promise<Deal> {
       title: input.title || "Новая сделка",
       value: input.value,
       currency: "RUB",
-      priority: input.priority as Priority,
-      closeDate: input.dueDate ? new Date(input.dueDate) : null,
       ...(isEnumStage
         ? { stage: input.stage as DealStage }
         : { stageId: input.stage, pipelineId: input.pipelineId ?? null }),

@@ -1,10 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ArrowUpDown, Building2, Calendar, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowUpDown, Building2, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn, formatCurrency } from "@/lib/utils";
-import Badge from "@/components/ui/Badge";
-import { CLOSED_STAGE_IDS, priorities } from "./types";
 import type { Deal, Stage } from "./types";
 
 const PAGE_SIZE_OPTIONS = [20, 50, 100] as const;
@@ -15,13 +13,6 @@ interface DealsListViewProps {
   stages: Stage[];
   onDealClick?: (deal: Deal) => void;
 }
-
-const priorityBadgeVariant: Record<string, "default" | "info" | "warning" | "danger"> = {
-  LOW:    "default",
-  MEDIUM: "info",
-  HIGH:   "warning",
-  URGENT: "danger",
-};
 
 export default function DealsListView({ deals, stages, onDealClick }: DealsListViewProps) {
   const stageMap = Object.fromEntries(stages.map((s) => [s.id, s]));
@@ -55,7 +46,7 @@ export default function DealsListView({ deals, stages, onDealClick }: DealsListV
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50/50">
-                {["Сделка", "Компания", "Этап", "Приоритет", "Ответственный", "Сумма", "Срок"].map(
+                {["Сделка", "Компания", "Этап", "Ответственный", "Сумма"].map(
                   (h) => (
                     <th
                       key={h}
@@ -76,11 +67,6 @@ export default function DealsListView({ deals, stages, onDealClick }: DealsListV
             <tbody className="divide-y divide-gray-50">
               {paginatedDeals.map((deal) => {
                 const stage = stageMap[deal.stage];
-                const pri = priorities.find((p) => p.value === deal.priority);
-                const isOverdue =
-                  deal.dueDate &&
-                  new Date(deal.dueDate) < new Date() &&
-                  !CLOSED_STAGE_IDS.has(deal.stage);
                 return (
                   <tr
                     key={deal.id}
@@ -116,39 +102,16 @@ export default function DealsListView({ deals, stages, onDealClick }: DealsListV
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-3">
-                      <Badge variant={priorityBadgeVariant[deal.priority] ?? "default"}>
-                        {pri?.label ?? deal.priority}
-                      </Badge>
-                    </td>
                     <td className="px-4 py-3 text-gray-600">{deal.assignee || "—"}</td>
                     <td className="px-4 py-3 text-right font-normal text-gray-900 tabular-nums">
                       {formatCurrency(deal.value, deal.currency)}
-                    </td>
-                    <td className="px-4 py-3">
-                      {deal.dueDate ? (
-                        <span
-                          className={cn(
-                            "flex items-center gap-1 text-sm",
-                            isOverdue ? "text-red-500" : "text-gray-500"
-                          )}
-                        >
-                          <Calendar size={12} />
-                          {new Date(deal.dueDate).toLocaleDateString("ru-RU", {
-                            day: "numeric",
-                            month: "short",
-                          })}
-                        </span>
-                      ) : (
-                        <span className="text-gray-300">—</span>
-                      )}
                     </td>
                   </tr>
                 );
               })}
               {deals.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-6 py-16 text-center text-gray-400 text-sm">
+                  <td colSpan={5} className="px-6 py-16 text-center text-gray-400 text-sm">
                     Нет сделок по заданным фильтрам
                   </td>
                 </tr>

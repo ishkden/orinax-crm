@@ -87,7 +87,6 @@ export default function DealsClient({
   const [viewMode, setViewMode] = useState<ViewMode>("kanban");
   const [searchQuery, setSearchQuery] = useState("");
   const [filterAssignee, setFilterAssignee] = useState<string | null>(null);
-  const [filterPriority, setFilterPriority] = useState<Deal["priority"] | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalStage, setModalStage] = useState<string | null>(null);
   const [stageOrderMap, setStageOrderMap] = useState<Record<string, string[]>>({});
@@ -194,11 +193,8 @@ export default function DealsClient({
     if (filterAssignee) {
       result = result.filter((d) => d.assignee === filterAssignee);
     }
-    if (filterPriority) {
-      result = result.filter((d) => d.priority === filterPriority);
-    }
     return result;
-  }, [deals, searchQuery, filterAssignee, filterPriority]);
+  }, [deals, searchQuery, filterAssignee]);
 
   const handleLoadMore = useCallback(async (stageId: string) => {
     const p = stagePagination[stageId];
@@ -383,9 +379,6 @@ export default function DealsClient({
             onViewModeChange={setViewMode}
             filterAssignee={filterAssignee}
             onFilterAssignee={setFilterAssignee}
-            filterPriority={filterPriority}
-            onFilterPriority={setFilterPriority}
-            totalDeals={filteredDeals.length}
             assignees={assignees}
           />
         </div>

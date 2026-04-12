@@ -3,9 +3,7 @@
 import { useRef } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Calendar } from "lucide-react";
 import { formatCurrency, getInitials } from "@/lib/utils";
-import { CLOSED_STAGE_IDS } from "./types";
 import { useKanbanStyles } from "./KanbanStyleContext";
 import type { Deal } from "./types";
 
@@ -61,12 +59,6 @@ export default function DealCard({ deal, onContactClick, onDealClick }: DealCard
     transform: CSS.Transform.toString(transform),
     transition,
   };
-
-  const isOverdue =
-    deal.dueDate &&
-    new Date(deal.dueDate) < new Date() &&
-    !CLOSED_STAGE_IDS.has(deal.stage);
-
   return (
     <div
       ref={setNodeRef}
@@ -191,7 +183,7 @@ export default function DealCard({ deal, onContactClick, onDealClick }: DealCard
           </span>
         )}
 
-        {s.cardFooter.show && (deal.dueDate || deal.assignee) && (
+        {s.cardFooter.show && deal.assignee && (
           <div
             style={{
               borderTopColor: s.cardFooter.borderColor,
@@ -200,22 +192,6 @@ export default function DealCard({ deal, onContactClick, onDealClick }: DealCard
             }}
             className="mt-auto flex shrink-0 flex-wrap items-center border-t"
           >
-            {s.cardDate.show && deal.dueDate && (
-              <span
-                style={{
-                  fontSize: s.cardDate.fontSize,
-                  color: isOverdue ? s.cardDate.overdueColor : s.cardDate.normalColor,
-                  fontWeight: isOverdue ? 500 : 400,
-                }}
-                className="inline-flex items-center gap-1"
-              >
-                <Calendar size={s.cardDate.iconSize} />
-                {new Date(deal.dueDate).toLocaleDateString("ru-RU", {
-                  day: "numeric",
-                  month: "short",
-                })}
-              </span>
-            )}
 
             {s.cardAssignee.show && deal.assignee && (
               <div

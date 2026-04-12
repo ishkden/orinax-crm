@@ -21,7 +21,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useCrmDealPipeline } from "./CrmDealPipelineContext";
-import { useCrmHeaderAction } from "./CrmHeaderActionContext";
+import { useCrmHeaderAction, type CrmHeaderPrimaryAction } from "./CrmHeaderActionContext";
 import { useKanbanStyles } from "@/components/crm/deals/KanbanStyleContext";
 
 const DEFAULT_TABS = [
@@ -37,7 +37,15 @@ const STORAGE_KEY = "crm-tabs-order";
 
 type Tab = (typeof DEFAULT_TABS)[number];
 
-function SortableTab({ tab, isActive }: { tab: Tab; isActive: boolean }) {
+function SortableTab({
+  tab,
+  isActive,
+  action,
+}: {
+  tab: Tab;
+  isActive: boolean;
+  action?: CrmHeaderPrimaryAction;
+}) {
   const {
     attributes,
     listeners,
@@ -58,7 +66,9 @@ function SortableTab({ tab, isActive }: { tab: Tab; isActive: boolean }) {
     <div
       ref={setNodeRef}
       style={style}
-      className={cn("relative", isDragging && "z-50 opacity-80")}
+      className={cn("group/tab relative flex items-stretch", isDragging && "z-50 opacity-80")}
+      {...attributes}
+      {...listeners}
     >
       <Link
         href={tab.href}
@@ -67,8 +77,6 @@ function SortableTab({ tab, isActive }: { tab: Tab; isActive: boolean }) {
           isActive ? "text-brand-600" : "text-gray-500 hover:text-gray-800",
           isDragging && "pointer-events-none"
         )}
-        {...attributes}
-        {...listeners}
       >
         <Icon
           size={15}
@@ -82,6 +90,24 @@ function SortableTab({ tab, isActive }: { tab: Tab; isActive: boolean }) {
           <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-500 rounded-t-full" />
         )}
       </Link>
+
+      {action && (
+        <div className="flex max-w-0 items-center overflow-hidden transition-[max-width] duration-500 ease-in-out group-hover/tab:max-w-[120px]">
+          <button
+            type="button"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => { e.preventDefault(); action.onClick(); }}
+            className={cn(
+              "flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md px-2 py-1 text-[11px] font-medium",
+              "text-brand-600 transition-colors duration-150 hover:bg-brand-50 hover:text-brand-700"
+            )}
+            aria-label={action.label}
+          >
+            <Plus size={11} strokeWidth={2.5} className="shrink-0" />
+            <span>{action.label}</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -192,7 +218,14 @@ export default function CrmSubNav() {
       {tabList.map((tab) => {
         const isActive =
           pathname === tab.href || pathname.startsWith(tab.href + "/");
-        return <SortableTab key={tab.id} tab={tab} isActive={isActive} />;
+        return (
+          <SortableTab
+            key={tab.id}
+            tab={tab}
+            isActive={isActive}
+            action={isActive ? headerAction : null}
+          />
+        );
       })}
     </div>
   );
@@ -256,41 +289,6 @@ export default function CrmSubNav() {
 
         <div className="flex-1 flex items-center justify-center min-w-0">
           <PipelineInTabsRow />
-        </div>
-
-        <div className="flex shrink-0 items-center pr-4">
-          {headerAction && (
-            <div className="group flex h-8 shrink-0 items-stretch overflow-hidden rounded-lg border border-transparent text-brand-600 transition-colors duration-[600ms] ease-in-out hover:border-gray-200 hover:bg-gray-50/80">
-              <button
-                type="button"
-                onClick={headerAction.onClick}
-                className="flex w-8 shrink-0 items-center justify-center rounded-l-lg transition-colors duration-[600ms] ease-in-out hover:bg-gray-100/80"
-                aria-label={headerAction.label}
-              >
-                <Plus size={14} strokeWidth={2.25} />
-              </button>
-              <div className="flex max-w-0 items-stretch overflow-hidden transition-[max-width] duration-[600ms] ease-in-out group-hover:max-w-[min(100vw-12rem,380px)]">
-                <div className="flex items-stretch border-l border-gray-200/80">
-                  <button
-                    type="button"
-                    onClick={headerAction.onClick}
-                    className="inline-flex items-center whitespace-nowrap px-2 text-[11px] font-medium leading-none text-brand-700 transition-colors duration-[600ms] ease-in-out hover:bg-gray-100/80"
-                  >
-                    {headerAction.label}
-                  </button>
-                  {headerAction.secondary && (
-                    <button
-                      type="button"
-                      onClick={headerAction.secondary.onClick}
-                      className="inline-flex items-center whitespace-nowrap border-l border-gray-200/80 px-2 text-[11px] font-medium leading-none text-brand-700 transition-colors duration-[600ms] ease-in-out hover:bg-gray-100/80"
-                    >
-                      {headerAction.secondary.label}
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>

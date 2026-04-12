@@ -1,15 +1,30 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Shield } from "lucide-react";
 
 export default function AdminLoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [sessionChecked, setSessionChecked] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/auth/session", { credentials: "include" })
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        const userEmail = (data?.user?.email || "").trim().toLowerCase();
+        setShowLogin(userEmail === "admin@orinax.ai");
+        setSessionChecked(true);
+      })
+      .catch(() => {
+        setShowLogin(false);
+        setSessionChecked(true);
+      });
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -20,11 +35,11 @@ export default function AdminLoginPage() {
       const res = await fetch("/api/admin/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: "admin@orinax.ai", password }),
       });
 
       if (!res.ok) {
-        setError("Неверный email или пароль");
+        setError("Неверный пароль");
         setLoading(false);
         return;
       }
@@ -34,6 +49,19 @@ export default function AdminLoginPage() {
       setError("Ошибка соединения");
       setLoading(false);
     }
+  }
+
+  if (!sessionChecked) return <div className="min-h-screen bg-gray-950" />;
+
+  if (!showLogin) {
+    return (
+      <div className="min-h-screen bg-gray-950 flex items-center justify-center p-4">
+        <div className="text-center">
+          <p className="text-5xl font-bold text-white">404</p>
+          <p className="text-gray-500 text-sm mt-2">This page could not be found.</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -52,22 +80,6 @@ export default function AdminLoginPage() {
         <div className="bg-gray-900 rounded-2xl border border-gray-800 p-7 shadow-xl">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-400 mb-1.5">
-                Email
-              </label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@orinax.ai"
-                required
-                autoFocus
-                className="block w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2.5 text-sm text-white placeholder-gray-500 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 transition-colors"
-              />
-            </div>
-
-            <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-400 mb-1.5">
                 Пароль
               </label>
@@ -78,6 +90,7 @@ export default function AdminLoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 required
+                autoFocus
                 className="block w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2.5 text-sm text-white placeholder-gray-500 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 transition-colors"
               />
             </div>

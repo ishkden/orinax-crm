@@ -1,4 +1,5 @@
 import CrmSubNav from "@/components/crm/CrmSubNav";
+import CrmHeader from "@/components/crm/CrmHeader";
 import CrmRightBar from "@/components/crm/CrmRightBar";
 import { CrmHeaderActionProvider } from "@/components/crm/CrmHeaderActionContext";
 import { CrmDealPipelineProvider } from "@/components/crm/CrmDealPipelineContext";
@@ -42,6 +43,7 @@ export default async function CrmLayout({ children }: { children: React.ReactNod
             <div className="flex min-h-0 min-w-0 flex-1 flex-row overflow-hidden">
               <div id="crm-scroll" className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overflow-x-hidden overscroll-y-contain [scrollbar-gutter:stable]">
                 <CrmSubNav />
+                <CrmHeader />
                 <div className="flex min-w-0 flex-col">
                   {children}
                 </div>

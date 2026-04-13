@@ -1340,14 +1340,14 @@ function DotHandle({ attributes, listeners }: { attributes: DraggableAttributes;
       {...attributes}
       {...(listeners ?? {})}
       data-drag-handle="true"
-      className="absolute top-1.5 left-1.5 z-10 opacity-0 group-hover:opacity-100 cursor-grab active:cursor-grabbing touch-none select-none transition-opacity"
+      className="absolute top-1 left-1 z-10 p-1 opacity-0 hover:opacity-100 cursor-grab active:cursor-grabbing touch-none select-none transition-opacity"
       onPointerDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
       title="Переместить"
     >
-      <span className="grid grid-cols-2 gap-[2.5px]">
+      <span className="grid grid-cols-2 gap-[2px]">
         {[0,1,2,3,4,5].map((i) => (
-          <span key={i} className="w-[3px] h-[3px] rounded-[1px] bg-gray-300 group-hover:bg-gray-400 transition-colors block" />
+          <span key={i} className="w-[2px] h-[2px] rounded-[0.5px] bg-gray-400 block" />
         ))}
       </span>
     </span>
@@ -1364,7 +1364,7 @@ function SortableItem({ id, children }: { id: string; children: (dragHandle: Rea
   };
   const handle = <DotHandle attributes={attributes} listeners={listeners} />;
   return (
-    <div ref={setNodeRef} style={style} className="group relative">
+    <div ref={setNodeRef} style={style} className="relative">
       {children(handle)}
     </div>
   );

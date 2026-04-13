@@ -1254,7 +1254,8 @@ function AssigneeBlock({
     : assigneeName;
 
   return (
-    <div ref={ref} className="relative rounded-xl border border-gray-100 bg-gray-50/60 overflow-hidden">
+    <div ref={ref} className="relative">
+      <div className="rounded-xl border border-gray-100 bg-gray-50/60 overflow-hidden">
       <div className="flex items-stretch">
         {dragHandle && (
           <div className="flex items-center px-2 border-r border-gray-100/60">
@@ -1288,9 +1289,10 @@ function AssigneeBlock({
           <ChevronDown size={14} className={"text-gray-400 shrink-0 transition-transform " + (open ? "rotate-180" : "")} />
         </button>
       </div>
+      </div>
 
       {open && (
-        <div className="absolute left-0 right-0 top-full z-[110] bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden">
+        <div className="absolute left-0 right-0 top-full z-[110] mt-1 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden">
           <div className="px-3 py-2 border-b border-gray-100">
             <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Выбрать ответственного</p>
           </div>

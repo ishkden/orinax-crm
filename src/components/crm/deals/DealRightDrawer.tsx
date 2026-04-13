@@ -1122,12 +1122,14 @@ function DealValueBlock({
   return (
     <div className="rounded-xl border border-gray-100 bg-gray-50/60 overflow-hidden">
       {dragHandle}
-      <div className="px-4 py-2.5">
-          <p className="text-[11px] font-medium text-gray-400 uppercase tracking-wide leading-none mb-1">
-            Сумма сделки
+      <div className="flex items-center gap-3 px-4 py-2.5">
+        <Banknote size={15} strokeWidth={1.75} className="text-gray-400 shrink-0" />
+        <div className="min-w-0 flex-1">
+          <p className="text-[11px] font-medium text-gray-400 uppercase tracking-wide leading-none mb-0.5">
+            Сумма
           </p>
           {editing ? (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <input
                 ref={inputRef}
                 type="text"
@@ -1138,28 +1140,27 @@ function DealValueBlock({
                   if (e.key === "Enter") handleCommit();
                   if (e.key === "Escape") { setDraft(String(value)); setEditing(false); }
                 }}
-                className="w-full text-3xl font-bold text-gray-900 border-b-2 border-brand-500 bg-transparent outline-none tracking-tight pb-0.5"
+                className="w-full text-sm font-semibold text-gray-900 border-b border-brand-500 bg-transparent outline-none pb-px"
                 placeholder="0"
                 inputMode="decimal"
               />
-              <span className="text-xl font-medium text-gray-400 shrink-0">{currencySymbol}</span>
+              <span className="text-xs text-gray-400 shrink-0">{currencySymbol}</span>
             </div>
           ) : (
             <button
               type="button"
               onClick={() => { setDraft(String(value)); setEditing(true); }}
               disabled={saving}
-              className="group flex items-baseline gap-2 hover:opacity-75 transition-opacity text-left w-full"
+              className="group flex items-center gap-1.5 hover:opacity-75 transition-opacity text-left w-full"
               title="Нажмите чтобы изменить"
             >
-              <span className="text-[2rem] font-bold text-gray-900 tracking-tight leading-none tabular-nums">
-                {formatDisplayValue(value)}
-              </span>
-              <span className="text-lg font-medium text-gray-400">{currencySymbol}</span>
-              {saving && <span className="text-xs text-gray-400 ml-1">…</span>}
-              <Pencil size={12} className="ml-auto self-center text-gray-300 group-hover:text-brand-500 transition-colors opacity-0 group-hover:opacity-100" />
+              <span className="text-sm font-semibold text-gray-900 tabular-nums">{formatDisplayValue(value)}</span>
+              <span className="text-xs text-gray-400">{currencySymbol}</span>
+              {saving && <span className="text-xs text-gray-400">…</span>}
+              <Pencil size={11} className="ml-auto text-gray-300 group-hover:text-brand-500 transition-colors opacity-0 group-hover:opacity-100" />
             </button>
           )}
+        </div>
       </div>
     </div>
   );
@@ -1257,22 +1258,15 @@ function AssigneeBlock({
           type="button"
           onClick={() => setOpen((v) => !v)}
           disabled={saving}
-          className="flex w-full items-center gap-3 px-4 py-2.5 hover:bg-gray-100/60 transition-colors disabled:opacity-50 text-left min-w-0"
+          className="flex w-full items-center gap-3 px-4 py-2.5 hover:bg-gray-100/60 transition-colors disabled:opacity-50 text-left"
         >
-          <div className="shrink-0">
-            <MemberAvatar member={currentMember} size={32} />
-          </div>
+          <UserCircle size={15} strokeWidth={1.75} className="text-gray-400 shrink-0" />
           <div className="flex-1 min-w-0">
             <p className="text-[11px] font-medium text-gray-400 uppercase tracking-wide leading-none mb-0.5">
               Ответственный
             </p>
             {fullAssigneeName ? (
-              <>
-                <p className="text-sm font-semibold text-gray-900 truncate">{fullAssigneeName}</p>
-                {currentMember?.position && (
-                  <p className="text-[11px] text-gray-400 truncate mt-0.5">{currentMember.position}</p>
-                )}
-              </>
+              <p className="text-sm font-semibold text-gray-900 truncate">{fullAssigneeName}</p>
             ) : (
               <p className="text-sm text-gray-400 italic">Не назначен</p>
             )}
@@ -1511,7 +1505,7 @@ function DetailsLeft({
     contact: (handle) => (
       <div className="rounded-xl border border-gray-100 bg-gray-50/60 overflow-hidden">
         {handle}
-        <ContactInfoBlock deal={deal} onOpenContact={onOpenContact} onCreateContact={onCreateContact} />
+        <ContactInfoBlock deal={deal} onOpenContact={onOpenContact} onCreateContact={onCreateContact} compact />
       </div>
     ),
     value: (handle) => (
@@ -1571,7 +1565,6 @@ function DetailsLeft({
                         {handle}
                         <div className="flex items-center justify-between px-3 py-2 bg-gray-50 border-b border-gray-100">
                           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
-                            <FolderOpen size={11} className="text-gray-400" />
                             {sectionName}
                             {isPending && <span className="text-[9px] text-gray-300 font-normal normal-case tracking-normal ml-1">пустой</span>}
                           </p>

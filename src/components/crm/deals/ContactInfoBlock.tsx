@@ -7,6 +7,7 @@ interface ContactInfoBlockProps {
   deal: Deal;
   onOpenContact?: (contactCuid: string) => void;
   onCreateContact?: () => void;
+  compact?: boolean;
 }
 
 interface InfoRowProps {
@@ -49,8 +50,40 @@ function InfoRow({ icon, label, value, href, onClick }: InfoRowProps) {
   );
 }
 
-export default function ContactInfoBlock({ deal, onOpenContact, onCreateContact }: ContactInfoBlockProps) {
+export default function ContactInfoBlock({ deal, onOpenContact, onCreateContact, compact }: ContactInfoBlockProps) {
   const hasContact = deal.contactId || deal.contactName !== "\u2014";
+
+  if (compact) {
+    return (
+      <div className="flex items-center gap-3 px-4 py-2.5">
+        <span className="text-gray-400 shrink-0">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+          </svg>
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[11px] font-medium text-gray-400 uppercase tracking-wide leading-none mb-0.5">
+            Контакт
+          </p>
+          {hasContact ? (
+            onOpenContact && deal.contactId ? (
+              <button
+                type="button"
+                onClick={() => onOpenContact(deal.contactId!)}
+                className="text-sm font-semibold text-brand-600 hover:underline truncate block text-left w-full"
+              >
+                {deal.contactName}
+              </button>
+            ) : (
+              <p className="text-sm font-semibold text-gray-900 truncate">{deal.contactName}</p>
+            )
+          ) : (
+            <p className="text-sm text-gray-400 italic">Не привязан</p>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   if (!hasContact) {
     return (

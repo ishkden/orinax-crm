@@ -1222,6 +1222,9 @@ export default function DealRightDrawer({
   const [stageChanging, setStageChanging] = useState(false);
   const [pipelineSelectorOpen, setPipelineSelectorOpen] = useState(false);
   const [dealSettingsOpen, setDealSettingsOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleteConfirmLoading, setDeleteConfirmLoading] = useState(false);
+  const [deleteConfirmError, setDeleteConfirmError] = useState<string | null>(null);
   const dealSettingsRef = useRef<HTMLDivElement>(null);
 
   const [mounted, setMounted] = useState(false);
@@ -1506,15 +1509,8 @@ export default function DealRightDrawer({
                             onClick={async () => {
                               setDealSettingsOpen(false);
                               if (!deal) return;
-                              const ok = window.confirm("Удалить сделку?");
-                              if (!ok) return;
-                              try {
-                                await deleteDeal(deal.id);
-                                onClose();
-                                window.location.href = "/crm/deals";
-                              } catch (e) {
-                                console.error("Failed to delete deal", e);
-                              }
+                              setDeleteConfirmError(null);
+                              setDeleteConfirmOpen(true);
                             }}
                             className="w-full text-left px-3 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
                           >
@@ -1525,6 +1521,90 @@ export default function DealRightDrawer({
                     )}
                   </div>
                 </div>
+
+                <AnimatePresence>
+                  {deleteConfirmOpen && (
+                    <motion.div
+                      className="fixed inset-0 z-[160] flex items-center justify-center p-4"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                    >
+                      <button
+                        type="button"
+                        className="absolute inset-0 bg-black/50"
+                        onClick={() => !deleteConfirmLoading && setDeleteConfirmOpen(false)}
+                        aria-label="Закрыть"
+                      />
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.96, y: 8 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.96, y: 8 }}
+                        transition={{ duration: 0.14, ease: "easeOut" }}
+                        className="relative w-full max-w-sm bg-white rounded-2xl shadow-2xl overflow-hidden"
+                      >
+                        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                          <div className="min-w-0">
+                            <h3 className="text-sm font-semibold text-gray-900 truncate">Удалить сделку</h3>
+                            <p className="text-xs text-gray-400 truncate">Это действие можно отменить только через админа</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => !deleteConfirmLoading && setDeleteConfirmOpen(false)}
+                            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                            aria-label="Закрыть"
+                          >
+                            <X size={16} />
+                          </button>
+                        </div>
+
+                        <div className="p-5 space-y-4">
+                          <p className="text-sm text-gray-600">
+                            Вы уверены, что хотите удалить сделку <span className="font-semibold text-gray-900">«{deal.title}»</span>?
+                          </p>
+                          {deleteConfirmError && (
+                            <div className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-xl px-3 py-2">
+                              {deleteConfirmError}
+                            </div>
+                          )}
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                if (!deal || deleteConfirmLoading) return;
+                                setDeleteConfirmLoading(true);
+                                setDeleteConfirmError(null);
+                                try {
+                                  await deleteDeal(deal.id);
+                                  setDeleteConfirmOpen(false);
+                                  onClose();
+                                  window.location.href = "/crm/deals";
+                                } catch (e: any) {
+                                  setDeleteConfirmError(e?.message || "Не удалось удалить сделку");
+                                } finally {
+                                  setDeleteConfirmLoading(false);
+                                }
+                              }}
+                              className="flex-1 py-2.5 rounded-xl bg-red-600 text-white text-sm font-medium hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                              disabled={deleteConfirmLoading}
+                            >
+                              {deleteConfirmLoading ? "Удаление..." : "Удалить"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setDeleteConfirmOpen(false)}
+                              disabled={deleteConfirmLoading}
+                              className="px-4 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                            >
+                              Отмена
+                            </button>
+                          </div>
+                        </div>
+                      </motion.div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
                 <div className="mb-3">
                   <PipelineSelector pipelines={pipelines} currentPipelineId={currentPipelineId} onSelect={handlePipelineSelect} loading={stageChanging} open={pipelineSelectorOpen} onOpenChange={setPipelineSelectorOpen} />
                 </div>

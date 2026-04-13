@@ -280,6 +280,14 @@ export async function updateDealPipeline(
   });
 }
 
+
+export async function deleteDeal(dealId: string): Promise<void> {
+  const orgId = await getOrgId();
+  await prisma.deal.update({
+    where: { id: dealId, orgId },
+    data: { isDeleted: true },
+  });
+}
 export async function deleteStage(stageId: string): Promise<void> {
   const orgId = await getOrgId();
   const dealsCount = await prisma.deal.count({ where: { stageId, orgId } });

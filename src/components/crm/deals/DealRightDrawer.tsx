@@ -22,7 +22,7 @@ import {
   getAllSectionsWithFields,
   cloneSectionToPipeline,
 } from "@/app/actions/custom-fields";
-import { updateDealStage, updateDealPipeline } from "@/app/actions/deals";
+import { updateDealStage, updateDealPipeline, deleteDeal } from "@/app/actions/deals";
 import ContactInfoBlock from "./ContactInfoBlock";
 import CreateContactModal from "@/components/crm/contacts/CreateContactModal";
 import type { CreateContactFormData } from "@/components/crm/contacts/CreateContactModal";
@@ -909,13 +909,22 @@ function CustomFieldRow({ field, value, onSave, onRemove, onUpdate }: {
 
 // ─── Pipeline Selector ────────────────────────────────────────────────────────
 
-function PipelineSelector({ pipelines, currentPipelineId, onSelect, loading }: {
+function PipelineSelector({ pipelines, currentPipelineId, onSelect, loading, open: openProp, onOpenChange }: {
   pipelines: Pipeline[];
   currentPipelineId: string | null;
   onSelect: (p: Pipeline) => void;
   loading: boolean;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const [openLocal, setOpenLocal] = useState(false);
+  const open = openProp ?? openLocal;
+
+  function setOpen(next: boolean | ((v: boolean) => boolean)) {
+    const value = typeof next === "function" ? (next as (v: boolean) => boolean)(open) : next;
+    if (openProp === undefined) setOpenLocal(value);
+    onOpenChange?.(value);
+  }
   const ref = useRef<HTMLDivElement>(null);
   const current = pipelines.find(p => p.id === currentPipelineId);
 
@@ -958,7 +967,15 @@ function StageKanban({ stages, currentStageId, onStageChange, loading }: {
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
 
   if (stages.length === 0) return null;
-  const currentIdx = stages.findIndex(s => s.id === currentStageId);
+  const currentIdx = stages.findIndex((s) => s.id === currentStageId);
+  const nextIdx = currentIdx >= 0 ? currentIdx + 1 : -1;
+
+  // Цвет прогресса: все стадии левее активной окрашиваем в цвет активной стадии.
+  const activeStage = currentIdx >= 0 ? stages[currentIdx] : null;
+  const activeColor = /^#[0-9A-Fa-f]{6}$/.test(activeStage?.color ?? "")
+    ? (activeStage?.color as string)
+    : "#6366f1";
+  const activeTextColor = contrastTextOnHex(activeColor);
 
   return (
     <div
@@ -968,23 +985,30 @@ function StageKanban({ stages, currentStageId, onStageChange, loading }: {
       {stages.map((stage, idx) => {
         const isPast = currentIdx >= 0 && idx < currentIdx;
         const isCurrent = idx === currentIdx;
+        const isNext = idx === nextIdx;
         const isHovered = hoveredIdx === idx;
-        const stageColor = /^#[0-9A-Fa-f]{6}$/.test(stage.color ?? "") ? stage.color! : "#6366f1";
-        const textColor = contrastTextOnHex(stageColor);
+
+        const stageColor = /^#[0-9A-Fa-f]{6}$/.test(stage.color ?? "")
+          ? (stage.color as string)
+          : "#6366f1";
+        const stageTextColor = contrastTextOnHex(stageColor);
 
         let bgColor: string;
         let fgColor: string;
 
-        if (isHovered || isCurrent) {
+        if (isPast || isCurrent) {
+          bgColor = activeColor;
+          fgColor = activeTextColor;
+        } else if (isHovered) {
+          // Ховер: показываем цвет самой стадии
           bgColor = stageColor;
-          fgColor = textColor;
-        } else if (isPast) {
-          bgColor = stageColor;
-          fgColor = textColor;
+          fgColor = stageTextColor;
         } else {
           bgColor = "#f3f4f6";
           fgColor = "#9ca3af";
         }
+
+        const emphasize = isCurrent || isNext;
 
         return (
           <button
@@ -995,18 +1019,25 @@ function StageKanban({ stages, currentStageId, onStageChange, loading }: {
             title={stage.label}
             className="relative border-r border-white/40 last:border-r-0 overflow-hidden"
             style={{
-              flexGrow: isHovered ? 3 : 1,
+              flexGrow: emphasize ? 5 : isHovered ? 3 : 1,
               flexShrink: 1,
               flexBasis: 0,
+              minWidth: 0,
               backgroundColor: bgColor,
               color: fgColor,
-              opacity: loading ? 0.6 : (isPast && !isHovered ? 0.55 : 1),
+              opacity: loading ? 0.6 : isPast ? 0.75 : 1,
               cursor: loading ? "not-allowed" : "pointer",
-              padding: "8px 6px",
-              transition: "flex-grow 0.2s ease, background-color 0.2s ease, opacity 0.2s ease",
+              padding: "7px 6px",
+              transition:
+                "flex-grow 0.18s ease, background-color 0.18s ease, opacity 0.18s ease",
             }}
           >
-            <span className="block text-[11px] font-semibold whitespace-nowrap truncate text-center">
+            <span
+              className={
+                "block text-[11px] font-semibold text-center leading-tight " +
+                (emphasize ? "whitespace-normal break-words" : "whitespace-nowrap truncate")
+              }
+            >
               {stage.label}
             </span>
           </button>
@@ -1189,6 +1220,10 @@ export default function DealRightDrawer({
   const [currentPipelineId, setCurrentPipelineId] = useState<string | null>(null);
   const [currentStageId, setCurrentStageId] = useState<string | null>(null);
   const [stageChanging, setStageChanging] = useState(false);
+  const [pipelineSelectorOpen, setPipelineSelectorOpen] = useState(false);
+  const [dealSettingsOpen, setDealSettingsOpen] = useState(false);
+  const dealSettingsRef = useRef<HTMLDivElement>(null);
+
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
   const leftColRef = useRef<HTMLDivElement>(null);
@@ -1441,9 +1476,57 @@ export default function DealRightDrawer({
               <div className="px-5 pt-4 pb-3 border-b border-gray-100">
                 <div className="flex items-start justify-between gap-3 mb-2">
                   <h2 className="text-lg font-semibold text-gray-900 leading-tight line-clamp-2">{deal.title}</h2>
+                  <div ref={dealSettingsRef} className="relative shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setDealSettingsOpen(v => !v)}
+                      className="p-2 rounded-xl text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                      title="Настройки сделки"
+                    >
+                      <Settings size={18} />
+                    </button>
+
+                    {dealSettingsOpen && (
+                      <>
+                        <div className="fixed inset-0 z-[95]" onClick={() => setDealSettingsOpen(false)} />
+                        <div className="absolute right-0 top-full mt-1 z-[100] bg-white rounded-xl shadow-xl border border-gray-100 py-1 min-w-[220px] overflow-hidden">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setDealSettingsOpen(false);
+                              setPipelineSelectorOpen(true);
+                            }}
+                            className="w-full text-left px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                          >
+                            Перенести в воронку
+                          </button>
+                          <div className="h-px bg-gray-100" />
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              setDealSettingsOpen(false);
+                              if (!deal) return;
+                              const ok = window.confirm("Удалить сделку?");
+                              if (!ok) return;
+                              try {
+                                await deleteDeal(deal.id);
+                                onClose();
+                                window.location.href = "/crm/deals";
+                              } catch (e) {
+                                console.error("Failed to delete deal", e);
+                              }
+                            }}
+                            className="w-full text-left px-3 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                          >
+                            Удалить сделку
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
                 <div className="mb-3">
-                  <PipelineSelector pipelines={pipelines} currentPipelineId={currentPipelineId} onSelect={handlePipelineSelect} loading={stageChanging} />
+                  <PipelineSelector pipelines={pipelines} currentPipelineId={currentPipelineId} onSelect={handlePipelineSelect} loading={stageChanging} open={pipelineSelectorOpen} onOpenChange={setPipelineSelectorOpen} />
                 </div>
                 <StageKanban stages={currentStages} currentStageId={currentStageId} onStageChange={handleStageChange} loading={stageChanging} />
               </div>

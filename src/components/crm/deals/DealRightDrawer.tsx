@@ -1991,14 +1991,15 @@ export default function DealRightDrawer({
             onClose();
           }}
           aria-label="Закрыть"
-          className="fixed z-[100] top-4 flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 shadow-lg hover:bg-gray-50 hover:text-gray-900 transition-colors group/closebtn"
+          className="fixed z-[100] top-4 flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 shadow-lg hover:bg-gray-50 hover:text-gray-900 transition-colors"
           style={{ left: Math.max(12, sidebarWidth - 48) }}
+          onMouseEnter={(e) => (e.currentTarget.querySelector("svg") as HTMLElement | null)?.classList.add("spin-accel")}
+          onMouseLeave={(e) => {
+            const svg = e.currentTarget.querySelector("svg") as HTMLElement | null;
+            if (svg) { svg.classList.remove("spin-accel"); void svg.offsetWidth; }
+          }}
         >
-          <X
-            size={18}
-            strokeWidth={2}
-            className="group-hover/closebtn:[animation:spin-accel_2s_ease-in_forwards]"
-          />
+          <X size={18} strokeWidth={2} />
         </button>
       )}
 

@@ -158,10 +158,10 @@ body {
 
 /* Close button spin acceleration easter egg */
 @keyframes spin-accel {
-  0%   { transform: rotate(0deg);     animation-timing-function: ease-in; }
-  20%  { transform: rotate(180deg);   animation-timing-function: ease-in; }
-  40%  { transform: rotate(720deg);   animation-timing-function: ease-in; }
-  60%  { transform: rotate(2160deg);  animation-timing-function: ease-in; }
-  80%  { transform: rotate(5760deg);  animation-timing-function: linear; }
-  100% { transform: rotate(36000deg); animation-timing-function: linear; }
+  0%   { transform: rotate(0deg); }
+  100% { transform: rotate(1080deg); }
+}
+
+.spin-accel {
+  animation: spin-accel 1.2s cubic-bezier(0.4, 0, 1, 1) forwards;
 }

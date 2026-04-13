@@ -987,7 +987,6 @@ function StageKanban({ stages, currentStageId, onStageChange, loading }: {
 
   if (stages.length === 0) return null;
   const currentIdx = stages.findIndex((s) => s.id === currentStageId);
-  const nextIdx = currentIdx >= 0 ? currentIdx + 1 : -1;
 
   // Цвет прогресса: все стадии левее активной окрашиваем в цвет активной стадии.
   const activeStage = currentIdx >= 0 ? stages[currentIdx] : null;
@@ -1004,7 +1003,6 @@ function StageKanban({ stages, currentStageId, onStageChange, loading }: {
       {stages.map((stage, idx) => {
         const isPast = currentIdx >= 0 && idx < currentIdx;
         const isCurrent = idx === currentIdx;
-        const isNext = idx === nextIdx;
         const isHovered = hoveredIdx === idx;
 
         const stageColor = /^#[0-9A-Fa-f]{6}$/.test(stage.color ?? "")
@@ -1027,7 +1025,7 @@ function StageKanban({ stages, currentStageId, onStageChange, loading }: {
           fgColor = "#9ca3af";
         }
 
-        const emphasize = isCurrent || isNext;
+        const emphasize = isCurrent;
 
         return (
           <button

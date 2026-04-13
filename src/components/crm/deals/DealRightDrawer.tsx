@@ -1935,24 +1935,27 @@ export default function DealRightDrawer({
   }
 
   const content = (
-    <AnimatePresence>
-      {deal && (
-        <>
-          <motion.div className="fixed inset-0 z-[80] bg-black/65" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} />
+    <>
+      {/* Закрытие слева от белой панели (вне карточки). Должно исчезать мгновенно при onClose. */}
+      {open && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onClose();
+          }}
+          aria-label="Закрыть"
+          className="fixed z-[100] top-4 flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 shadow-lg hover:bg-gray-50 hover:text-gray-900 transition-colors"
+          style={{ left: Math.max(12, sidebarWidth - 48) }}
+        >
+          <X size={18} strokeWidth={2} />
+        </button>
+      )}
 
-          {/* Закрытие слева от белой панели (вне карточки), всегда на экране при скролле */}
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onClose();
-            }}
-            aria-label="Закрыть"
-            className="fixed z-[100] top-4 flex h-10 w-10 items-center justify-center rounded-full border border-white/25 bg-zinc-900/85 text-zinc-100 shadow-lg backdrop-blur-sm hover:bg-zinc-800 hover:text-white transition-colors"
-            style={{ left: Math.max(12, sidebarWidth - 48) }}
-          >
-            <X size={18} strokeWidth={2} />
-          </button>
+      <AnimatePresence>
+        {deal && (
+          <>
+          <motion.div className="fixed inset-0 z-[80] bg-black/65" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} />
 
           <motion.div key="deal-right-drawer" role="dialog" aria-modal="true"
             className="fixed top-0 bottom-0 z-[90] bg-white shadow-2xl flex flex-col overflow-hidden"
@@ -2235,9 +2238,10 @@ export default function DealRightDrawer({
             onSave={handleCreateContact}
             title="Новый контакт для сделки"
           />
-        </>
-      )}
-    </AnimatePresence>
+          </>
+        )}
+      </AnimatePresence>
+    </>
   );
 
   if (!mounted) return null;

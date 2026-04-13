@@ -5,13 +5,14 @@ import Link from "next/link";
 import {
   ArrowLeft, Building2, User, Phone, Mail, Calendar,
   Clock, FileText, MessageSquare, ListTodo, History,
-  Users, Info, Tag,
+  Users, Info, Tag, UserPlus, X,
 } from "lucide-react";
 import { contrastTextOnHex } from "@/lib/utils";
 import type { FullDeal, ActivityItem, TaskItem, CommentItem, StageHistoryItem, DealContactItem } from "@/app/actions/deals";
-import { getContactByCuid } from "@/app/actions/contacts";
+import { getContactByCuid, linkContactToDeal, unlinkContactFromDeal } from "@/app/actions/contacts";
 import type { ContactDetail } from "@/app/actions/contacts";
 import ContactDetailDrawer from "@/components/crm/contacts/ContactDetailDrawer";
+import AddContactModal from "@/components/crm/deals/AddContactModal";
 
 const TABS = [
   { key: "details", label: "Детали", icon: Info },
@@ -185,30 +186,67 @@ function DetailsTab({ deal }: { deal: FullDeal }) {
 }
 
 function ContactsTab({ deal, onOpenContact }: { deal: FullDeal; onOpenContact: (id: string) => void }) {
-  const contacts: DealContactItem[] = deal.dealContacts.length
+  const initialContacts: DealContactItem[] = deal.dealContacts.length
     ? deal.dealContacts
     : deal.contact
       ? [{ id: "primary", isPrimary: true, contact: { ...deal.contact, primaryIM: null } }]
       : [];
 
-  if (!contacts.length) return <p className="text-sm text-zinc-500">Нет привязанных контактов</p>;
+  const [contacts, setContacts] = useState<DealContactItem[]>(initialContacts);
+  const [addOpen, setAddOpen] = useState(false);
+  const [unlinking, setUnlinking] = useState<string | null>(null);
+
+  async function handleUnlink(contactId: string) {
+    setUnlinking(contactId);
+    try {
+      await unlinkContactFromDeal(deal.id, contactId);
+      setContacts((prev) => prev.filter((dc) => dc.contact.id !== contactId));
+    } catch {}
+    setUnlinking(null);
+  }
 
   return (
     <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-zinc-500 uppercase tracking-wider">
+          {contacts.length} {contacts.length === 1 ? "контакт" : contacts.length < 5 ? "контакта" : "контактов"}
+        </p>
+        <button
+          type="button"
+          onClick={() => setAddOpen(true)}
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500/30 transition-colors text-xs font-medium"
+        >
+          <UserPlus className="w-3.5 h-3.5" /> Добавить
+        </button>
+      </div>
+
+      {contacts.length === 0 && (
+        <p className="text-sm text-zinc-500">Нет привязанных контактов</p>
+      )}
+
       {contacts.map((dc) => (
-        <div key={dc.id} className="p-3 bg-zinc-950 rounded-lg border border-zinc-800/60">
+        <div key={dc.id} className="p-3 bg-zinc-950 rounded-lg border border-zinc-800/60 group">
           <div className="flex items-center gap-2 mb-2">
-            <User className="w-4 h-4 text-zinc-400" />
+            <User className="w-4 h-4 text-zinc-400 shrink-0" />
             <button
               type="button"
               onClick={() => onOpenContact(dc.contact.id)}
-              className="text-sm font-medium text-zinc-200 hover:text-indigo-400 text-left"
+              className="text-sm font-medium text-zinc-200 hover:text-indigo-400 text-left flex-1"
             >
               {dc.contact.firstName} {dc.contact.lastName}
             </button>
             {dc.isPrimary && (
-              <span className="px-1.5 py-0.5 text-[10px] bg-indigo-500/20 text-indigo-400 rounded">основной</span>
+              <span className="px-1.5 py-0.5 text-[10px] bg-indigo-500/20 text-indigo-400 rounded shrink-0">основной</span>
             )}
+            <button
+              type="button"
+              onClick={() => handleUnlink(dc.contact.id)}
+              disabled={unlinking === dc.contact.id}
+              className="shrink-0 p-1 rounded hover:bg-red-500/20 text-zinc-600 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-50"
+              title="Отвязать"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
           </div>
           <div className="grid grid-cols-2 gap-2 text-xs">
             {dc.contact.phone && (
@@ -232,6 +270,34 @@ function ContactsTab({ deal, onOpenContact }: { deal: FullDeal; onOpenContact: (
           </div>
         </div>
       ))}
+
+      {addOpen && (
+        <AddContactModal
+          dealId={deal.id}
+          onClose={() => setAddOpen(false)}
+          onLinked={(c) => {
+            setAddOpen(false);
+            const newItem: DealContactItem = {
+              id: c.id,
+              isPrimary: contacts.length === 0,
+              contact: {
+                id: c.id,
+                firstName: c.name.split(" ")[0] ?? "",
+                lastName: c.name.split(" ").slice(1).join(" ") ?? "",
+                phone: c.phone,
+                email: c.email,
+                company: c.company,
+                position: null,
+                primaryIM: null,
+              },
+            };
+            setContacts((prev) => {
+              if (prev.some((dc) => dc.contact.id === c.id)) return prev;
+              return [...prev, newItem];
+            });
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -45,9 +45,9 @@ import ContactInfoBlock from "./ContactInfoBlock";
 import AddContactModal from "./AddContactModal";
 import CreateContactModal from "@/components/crm/contacts/CreateContactModal";
 import type { CreateContactFormData } from "@/components/crm/contacts/CreateContactModal";
-import { createContact, linkContactToDeal, unlinkContactFromDeal } from "@/app/actions/contacts";
+import { createContact, linkContactToDeal, unlinkContactFromDeal, getDealContacts } from "@/app/actions/contacts";
 import { getContactByCuid } from "@/app/actions/contacts";
-import type { ContactDetail } from "@/app/actions/contacts";
+import type { ContactDetail, DealContactInfo } from "@/app/actions/contacts";
 import ContactDetailDrawer from "@/components/crm/contacts/ContactDetailDrawer";
 import ActivityFeed from "./ActivityFeed";
 import TaskList from "./TaskList";
@@ -1428,6 +1428,27 @@ function DetailsLeft({
   );
 
   const [addContactOpen, setAddContactOpen] = useState(false);
+  const [dealContacts, setDealContacts] = useState<DealContactInfo[]>(() => {
+    if (deal.contactId) {
+      return [{
+        id: "primary",
+        contactId: deal.contactId,
+        isPrimary: true,
+        firstName: deal.contactName?.split(" ")[0] ?? "",
+        lastName: deal.contactName?.split(" ").slice(1).join(" ") ?? "",
+        phone: deal.contactPhone,
+        email: deal.contactEmail,
+        company: deal.company,
+        position: null,
+      }];
+    }
+    return [];
+  });
+
+  useEffect(() => {
+    getDealContacts(deal.id).then(setDealContacts).catch(() => {});
+  }, [deal.id]);
+
   const STORAGE_BLOCKS_KEY = `deal-blocks-order-${deal.id}`;
   const STORAGE_SECTIONS_KEY = `deal-sections-order-${deal.id}`;
 
@@ -1513,13 +1534,23 @@ function DetailsLeft({
         <div className="rounded-xl border border-gray-100 bg-gray-50/60 overflow-hidden">
           {handle}
           <ContactInfoBlock
-            deal={deal}
+            contacts={dealContacts}
             onOpenContact={onOpenContact}
             onAddContact={() => setAddContactOpen(true)}
-            onUnlinkContact={async () => {
+            onUnlinkContact={async (contactId) => {
               try {
-                await unlinkContactFromDeal(deal.id);
-                if (onDealUpdate) onDealUpdate({ ...deal, contactId: null, contactName: "—", contactPhone: null, contactEmail: null, company: null });
+                await unlinkContactFromDeal(deal.id, contactId);
+                const updated = await getDealContacts(deal.id);
+                setDealContacts(updated);
+                const primary = updated.find((c) => c.isPrimary) ?? updated[0] ?? null;
+                if (onDealUpdate) onDealUpdate({
+                  ...deal,
+                  contactId: primary?.contactId ?? null,
+                  contactName: primary ? `${primary.firstName} ${primary.lastName}`.trim() : "—",
+                  contactPhone: primary?.phone ?? null,
+                  contactEmail: primary?.email ?? null,
+                  company: primary?.company ?? null,
+                });
               } catch {}
             }}
           />
@@ -1528,15 +1559,18 @@ function DetailsLeft({
           <AddContactModal
             dealId={deal.id}
             onClose={() => setAddContactOpen(false)}
-            onLinked={(c) => {
+            onLinked={async (c) => {
               setAddContactOpen(false);
+              const updated = await getDealContacts(deal.id);
+              setDealContacts(updated);
+              const primary = updated.find((x) => x.isPrimary) ?? updated[0] ?? null;
               if (onDealUpdate) onDealUpdate({
                 ...deal,
-                contactId: c.id,
-                contactName: c.name,
-                contactPhone: c.phone,
-                contactEmail: c.email,
-                company: c.company,
+                contactId: primary?.contactId ?? c.id,
+                contactName: primary ? `${primary.firstName} ${primary.lastName}`.trim() : c.name,
+                contactPhone: primary?.phone ?? c.phone,
+                contactEmail: primary?.email ?? c.email,
+                company: primary?.company ?? c.company,
               });
             }}
           />

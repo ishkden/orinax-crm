@@ -55,6 +55,7 @@ export async function logDealEvent(
 export type DealHistoryItem = {
   id: string;
   userName: string | null;
+  userImage: string | null;
   action: string;
   field: string | null;
   fromValue: string | null;
@@ -90,10 +91,21 @@ export async function getDealHistory(
     prisma.dealHistory.count({ where }),
   ]);
 
+  // Fetch user avatars in bulk
+  const userIds = [...new Set(rows.map((r) => r.userId).filter(Boolean))] as string[];
+  const users = userIds.length
+    ? await prisma.user.findMany({
+        where: { id: { in: userIds } },
+        select: { id: true, image: true },
+      })
+    : [];
+  const imageMap = Object.fromEntries(users.map((u) => [u.id, u.image ?? null]));
+
   return {
     items: rows.map((r) => ({
       id: r.id,
       userName: r.userName,
+      userImage: r.userId ? (imageMap[r.userId] ?? null) : null,
       action: r.action,
       field: r.field,
       fromValue: r.fromValue,

@@ -151,12 +151,19 @@ function HistoryItem({ item }: { item: DealHistoryItem }) {
     <div className="flex gap-3 group">
       {/* Avatar */}
       <div className="flex flex-col items-center gap-1 shrink-0">
-        <div
-          className={`w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-semibold ${avatarColor(item.userName)}`}
-        >
-          {getInitials(item.userName)}
-        </div>
-        {/* Connecting line — drawn by the parent, this is just a spacer */}
+        {item.userImage ? (
+          <img
+            src={item.userImage}
+            alt={item.userName ?? ""}
+            className="w-8 h-8 rounded-full object-cover border border-gray-100 shadow-sm"
+          />
+        ) : (
+          <div
+            className={`w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-semibold ${avatarColor(item.userName)}`}
+          >
+            {getInitials(item.userName)}
+          </div>
+        )}
       </div>
 
       {/* Card */}

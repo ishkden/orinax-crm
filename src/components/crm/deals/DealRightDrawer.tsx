@@ -4,7 +4,8 @@ import { useEffect, useState, useCallback, useTransition, useRef, useMemo } from
 import {
   DndContext,
   closestCenter,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   type DragEndEvent,
@@ -1353,7 +1354,10 @@ function SortableItem({ id, children }: { id: string; children: (dragHandle: Rea
     <span
       {...attributes}
       {...listeners}
-      className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 shrink-0 touch-none"
+      data-drag-handle="true"
+      className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 shrink-0 touch-none select-none"
+      onPointerDown={(e) => e.stopPropagation()}
+      onClick={(e) => e.stopPropagation()}
     >
       <GripVertical size={14} />
     </span>
@@ -1469,8 +1473,12 @@ function DetailsLeft({
     [sectionOrder, allSectionNames]
   );
 
-  const blockSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
-  const sectionSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
+  const sharedSensors = useSensors(
+    useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 6 } })
+  );
+  const blockSensors = sharedSensors;
+  const sectionSensors = sharedSensors;
 
   function handleBlockDragEnd(event: DragEndEvent) {
     const { active, over } = event;

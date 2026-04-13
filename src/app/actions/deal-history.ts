@@ -62,30 +62,44 @@ export type DealHistoryItem = {
   createdAt: string;
 };
 
-export async function getDealHistory(dealId: string): Promise<DealHistoryItem[]> {
+export async function getDealHistory(
+  dealId: string,
+  page = 1,
+  pageSize = 50,
+): Promise<{ items: DealHistoryItem[]; total: number }> {
   const session = await getServerSession(authOptions);
   const userId = (session?.user as { id?: string } | undefined)?.id;
-  if (!userId) return [];
+  if (!userId) return { items: [], total: 0 };
 
   const member = await prisma.orgMember.findFirst({
     where: { userId },
     select: { orgId: true },
   });
-  if (!member) return [];
+  if (!member) return { items: [], total: 0 };
 
-  const rows = await prisma.dealHistory.findMany({
-    where: { dealId, orgId: member.orgId },
-    orderBy: { createdAt: "desc" },
-    take: 200,
-  });
+  const where = { dealId, orgId: member.orgId };
+  const skip = (page - 1) * pageSize;
 
-  return rows.map((r) => ({
-    id: r.id,
-    userName: r.userName,
-    action: r.action,
-    field: r.field,
-    fromValue: r.fromValue,
-    toValue: r.toValue,
-    createdAt: r.createdAt.toISOString(),
-  }));
+  const [rows, total] = await Promise.all([
+    prisma.dealHistory.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      take: pageSize,
+      skip,
+    }),
+    prisma.dealHistory.count({ where }),
+  ]);
+
+  return {
+    items: rows.map((r) => ({
+      id: r.id,
+      userName: r.userName,
+      action: r.action,
+      field: r.field,
+      fromValue: r.fromValue,
+      toValue: r.toValue,
+      createdAt: r.createdAt.toISOString(),
+    })),
+    total,
+  };
 }

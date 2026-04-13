@@ -283,6 +283,17 @@ export async function getDealsPage(
   return { items: rows.map(mapDeal), total };
 }
 
+export async function updateDealValue(
+  dealId: string,
+  value: number
+): Promise<void> {
+  const orgId = await getOrgId();
+  await prisma.deal.update({
+    where: { id: dealId, orgId },
+    data: { value },
+  });
+}
+
 export async function updateDealStage(
   dealId: string,
   newStage: string

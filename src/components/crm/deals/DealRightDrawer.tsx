@@ -22,7 +22,7 @@ import {
   getAllSectionsWithFields,
   cloneSectionToPipeline,
 } from "@/app/actions/custom-fields";
-import { updateDealStage, updateDealPipeline, deleteDeal, getOrgMembers, updateDealAssignee, type OrgMember } from "@/app/actions/deals";
+import { updateDealStage, updateDealPipeline, deleteDeal, getOrgMembers, updateDealAssignee, updateDealValue, type OrgMember } from "@/app/actions/deals";
 import ContactInfoBlock from "./ContactInfoBlock";
 import CreateContactModal from "@/components/crm/contacts/CreateContactModal";
 import type { CreateContactFormData } from "@/components/crm/contacts/CreateContactModal";
@@ -1048,6 +1048,101 @@ function StageKanban({ stages, currentStageId, onStageChange, loading }: {
 }
 
 
+
+// ─── Deal Value Block ────────────────────────────────────────────────────────────────────────────
+
+function DealValueBlock({
+  dealId,
+  value,
+  currency,
+  onUpdate,
+}: {
+  dealId: string;
+  value: number;
+  currency: string;
+  onUpdate: (value: number) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(String(value));
+  const [saving, setSaving] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [editing]);
+
+  useEffect(() => {
+    if (!editing) setDraft(String(value));
+  }, [value, editing]);
+
+  const currencySymbol = currency === "RUB" ? "руб." : currency === "USD" ? "$" : currency === "EUR" ? "€" : currency;
+
+  function formatDisplayValue(v: number): string {
+    return new Intl.NumberFormat("ru-RU", { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(v);
+  }
+
+  async function handleCommit() {
+    const num = parseFloat(draft.replace(/[\s]/g, "").replace(",", "."));
+    if (!isNaN(num) && num !== value) {
+      setSaving(true);
+      try {
+        await updateDealValue(dealId, num);
+        onUpdate(num);
+      } catch {}
+      setSaving(false);
+    } else {
+      setDraft(String(value));
+    }
+    setEditing(false);
+  }
+
+  return (
+    <div className="px-4 pt-4 pb-3 border-b border-gray-100">
+      <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Сумма сделки</p>
+      {editing ? (
+        <div className="flex items-center gap-2">
+          <input
+            ref={inputRef}
+            type="text"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={handleCommit}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") handleCommit();
+              if (e.key === "Escape") { setDraft(String(value)); setEditing(false); }
+            }}
+            className="w-full text-3xl font-bold text-gray-900 border-b-2 border-brand-500 bg-transparent outline-none tracking-tight pb-0.5"
+            placeholder="0"
+            inputMode="decimal"
+          />
+          <span className="text-xl font-medium text-gray-400 shrink-0">{currencySymbol}</span>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => { setDraft(String(value)); setEditing(true); }}
+          disabled={saving}
+          className="group flex items-baseline gap-2 hover:opacity-80 transition-opacity text-left w-full"
+          title="Нажмите чтобы изменить"
+        >
+          <span className="text-[2rem] font-bold text-gray-900 tracking-tight leading-none tabular-nums">
+            {formatDisplayValue(value)}
+          </span>
+          <span className="text-lg font-medium text-gray-400">{currencySymbol}</span>
+          {saving && <span className="text-xs text-gray-400 ml-1">…</span>}
+          <Pencil
+            size={13}
+            className="ml-auto self-center text-gray-300 group-hover:text-brand-500 transition-colors opacity-0 group-hover:opacity-100"
+          />
+        </button>
+      )}
+    </div>
+  );
+}
+
 // ─── Assignee Block ───────────────────────────────────────────────────────────
 
 function AssigneeBlock({
@@ -1190,6 +1285,7 @@ function DetailsLeft({
   currentAssignedId,
   currentAssigneeName,
   onAssigneeUpdate,
+  onDealUpdate,
 }: {
   deal: Deal;
   customFields: CustomFieldDef[];
@@ -1208,6 +1304,7 @@ function DetailsLeft({
   currentAssignedId: string | null;
   currentAssigneeName: string | null;
   onAssigneeUpdate: (id: string | null, name: string | null) => void;
+  onDealUpdate?: (deal: Deal) => void;
 }) {
   // Filter fields for the current pipeline (pipeline-specific + legacy global fields)
   const pipelineFields = customFields.filter(
@@ -1230,20 +1327,9 @@ function DetailsLeft({
     <div className="space-y-4 pb-6">
       <ContactInfoBlock deal={deal} onOpenContact={onOpenContact} onCreateContact={onCreateContact} />
 
-      <div className="rounded-xl border border-gray-100 bg-gray-50/60 divide-y divide-gray-100 overflow-hidden">
-        <div className="flex items-center gap-3 px-4 py-2.5">
-          <Banknote size={15} strokeWidth={1.75} className="text-gray-400 shrink-0" />
-          <div>
-            <p className="text-[11px] font-medium text-gray-400 uppercase tracking-wide leading-none mb-0.5">Сумма</p>
-            <p className="text-sm font-semibold text-gray-900">{formatCurrency(deal.value, deal.currency)}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3 px-4 py-2.5">
-          <Calendar size={15} strokeWidth={1.75} className="text-gray-400 shrink-0" />
-          <div>
-          </div>
-        </div>
-      </div>
+      <DealValueBlock dealId={deal.id} value={deal.value} currency={deal.currency} onUpdate={(v) => {
+          if (onDealUpdate) onDealUpdate({ ...deal, value: v });
+        }} />
         <AssigneeBlock
           dealId={deal.id}
           assignedId={currentAssignedId}
@@ -1795,6 +1881,7 @@ export default function DealRightDrawer({
                         onCreateSection={() => setCreateSectionOpen(true)}
                         onChooseSection={() => setChooseSectionOpen(true)}
                         onCreateContact={() => setCreateContactOpen(true)}
+                        onDealUpdate={onDealUpdate}
                       />
                     </div>
                     <div ref={rightColRef} className="col-span-3 p-4">

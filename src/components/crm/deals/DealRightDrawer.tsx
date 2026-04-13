@@ -1991,10 +1991,14 @@ export default function DealRightDrawer({
             onClose();
           }}
           aria-label="Закрыть"
-          className="fixed z-[100] top-4 flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 shadow-lg hover:bg-gray-50 hover:text-gray-900 transition-colors"
+          className="fixed z-[100] top-4 flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 shadow-lg hover:bg-gray-50 hover:text-gray-900 transition-colors group/closebtn"
           style={{ left: Math.max(12, sidebarWidth - 48) }}
         >
-          <X size={18} strokeWidth={2} />
+          <X
+            size={18}
+            strokeWidth={2}
+            className="group-hover/closebtn:[animation:spin-accel_2s_ease-in_forwards]"
+          />
         </button>
       )}
 

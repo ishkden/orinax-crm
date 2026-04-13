@@ -235,3 +235,71 @@ export async function createContact(input: CreateContactInput): Promise<ContactD
     deals: [],
   };
 }
+
+// ─── Search + Link ────────────────────────────────────────────────────────────
+
+export interface ContactSearchResult {
+  id: string;
+  serialNumber: number;
+  firstName: string;
+  lastName: string;
+  phone: string | null;
+  email: string | null;
+  company: string | null;
+}
+
+export async function searchContacts(query: string): Promise<ContactSearchResult[]> {
+  const orgId = await getOrgId();
+  if (!orgId || !query.trim()) return [];
+
+  const q = query.trim().toLowerCase();
+
+  const contacts = await prisma.contact.findMany({
+    where: {
+      orgId,
+      isDeleted: false,
+      OR: [
+        { firstName: { contains: q, mode: "insensitive" } },
+        { lastName: { contains: q, mode: "insensitive" } },
+        { phone: { contains: q, mode: "insensitive" } },
+        { email: { contains: q, mode: "insensitive" } },
+      ],
+    },
+    select: {
+      id: true,
+      serialNumber: true,
+      firstName: true,
+      lastName: true,
+      phone: true,
+      email: true,
+      company: true,
+    },
+    take: 20,
+    orderBy: { createdAt: "desc" },
+  });
+
+  return contacts;
+}
+
+export async function linkContactToDeal(dealId: string, contactId: string): Promise<void> {
+  const orgId = await getOrgId();
+  if (!orgId) throw new Error("Unauthorized");
+
+  const contact = await prisma.contact.findFirst({
+    where: { id: contactId, orgId },
+    select: { firstName: true, lastName: true, phone: true, email: true, company: true },
+  });
+  if (!contact) throw new Error("Contact not found");
+
+  await prisma.$transaction([
+    prisma.deal.update({
+      where: { id: dealId, orgId },
+      data: { contactId },
+    }),
+    prisma.dealContact.upsert({
+      where: { dealId_contactId: { dealId, contactId } },
+      create: { orgId, dealId, contactId, isPrimary: true },
+      update: { isPrimary: true },
+    }),
+  ]);
+}

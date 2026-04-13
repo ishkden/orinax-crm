@@ -87,20 +87,20 @@ export default function ContactInfoBlock({ deal, onOpenContact, onCreateContact,
 
   if (!hasContact) {
     return (
-      <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50/40 p-4">
-        <div className="flex items-center justify-between mb-2">
-          <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Контакт</p>
+      <div className="px-4 py-3">
+        <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Контакт</p>
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-gray-400">Не привязан</p>
+          {onCreateContact && (
+            <button
+              type="button"
+              onClick={onCreateContact}
+              className="inline-flex items-center gap-1 text-xs font-semibold text-brand-600 hover:text-brand-700 transition-colors"
+            >
+              <Plus size={12} /> Добавить
+            </button>
+          )}
         </div>
-        <p className="text-sm text-gray-400 mb-3">Контакт не привязан к сделке</p>
-        {onCreateContact && (
-          <button
-            type="button"
-            onClick={onCreateContact}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-brand-600 bg-brand-50 hover:bg-brand-100 transition-colors"
-          >
-            <Plus size={14} /> Создать контакт
-          </button>
-        )}
       </div>
     );
   }

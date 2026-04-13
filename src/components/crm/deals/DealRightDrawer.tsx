@@ -42,9 +42,10 @@ import {
 } from "@/app/actions/custom-fields";
 import { updateDealStage, updateDealPipeline, deleteDeal, getOrgMembers, updateDealAssignee, updateDealValue, type OrgMember } from "@/app/actions/deals";
 import ContactInfoBlock from "./ContactInfoBlock";
+import AddContactModal from "./AddContactModal";
 import CreateContactModal from "@/components/crm/contacts/CreateContactModal";
 import type { CreateContactFormData } from "@/components/crm/contacts/CreateContactModal";
-import { createContact } from "@/app/actions/contacts";
+import { createContact, linkContactToDeal } from "@/app/actions/contacts";
 import { getContactByCuid } from "@/app/actions/contacts";
 import type { ContactDetail } from "@/app/actions/contacts";
 import ContactDetailDrawer from "@/components/crm/contacts/ContactDetailDrawer";
@@ -1426,6 +1427,7 @@ function DetailsLeft({
     new Set([...Object.keys(sections), ...pendingSections])
   );
 
+  const [addContactOpen, setAddContactOpen] = useState(false);
   const STORAGE_BLOCKS_KEY = `deal-blocks-order-${deal.id}`;
   const STORAGE_SECTIONS_KEY = `deal-sections-order-${deal.id}`;
 
@@ -1507,10 +1509,33 @@ function DetailsLeft({
 
   const blockComponents: Record<string, (handle: React.ReactNode) => React.ReactNode> = {
     contact: (handle) => (
-      <div className="rounded-xl border border-gray-100 bg-gray-50/60 overflow-hidden">
-        {handle}
-        <ContactInfoBlock deal={deal} onOpenContact={onOpenContact} onCreateContact={onCreateContact} />
-      </div>
+      <>
+        <div className="rounded-xl border border-gray-100 bg-gray-50/60 overflow-hidden">
+          {handle}
+          <ContactInfoBlock
+            deal={deal}
+            onOpenContact={onOpenContact}
+            onCreateContact={() => setAddContactOpen(true)}
+          />
+        </div>
+        {addContactOpen && (
+          <AddContactModal
+            dealId={deal.id}
+            onClose={() => setAddContactOpen(false)}
+            onLinked={(c) => {
+              setAddContactOpen(false);
+              if (onDealUpdate) onDealUpdate({
+                ...deal,
+                contactId: c.id,
+                contactName: c.name,
+                contactPhone: c.phone,
+                contactEmail: c.email,
+                company: c.company,
+              });
+            }}
+          />
+        )}
+      </>
     ),
     value: (handle) => (
       <DealValueBlock

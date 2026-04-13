@@ -29,18 +29,27 @@ async function getOrgId(): Promise<string> {
 
 // ─── Org Members ──────────────────────────────────────────────────────────────
 
-export type OrgMember = { id: string; name: string };
+export type OrgMember = {
+  id: string;
+  name: string;
+  lastName: string | null;
+  image: string | null;
+  position: string | null;
+};
 
 export async function getOrgMembers(): Promise<OrgMember[]> {
   const orgId = await getOrgId();
   const members = await prisma.orgMember.findMany({
     where: { orgId },
-    include: { user: { select: { id: true, name: true, email: true } } },
+    include: { user: { select: { id: true, name: true, lastName: true, email: true, image: true, position: true } } },
     orderBy: { joinedAt: "asc" },
   });
   return members.map((m) => ({
     id: m.user.id,
     name: m.user.name ?? m.user.email ?? "Сотрудник",
+    lastName: m.user.lastName ?? null,
+    image: m.user.image ?? null,
+    position: m.user.position ?? null,
   }));
 }
 

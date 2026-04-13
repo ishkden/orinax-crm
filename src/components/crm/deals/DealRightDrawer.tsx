@@ -1,6 +1,21 @@
 "use client";
 
-import { useEffect, useState, useCallback, useTransition, useRef } from "react";
+import { useEffect, useState, useCallback, useTransition, useRef, useMemo } from "react";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -9,7 +24,7 @@ import {
   FileText, ChevronDown, Plus, FolderOpen,
   Type, List, Clock, MapPin, Link2, Paperclip,
   DollarSign, ToggleLeft, Hash, CalendarRange, ChevronRight,
-  Trash2, Search, Layers, Settings, UserCircle,
+  Trash2, Search, Layers, Settings, UserCircle, GripVertical,
 } from "lucide-react";
 import Link from "next/link";
 import { formatCurrency, formatDate, contrastTextOnHex } from "@/lib/utils";
@@ -1049,18 +1064,20 @@ function StageKanban({ stages, currentStageId, onStageChange, loading }: {
 
 
 
-// ─── Deal Value Block ────────────────────────────────────────────────────────────────────────────
+// ─── Deal Value Block ───────────────────────────────────────────────────────────────
 
 function DealValueBlock({
   dealId,
   value,
   currency,
   onUpdate,
+  dragHandle,
 }: {
   dealId: string;
   value: number;
   currency: string;
   onUpdate: (value: number) => void;
+  dragHandle?: React.ReactNode;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(String(value));
@@ -1100,67 +1117,108 @@ function DealValueBlock({
   }
 
   return (
-    <div className="px-4 pt-4 pb-3 border-b border-gray-100">
-      <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Сумма сделки</p>
-      {editing ? (
-        <div className="flex items-center gap-2">
-          <input
-            ref={inputRef}
-            type="text"
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onBlur={handleCommit}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") handleCommit();
-              if (e.key === "Escape") { setDraft(String(value)); setEditing(false); }
-            }}
-            className="w-full text-3xl font-bold text-gray-900 border-b-2 border-brand-500 bg-transparent outline-none tracking-tight pb-0.5"
-            placeholder="0"
-            inputMode="decimal"
-          />
-          <span className="text-xl font-medium text-gray-400 shrink-0">{currencySymbol}</span>
+    <div className="rounded-xl border border-gray-100 bg-gray-50/60 overflow-hidden">
+      <div className="flex items-center gap-3 px-4 py-2.5">
+        {dragHandle}
+        <div className="flex-1 min-w-0">
+          <p className="text-[11px] font-medium text-gray-400 uppercase tracking-wide leading-none mb-1">
+            Сумма сделки
+          </p>
+          {editing ? (
+            <div className="flex items-center gap-2">
+              <input
+                ref={inputRef}
+                type="text"
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onBlur={handleCommit}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleCommit();
+                  if (e.key === "Escape") { setDraft(String(value)); setEditing(false); }
+                }}
+                className="w-full text-3xl font-bold text-gray-900 border-b-2 border-brand-500 bg-transparent outline-none tracking-tight pb-0.5"
+                placeholder="0"
+                inputMode="decimal"
+              />
+              <span className="text-xl font-medium text-gray-400 shrink-0">{currencySymbol}</span>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => { setDraft(String(value)); setEditing(true); }}
+              disabled={saving}
+              className="group flex items-baseline gap-2 hover:opacity-75 transition-opacity text-left w-full"
+              title="Нажмите чтобы изменить"
+            >
+              <span className="text-[2rem] font-bold text-gray-900 tracking-tight leading-none tabular-nums">
+                {formatDisplayValue(value)}
+              </span>
+              <span className="text-lg font-medium text-gray-400">{currencySymbol}</span>
+              {saving && <span className="text-xs text-gray-400 ml-1">…</span>}
+              <Pencil size={12} className="ml-auto self-center text-gray-300 group-hover:text-brand-500 transition-colors opacity-0 group-hover:opacity-100" />
+            </button>
+          )}
         </div>
-      ) : (
-        <button
-          type="button"
-          onClick={() => { setDraft(String(value)); setEditing(true); }}
-          disabled={saving}
-          className="group flex items-baseline gap-2 hover:opacity-80 transition-opacity text-left w-full"
-          title="Нажмите чтобы изменить"
-        >
-          <span className="text-[2rem] font-bold text-gray-900 tracking-tight leading-none tabular-nums">
-            {formatDisplayValue(value)}
-          </span>
-          <span className="text-lg font-medium text-gray-400">{currencySymbol}</span>
-          {saving && <span className="text-xs text-gray-400 ml-1">…</span>}
-          <Pencil
-            size={13}
-            className="ml-auto self-center text-gray-300 group-hover:text-brand-500 transition-colors opacity-0 group-hover:opacity-100"
-          />
-        </button>
-      )}
+      </div>
     </div>
   );
 }
 
-// ─── Assignee Block ───────────────────────────────────────────────────────────
+
+// ─── Assignee Block ───────────────────────────────────────────────────────────────
+
+function MemberAvatar({ member, size = 32 }: { member: OrgMember | null; size?: number }) {
+  const fullName = member ? [member.name, member.lastName].filter(Boolean).join(" ") : null;
+  const initials = fullName
+    ? fullName.split(" ").slice(0, 2).map((w: string) => w[0]?.toUpperCase() ?? "").join("")
+    : null;
+  if (member?.image) {
+    return (
+      <img
+        src={member.image}
+        alt={fullName ?? ""}
+        width={size}
+        height={size}
+        className="rounded-full object-cover shrink-0"
+        style={{ width: size, height: size }}
+      />
+    );
+  }
+  return (
+    <span
+      className="inline-flex items-center justify-center rounded-full bg-brand-100 text-brand-700 font-bold shrink-0 text-[11px]"
+      style={{ width: size, height: size }}
+    >
+      {initials ?? "?"}
+    </span>
+  );
+}
 
 function AssigneeBlock({
   dealId,
   assignedId,
   assigneeName,
   onUpdate,
+  dragHandle,
 }: {
   dealId: string;
   assignedId: string | null;
   assigneeName: string | null;
   onUpdate: (userId: string | null, name: string | null) => void;
+  dragHandle?: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const [members, setMembers] = useState<OrgMember[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+
+  // Load members eagerly to show current assignee avatar/position
+  useEffect(() => {
+    getOrgMembers()
+      .then((m) => { setMembers(m); setLoaded(true); })
+      .catch(() => setLoaded(true));
+  }, []);
 
   useEffect(() => {
     function handle(e: MouseEvent) {
@@ -1170,47 +1228,49 @@ function AssigneeBlock({
     return () => document.removeEventListener("mousedown", handle);
   }, []);
 
-  function handleOpen() {
-    if (!loaded) {
-      getOrgMembers().then((m) => { setMembers(m); setLoaded(true); }).catch(() => setLoaded(true));
-    }
-    setOpen((v) => !v);
-  }
+  const currentMember = useMemo(
+    () => loaded ? members.find((m) => m.id === assignedId) ?? null : null,
+    [members, assignedId, loaded]
+  );
 
   async function handleSelect(m: OrgMember | null) {
     setSaving(true);
     try {
-      // dealId passed from parent via handleSelect prop
+      await updateDealAssignee(dealId, m?.id ?? null);
     } catch {}
-    onUpdate(m?.id ?? null, m?.name ?? null);
+    const fullName = m ? [m.name, m.lastName].filter(Boolean).join(" ") : null;
+    onUpdate(m?.id ?? null, fullName);
     setSaving(false);
     setOpen(false);
   }
 
-  const initials = assigneeName
-    ? assigneeName.split(" ").slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("")
-    : null;
+  const fullAssigneeName = currentMember
+    ? [currentMember.name, currentMember.lastName].filter(Boolean).join(" ")
+    : assigneeName;
 
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} className="relative rounded-xl border border-gray-100 bg-gray-50/60 overflow-hidden">
       <button
         type="button"
-        onClick={handleOpen}
+        onClick={() => setOpen((v) => !v)}
         disabled={saving}
-        className="flex items-center gap-3 w-full px-4 py-2.5 hover:bg-gray-50 transition-colors disabled:opacity-50 text-left"
+        className="flex items-center gap-3 w-full px-4 py-2.5 hover:bg-gray-100/60 transition-colors disabled:opacity-50 text-left"
       >
-        <UserCircle size={15} strokeWidth={1.75} className="text-gray-400 shrink-0" />
+        {dragHandle}
+        <div className="shrink-0">
+          <MemberAvatar member={currentMember} size={32} />
+        </div>
         <div className="flex-1 min-w-0">
           <p className="text-[11px] font-medium text-gray-400 uppercase tracking-wide leading-none mb-0.5">
             Ответственный
           </p>
-          {assigneeName ? (
-            <div className="flex items-center gap-1.5">
-              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-brand-100 text-brand-700 text-[10px] font-bold shrink-0">
-                {initials}
-              </span>
-              <span className="text-sm font-semibold text-gray-900 truncate">{assigneeName}</span>
-            </div>
+          {fullAssigneeName ? (
+            <>
+              <p className="text-sm font-semibold text-gray-900 truncate">{fullAssigneeName}</p>
+              {currentMember?.position && (
+                <p className="text-[11px] text-gray-400 truncate mt-0.5">{currentMember.position}</p>
+              )}
+            </>
           ) : (
             <p className="text-sm text-gray-400 italic">Не назначен</p>
           )}
@@ -1223,7 +1283,7 @@ function AssigneeBlock({
           <div className="px-3 py-2 border-b border-gray-100">
             <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Выбрать ответственного</p>
           </div>
-          <div className="max-h-56 overflow-y-auto py-1">
+          <div className="max-h-60 overflow-y-auto py-1">
             {!loaded && (
               <p className="px-3 py-3 text-sm text-gray-400 text-center italic">Загрузка…</p>
             )}
@@ -1241,7 +1301,7 @@ function AssigneeBlock({
             )}
             {loaded && members.map((m) => {
               const active = m.id === assignedId;
-              const ini = m.name.split(" ").slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("");
+              const mFullName = [m.name, m.lastName].filter(Boolean).join(" ");
               return (
                 <button
                   key={m.id}
@@ -1250,17 +1310,47 @@ function AssigneeBlock({
                   className={"w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-left transition-colors " +
                     (active ? "bg-brand-50 text-brand-700 font-medium" : "text-gray-700 hover:bg-gray-50")}
                 >
-                  <span className={"inline-flex items-center justify-center w-7 h-7 rounded-full text-[11px] font-bold shrink-0 " +
-                    (active ? "bg-brand-500 text-white" : "bg-gray-100 text-gray-600")}>
-                    {active ? <Check size={13} /> : ini}
-                  </span>
-                  <span className="truncate">{m.name}</span>
+                  <div className="shrink-0">
+                    <MemberAvatar member={m} size={28} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className={"text-sm font-medium truncate " + (active ? "text-brand-700" : "text-gray-900")}>{mFullName}</p>
+                    {m.position && <p className="text-[10px] text-gray-400 truncate">{m.position}</p>}
+                  </div>
+                  {active && <Check size={14} className="text-brand-500 shrink-0" />}
                 </button>
               );
             })}
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+
+// ─── Sortable wrappers ───────────────────────────────────────────────────────
+
+function SortableItem({ id, children }: { id: string; children: (dragHandle: React.ReactNode) => React.ReactNode }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 1 : undefined,
+  };
+  const handle = (
+    <span
+      {...attributes}
+      {...listeners}
+      className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 shrink-0 touch-none"
+    >
+      <GripVertical size={14} />
+    </span>
+  );
+  return (
+    <div ref={setNodeRef} style={style}>
+      {children(handle)}
     </div>
   );
 }
@@ -1323,20 +1413,124 @@ function DetailsLeft({
     new Set([...Object.keys(sections), ...pendingSections])
   );
 
+  const STORAGE_BLOCKS_KEY = `deal-blocks-order-${deal.id}`;
+  const STORAGE_SECTIONS_KEY = `deal-sections-order-${deal.id}`;
+
+  const defaultBlockOrder = ["contact", "value", "assignee"];
+  const [blockOrder, setBlockOrder] = useState<string[]>(() => {
+    try {
+      const stored = typeof window !== "undefined" ? localStorage.getItem(STORAGE_BLOCKS_KEY) : null;
+      const parsed = stored ? JSON.parse(stored) : null;
+      if (Array.isArray(parsed) && parsed.length === 3) return parsed;
+    } catch {}
+    return defaultBlockOrder;
+  });
+
+  const [sectionOrder, setSectionOrder] = useState<string[]>(() => {
+    try {
+      const stored = typeof window !== "undefined" ? localStorage.getItem(STORAGE_SECTIONS_KEY) : null;
+      const parsed = stored ? JSON.parse(stored) : null;
+      if (Array.isArray(parsed)) return parsed;
+    } catch {}
+    return allSectionNames;
+  });
+
+  // Sync sectionOrder when allSectionNames changes (new section added)
+  const prevSectionNamesRef = useRef<string[]>([]);
+  useEffect(() => {
+    const prev = prevSectionNamesRef.current;
+    const added = allSectionNames.filter((n) => !prev.includes(n));
+    const removed = prev.filter((n) => !allSectionNames.includes(n));
+    if (added.length > 0 || removed.length > 0) {
+      setSectionOrder((old) => {
+        const filtered = old.filter((n) => allSectionNames.includes(n));
+        const newOnes = added.filter((n) => !filtered.includes(n));
+        return [...filtered, ...newOnes];
+      });
+    }
+    prevSectionNamesRef.current = allSectionNames;
+  }, [allSectionNames]);
+
+  const sortedSectionNames = useMemo(
+    () => [
+      ...sectionOrder.filter((n) => allSectionNames.includes(n)),
+      ...allSectionNames.filter((n) => !sectionOrder.includes(n)),
+    ],
+    [sectionOrder, allSectionNames]
+  );
+
+  const blockSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
+  const sectionSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
+
+  function handleBlockDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setBlockOrder((items) => {
+        const oldIdx = items.indexOf(active.id as string);
+        const newIdx = items.indexOf(over.id as string);
+        const next = arrayMove(items, oldIdx, newIdx);
+        try { localStorage.setItem(STORAGE_BLOCKS_KEY, JSON.stringify(next)); } catch {}
+        return next;
+      });
+    }
+  }
+
+  function handleSectionDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setSectionOrder((items) => {
+        const oldIdx = items.indexOf(active.id as string);
+        const newIdx = items.indexOf(over.id as string);
+        const next = arrayMove(items, oldIdx, newIdx);
+        try { localStorage.setItem(STORAGE_SECTIONS_KEY, JSON.stringify(next)); } catch {}
+        return next;
+      });
+    }
+  }
+
+  const blockComponents: Record<string, (handle: React.ReactNode) => React.ReactNode> = {
+    contact: (handle) => (
+      <div className="rounded-xl border border-gray-100 bg-gray-50/60 overflow-hidden">
+        <div className="flex items-center gap-2 px-3 pt-2 pb-0">
+          {handle}
+        </div>
+        <ContactInfoBlock deal={deal} onOpenContact={onOpenContact} onCreateContact={onCreateContact} />
+      </div>
+    ),
+    value: (handle) => (
+      <DealValueBlock
+        dealId={deal.id}
+        value={deal.value}
+        currency={deal.currency}
+        onUpdate={(v) => { if (onDealUpdate) onDealUpdate({ ...deal, value: v }); }}
+        dragHandle={handle}
+      />
+    ),
+    assignee: (handle) => (
+      <AssigneeBlock
+        dealId={deal.id}
+        assignedId={currentAssignedId}
+        assigneeName={currentAssigneeName}
+        onUpdate={onAssigneeUpdate}
+        dragHandle={handle}
+      />
+    ),
+  };
+
   return (
     <div className="space-y-4 pb-6">
-      <ContactInfoBlock deal={deal} onOpenContact={onOpenContact} onCreateContact={onCreateContact} />
-
-      <DealValueBlock dealId={deal.id} value={deal.value} currency={deal.currency} onUpdate={(v) => {
-          if (onDealUpdate) onDealUpdate({ ...deal, value: v });
-        }} />
-        <AssigneeBlock
-          dealId={deal.id}
-          assignedId={currentAssignedId}
-          assigneeName={currentAssigneeName}
-          onUpdate={onAssigneeUpdate}
-        />
-
+      {/* Draggable top blocks */}
+      <DndContext sensors={blockSensors} collisionDetection={closestCenter} onDragEnd={handleBlockDragEnd}>
+        <SortableContext items={blockOrder} strategy={verticalListSortingStrategy}>
+          <div className="space-y-3">
+            {blockOrder.map((id) => (
+              <SortableItem key={id} id={id}>
+                {(handle) => blockComponents[id]?.(handle) ?? null}
+              </SortableItem>
+            ))}
+          </div>
+        </SortableContext>
+      </DndContext>
 
       {deal.description && (
         <div>
@@ -1345,77 +1539,86 @@ function DetailsLeft({
         </div>
       )}
 
-      {/* Custom fields grouped by section */}
-      {allSectionNames.length > 0 && (
-        <div className="space-y-3">
-          {allSectionNames.map(sectionName => {
-            const fields = sections[sectionName] ?? [];
-            const isPending = fields.length === 0;
-            return (
-              <div key={sectionName} className="rounded-xl border border-gray-100 overflow-hidden">
-                <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b border-gray-100">
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
-                    <FolderOpen size={11} className="text-gray-400" />
-                    {sectionName}
-                    {isPending && <span className="text-[9px] text-gray-300 font-normal normal-case tracking-normal ml-1">пустой</span>}
-                  </p>
-                  <Link href="/crm/settings/custom-fields" className="flex items-center gap-1 text-[10px] text-gray-300 hover:text-brand-500 transition-colors">
-                    <SlidersHorizontal size={10} /> Настроить
-                  </Link>
-                </div>
-                {fields.length > 0 && (
-                  <div className="bg-white px-4 divide-y divide-gray-50">
-                    {fields.map(f => (
-                      <CustomFieldRow
-                        key={f.id}
-                        field={f}
-                        value={deal.customFieldValues?.[f.code] ?? null}
-                        onSave={onFieldSave}
-                        onRemove={onFieldRemove}
-                        onUpdate={onFieldUpdate}
-                      />
-                    ))}
-                  </div>
-                )}
-                <div className="flex border-t border-gray-100">
-                  <button
-                    type="button"
-                    onClick={() => onAddField(sectionName)}
-                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs text-gray-500 hover:text-brand-600 hover:bg-brand-50 transition-colors border-r border-gray-100"
-                  >
-                    <Plus size={12} /> Создать поле
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onSelectField(sectionName)}
-                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs text-gray-500 hover:text-brand-600 hover:bg-brand-50 transition-colors"
-                  >
-                    <List size={12} /> Выбрать поле
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+      {/* Custom fields grouped by section — draggable */}
+      {sortedSectionNames.length > 0 && (
+        <DndContext sensors={sectionSensors} collisionDetection={closestCenter} onDragEnd={handleSectionDragEnd}>
+          <SortableContext items={sortedSectionNames} strategy={verticalListSortingStrategy}>
+            <div className="space-y-3">
+              {sortedSectionNames.map(sectionName => {
+                const fields = sections[sectionName] ?? [];
+                const isPending = fields.length === 0;
+                return (
+                  <SortableItem key={sectionName} id={sectionName}>
+                    {(handle) => (
+                      <div className="rounded-xl border border-gray-100 overflow-hidden">
+                        <div className="flex items-center justify-between px-3 py-2 bg-gray-50 border-b border-gray-100">
+                          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
+                            {handle}
+                            <FolderOpen size={11} className="text-gray-400" />
+                            {sectionName}
+                            {isPending && <span className="text-[9px] text-gray-300 font-normal normal-case tracking-normal ml-1">пустой</span>}
+                          </p>
+                          <Link href="/crm/settings/custom-fields" className="flex items-center gap-1 text-[10px] text-gray-300 hover:text-brand-500 transition-colors">
+                            <SlidersHorizontal size={10} /> Настроить
+                          </Link>
+                        </div>
+                        {fields.length > 0 && (
+                          <div className="bg-white px-4 divide-y divide-gray-50">
+                            {fields.map(f => (
+                              <CustomFieldRow
+                                key={f.id}
+                                field={f}
+                                value={deal.customFieldValues?.[f.code] ?? null}
+                                onSave={onFieldSave}
+                                onRemove={onFieldRemove}
+                                onUpdate={onFieldUpdate}
+                              />
+                            ))}
+                          </div>
+                        )}
+                        <div className="flex items-center gap-3 px-4 py-2 border-t border-gray-100 bg-gray-50/40">
+                          <button
+                            type="button"
+                            onClick={() => onAddField(sectionName)}
+                            className="text-[11px] text-gray-400 hover:text-brand-600 transition-colors"
+                          >
+                            + Создать поле
+                          </button>
+                          <span className="text-gray-200">·</span>
+                          <button
+                            type="button"
+                            onClick={() => onSelectField(sectionName)}
+                            className="text-[11px] text-gray-400 hover:text-brand-600 transition-colors"
+                          >
+                            Выбрать поле
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </SortableItem>
+                );
+              })}
+            </div>
+          </SortableContext>
+        </DndContext>
       )}
 
-      {/* Two minimal bottom buttons */}
-      <div className="flex gap-2">
+      {/* Bottom section actions as subtle links */}
+      <div className="flex items-center gap-4 px-1">
         <button
           type="button"
           onClick={onCreateSection}
-          className="flex-1 flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-gray-200 px-3 py-2.5 text-sm text-gray-400 hover:border-brand-400 hover:text-brand-600 hover:bg-brand-50/50 transition-colors"
+          className="text-[11px] text-gray-400 hover:text-brand-600 transition-colors"
         >
-          <Plus size={14} className="shrink-0" />
-          <span>Создать раздел</span>
+          + Создать раздел
         </button>
+        <span className="text-gray-200">·</span>
         <button
           type="button"
           onClick={onChooseSection}
-          className="flex-1 flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-gray-200 px-3 py-2.5 text-sm text-gray-400 hover:border-brand-400 hover:text-brand-600 hover:bg-brand-50/50 transition-colors"
+          className="text-[11px] text-gray-400 hover:text-brand-600 transition-colors"
         >
-          <Layers size={14} className="shrink-0" />
-          <span>Выбрать раздел</span>
+          Выбрать раздел
         </button>
       </div>
     </div>

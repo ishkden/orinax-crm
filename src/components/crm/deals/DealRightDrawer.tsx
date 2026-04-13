@@ -1118,9 +1118,13 @@ function DealValueBlock({
 
   return (
     <div className="rounded-xl border border-gray-100 bg-gray-50/60 overflow-hidden">
-      <div className="flex items-center gap-3 px-4 py-2.5">
-        {dragHandle}
-        <div className="flex-1 min-w-0">
+      <div className="flex items-stretch">
+        {dragHandle && (
+          <div className="flex items-center px-2 border-r border-gray-100/60">
+            {dragHandle}
+          </div>
+        )}
+        <div className="flex-1 px-4 py-2.5 min-w-0">
           <p className="text-[11px] font-medium text-gray-400 uppercase tracking-wide leading-none mb-1">
             Сумма сделки
           </p>
@@ -1250,33 +1254,39 @@ function AssigneeBlock({
 
   return (
     <div ref={ref} className="relative rounded-xl border border-gray-100 bg-gray-50/60 overflow-hidden">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        disabled={saving}
-        className="flex items-center gap-3 w-full px-4 py-2.5 hover:bg-gray-100/60 transition-colors disabled:opacity-50 text-left"
-      >
-        {dragHandle}
-        <div className="shrink-0">
-          <MemberAvatar member={currentMember} size={32} />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-[11px] font-medium text-gray-400 uppercase tracking-wide leading-none mb-0.5">
-            Ответственный
-          </p>
-          {fullAssigneeName ? (
-            <>
-              <p className="text-sm font-semibold text-gray-900 truncate">{fullAssigneeName}</p>
-              {currentMember?.position && (
-                <p className="text-[11px] text-gray-400 truncate mt-0.5">{currentMember.position}</p>
-              )}
-            </>
-          ) : (
-            <p className="text-sm text-gray-400 italic">Не назначен</p>
-          )}
-        </div>
-        <ChevronDown size={14} className={"text-gray-400 shrink-0 transition-transform " + (open ? "rotate-180" : "")} />
-      </button>
+      <div className="flex items-stretch">
+        {dragHandle && (
+          <div className="flex items-center px-2 border-r border-gray-100/60">
+            {dragHandle}
+          </div>
+        )}
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          disabled={saving}
+          className="flex flex-1 items-center gap-3 px-4 py-2.5 hover:bg-gray-100/60 transition-colors disabled:opacity-50 text-left min-w-0"
+        >
+          <div className="shrink-0">
+            <MemberAvatar member={currentMember} size={32} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[11px] font-medium text-gray-400 uppercase tracking-wide leading-none mb-0.5">
+              Ответственный
+            </p>
+            {fullAssigneeName ? (
+              <>
+                <p className="text-sm font-semibold text-gray-900 truncate">{fullAssigneeName}</p>
+                {currentMember?.position && (
+                  <p className="text-[11px] text-gray-400 truncate mt-0.5">{currentMember.position}</p>
+                )}
+              </>
+            ) : (
+              <p className="text-sm text-gray-400 italic">Не назначен</p>
+            )}
+          </div>
+          <ChevronDown size={14} className={"text-gray-400 shrink-0 transition-transform " + (open ? "rotate-180" : "")} />
+        </button>
+      </div>
 
       {open && (
         <div className="absolute left-0 right-0 top-full z-[110] bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden">
@@ -1491,9 +1501,11 @@ function DetailsLeft({
   const blockComponents: Record<string, (handle: React.ReactNode) => React.ReactNode> = {
     contact: (handle) => (
       <div className="rounded-xl border border-gray-100 bg-gray-50/60 overflow-hidden">
-        <div className="flex items-center gap-2 px-3 pt-2 pb-0">
-          {handle}
-        </div>
+        {handle && (
+          <div className="flex items-center gap-1 px-3 pt-2 pb-0">
+            {handle}
+          </div>
+        )}
         <ContactInfoBlock deal={deal} onOpenContact={onOpenContact} onCreateContact={onCreateContact} />
       </div>
     ),

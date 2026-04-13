@@ -41,15 +41,15 @@ export default function AddContactModal({ dealId, onClose, onLinked }: AddContac
 
   const doSearch = useCallback((q: string) => {
     if (searchTimeout.current) clearTimeout(searchTimeout.current);
+    if (!q.trim()) { setResults([]); setSearching(false); return; }
     setSearching(true);
-    const delay = q.trim() ? 280 : 0;
     searchTimeout.current = setTimeout(async () => {
       try {
         const res = await searchContacts(q);
         setResults(res);
       } catch {}
       setSearching(false);
-    }, delay);
+    }, 280);
   }, []);
 
   useEffect(() => { doSearch(query); }, [query, doSearch]);
@@ -147,10 +147,11 @@ export default function AddContactModal({ dealId, onClose, onLinked }: AddContac
                   <Loader2 size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 animate-spin" />
                 )}
               </div>
+              {!query.trim() && !searching && (
+                <p className="text-center text-sm text-gray-400 py-6 italic">Введите имя или номер телефона</p>
+              )}
               {!searching && results.length > 0 && (
-                <p className="text-[11px] text-gray-400 mb-2 px-1">
-                  {query.trim() ? `Найдено: ${results.length}${results.length === 50 ? "+" : ""}` : `Последние ${results.length} контактов`}
-                </p>
+                <p className="text-[11px] text-gray-400 mb-2 px-1">Найдено: {results.length}</p>
               )}
 
               <div className="max-h-64 overflow-y-auto space-y-1">

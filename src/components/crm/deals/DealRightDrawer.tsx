@@ -45,7 +45,7 @@ import ContactInfoBlock from "./ContactInfoBlock";
 import AddContactModal from "./AddContactModal";
 import CreateContactModal from "@/components/crm/contacts/CreateContactModal";
 import type { CreateContactFormData } from "@/components/crm/contacts/CreateContactModal";
-import { createContact, linkContactToDeal } from "@/app/actions/contacts";
+import { createContact, linkContactToDeal, unlinkContactFromDeal } from "@/app/actions/contacts";
 import { getContactByCuid } from "@/app/actions/contacts";
 import type { ContactDetail } from "@/app/actions/contacts";
 import ContactDetailDrawer from "@/components/crm/contacts/ContactDetailDrawer";
@@ -1515,7 +1515,13 @@ function DetailsLeft({
           <ContactInfoBlock
             deal={deal}
             onOpenContact={onOpenContact}
-            onCreateContact={() => setAddContactOpen(true)}
+            onAddContact={() => setAddContactOpen(true)}
+            onUnlinkContact={async () => {
+              try {
+                await unlinkContactFromDeal(deal.id);
+                if (onDealUpdate) onDealUpdate({ ...deal, contactId: null, contactName: "—", contactPhone: null, contactEmail: null, company: null });
+              } catch {}
+            }}
           />
         </div>
         {addContactOpen && (

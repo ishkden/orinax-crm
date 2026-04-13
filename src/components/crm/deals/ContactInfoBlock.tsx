@@ -1,89 +1,29 @@
 "use client";
 
-import { User, Briefcase, Building2, Phone, Mail, Plus } from "lucide-react";
+import { useState } from "react";
+import { User, Phone, Mail, MessageCircle, Building2, X, UserPlus } from "lucide-react";
 import type { Deal } from "./types";
 
 interface ContactInfoBlockProps {
   deal: Deal;
   onOpenContact?: (contactCuid: string) => void;
-  onCreateContact?: () => void;
+  onAddContact?: () => void;
+  onUnlinkContact?: () => void;
   compact?: boolean;
 }
 
-interface InfoRowProps {
-  icon: React.ReactNode;
-  label: string;
-  value: string | null | undefined;
-  href?: string;
-  onClick?: () => void;
-}
+export default function ContactInfoBlock({
+  deal,
+  onOpenContact,
+  onAddContact,
+  onUnlinkContact,
+  compact,
+}: ContactInfoBlockProps) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const hasContact = !!(deal.contactId || (deal.contactName && deal.contactName !== "—"));
 
-function InfoRow({ icon, label, value, href, onClick }: InfoRowProps) {
-  if (!value) return null;
-  return (
-    <div className="flex items-center gap-3 px-4 py-2.5">
-      <span className="text-gray-400 shrink-0">{icon}</span>
-      <div className="min-w-0">
-        <p className="text-[11px] font-medium text-gray-400 uppercase tracking-wide leading-none mb-0.5">
-          {label}
-        </p>
-        {onClick ? (
-          <button
-            type="button"
-            onClick={onClick}
-            className="text-sm text-brand-600 hover:underline truncate block text-left w-full"
-          >
-            {value}
-          </button>
-        ) : href ? (
-          <a
-            href={href}
-            className="text-sm text-brand-600 hover:underline truncate block"
-          >
-            {value}
-          </a>
-        ) : (
-          <p className="text-sm text-gray-900 truncate">{value}</p>
-        )}
-      </div>
-    </div>
-  );
-}
-
-export default function ContactInfoBlock({ deal, onOpenContact, onCreateContact, compact }: ContactInfoBlockProps) {
-  const hasContact = deal.contactId || deal.contactName !== "\u2014";
-
-  if (compact) {
-    return (
-      <div className="flex items-center gap-3 px-4 py-2.5">
-        <span className="text-gray-400 shrink-0">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
-          </svg>
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="text-[11px] font-medium text-gray-400 uppercase tracking-wide leading-none mb-0.5">
-            Контакт
-          </p>
-          {hasContact ? (
-            onOpenContact && deal.contactId ? (
-              <button
-                type="button"
-                onClick={() => onOpenContact(deal.contactId!)}
-                className="text-sm font-semibold text-brand-600 hover:underline truncate block text-left w-full"
-              >
-                {deal.contactName}
-              </button>
-            ) : (
-              <p className="text-sm font-semibold text-gray-900 truncate">{deal.contactName}</p>
-            )
-          ) : (
-            <p className="text-sm text-gray-400 italic">Не привязан</p>
-          )}
-        </div>
-      </div>
-    );
-  }
+  const hasPhone = !!deal.contactPhone;
+  const hasEmail = !!deal.contactEmail;
 
   if (!hasContact) {
     return (
@@ -91,13 +31,13 @@ export default function ContactInfoBlock({ deal, onOpenContact, onCreateContact,
         <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Контакт</p>
         <div className="flex items-center justify-between">
           <p className="text-sm text-gray-400">Не привязан</p>
-          {onCreateContact && (
+          {onAddContact && (
             <button
               type="button"
-              onClick={onCreateContact}
+              onClick={onAddContact}
               className="inline-flex items-center gap-1 text-xs font-semibold text-brand-600 hover:text-brand-700 transition-colors"
             >
-              <Plus size={12} /> Добавить
+              <UserPlus size={12} /> Добавить
             </button>
           )}
         </div>
@@ -106,39 +46,112 @@ export default function ContactInfoBlock({ deal, onOpenContact, onCreateContact,
   }
 
   return (
-    <div className="rounded-xl border border-gray-100 bg-gray-50/60 divide-y divide-gray-100 overflow-hidden">
-      <InfoRow
-        icon={<User size={15} strokeWidth={1.75} />}
-        label="Контакт"
-        value={deal.contactName || null}
-        onClick={
-          onOpenContact && deal.contactId
-            ? () => onOpenContact(deal.contactId!)
-            : undefined
-        }
-      />
-      <InfoRow
-        icon={<Briefcase size={15} strokeWidth={1.75} />}
-        label="Должность"
-        value={null}
-      />
-      <InfoRow
-        icon={<Building2 size={15} strokeWidth={1.75} />}
-        label="Компания"
-        value={deal.company}
-      />
-      <InfoRow
-        icon={<Phone size={15} strokeWidth={1.75} />}
-        label="Телефон"
-        value={deal.contactPhone}
-        href={deal.contactPhone ? `tel:${deal.contactPhone}` : undefined}
-      />
-      <InfoRow
-        icon={<Mail size={15} strokeWidth={1.75} />}
-        label="Email"
-        value={deal.contactEmail}
-        href={deal.contactEmail ? `mailto:${deal.contactEmail}` : undefined}
-      />
+    <div className="px-4 py-3">
+      {/* Header row: label + unlink button */}
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Контакт</p>
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setMenuOpen((v) => !v)}
+            className="p-0.5 rounded hover:bg-gray-100 text-gray-300 hover:text-gray-500 transition-colors"
+            title="Действия с контактом"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/>
+            </svg>
+          </button>
+          {menuOpen && (
+            <>
+              <div className="fixed inset-0 z-[200]" onClick={() => setMenuOpen(false)} />
+              <div className="absolute right-0 top-6 z-[210] bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden w-40">
+                {onAddContact && (
+                  <button
+                    type="button"
+                    onClick={() => { setMenuOpen(false); onAddContact(); }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors text-left"
+                  >
+                    <UserPlus size={13} className="text-gray-400" /> Изменить
+                  </button>
+                )}
+                {onUnlinkContact && (
+                  <button
+                    type="button"
+                    onClick={() => { setMenuOpen(false); onUnlinkContact(); }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-500 hover:bg-red-50 transition-colors text-left"
+                  >
+                    <X size={13} /> Отвязать
+                  </button>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Contact name */}
+      {onOpenContact && deal.contactId ? (
+        <button
+          type="button"
+          onClick={() => onOpenContact(deal.contactId!)}
+          className="text-sm font-semibold text-brand-600 hover:underline truncate block text-left w-full mb-1"
+        >
+          {deal.contactName}
+        </button>
+      ) : (
+        <p className="text-sm font-semibold text-gray-900 truncate mb-1">{deal.contactName}</p>
+      )}
+
+      {/* Company */}
+      {deal.company && (
+        <div className="flex items-center gap-1.5 mb-2">
+          <Building2 size={11} className="text-gray-400 shrink-0" />
+          <p className="text-[11px] text-gray-500 truncate">{deal.company}</p>
+        </div>
+      )}
+
+      {/* Action icon buttons */}
+      <div className="flex items-center gap-2 mt-2">
+        {/* Phone */}
+        {hasPhone ? (
+          <a
+            href={`tel:${deal.contactPhone}`}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition-colors text-[11px] font-medium"
+            title={deal.contactPhone ?? ""}
+          >
+            <Phone size={12} />
+            <span className="truncate max-w-[90px]">{deal.contactPhone}</span>
+          </a>
+        ) : (
+          <span className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-gray-50 text-gray-300 text-[11px]" title="Телефон не указан">
+            <Phone size={12} />
+          </span>
+        )}
+
+        {/* Email */}
+        {hasEmail ? (
+          <a
+            href={`mailto:${deal.contactEmail}`}
+            className="flex items-center justify-center w-7 h-7 rounded-lg bg-blue-50 text-blue-500 hover:bg-blue-100 transition-colors"
+            title={deal.contactEmail ?? ""}
+          >
+            <Mail size={13} />
+          </a>
+        ) : (
+          <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-gray-50 text-gray-300" title="Email не указан">
+            <Mail size={13} />
+          </span>
+        )}
+
+        {/* Chat — active if contact has a linked chat */}
+        <span
+          className={"flex items-center justify-center w-7 h-7 rounded-lg transition-colors " +
+            (deal.contactId ? "bg-brand-50 text-brand-500 cursor-pointer hover:bg-brand-100" : "bg-gray-50 text-gray-300")}
+          title={deal.contactId ? "Перейти к переписке" : "Чат недоступен"}
+        >
+          <MessageCircle size={13} />
+        </span>
+      </div>
     </div>
   );
 }

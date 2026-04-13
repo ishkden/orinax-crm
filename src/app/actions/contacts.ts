@@ -254,18 +254,18 @@ export async function searchContacts(query: string): Promise<ContactSearchResult
 
   const q = query.trim();
 
+  if (!q) return [];
+
   const contacts = await prisma.contact.findMany({
     where: {
       orgId,
       isDeleted: false,
-      ...(q ? {
-        OR: [
-          { firstName: { contains: q, mode: "insensitive" } },
-          { lastName: { contains: q, mode: "insensitive" } },
-          { phone: { contains: q, mode: "insensitive" } },
-          { email: { contains: q, mode: "insensitive" } },
-        ],
-      } : {}),
+      OR: [
+        { firstName: { contains: q, mode: "insensitive" } },
+        { lastName: { contains: q, mode: "insensitive" } },
+        { phone: { contains: q, mode: "insensitive" } },
+        { email: { contains: q, mode: "insensitive" } },
+      ],
     },
     select: {
       id: true,
@@ -276,7 +276,7 @@ export async function searchContacts(query: string): Promise<ContactSearchResult
       email: true,
       company: true,
     },
-    take: 50,
+    take: 5,
     orderBy: { createdAt: "desc" },
   });
 
@@ -304,4 +304,13 @@ export async function linkContactToDeal(dealId: string, contactId: string): Prom
       update: { isPrimary: true },
     }),
   ]);
+}
+
+export async function unlinkContactFromDeal(dealId: string): Promise<void> {
+  const orgId = await getOrgId();
+  if (!orgId) throw new Error("Unauthorized");
+  await prisma.deal.update({
+    where: { id: dealId, orgId },
+    data: { contactId: null },
+  });
 }

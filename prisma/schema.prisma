@@ -38,6 +38,7 @@ model Org {
   channels       CommunicationChannel[]
   stageHistories StageHistory[]
   customFields   CustomField[]
+  dealHistory    DealHistory[]
 }
 
 // Связь User ↔ Org через промежуточную таблицу (один user — много org)
@@ -300,6 +301,7 @@ model Deal {
   comments     Comment[]
   dealContacts DealContact[]
   stageHistory StageHistory[]
+  dealHistory  DealHistory[]
 
   @@unique([orgId, sourceId])
   @@index([pipelineId])
@@ -589,6 +591,28 @@ enum ConversationStatus {
   PENDING
   RESOLVED
   CLOSED
+}
+
+// ─── Deal History (audit log of changes to a deal card) ──────────────────────
+
+model DealHistory {
+  id        String   @id @default(cuid())
+  orgId     String
+  dealId    String
+  userId    String?
+  userName  String?
+  action    String
+  field     String?
+  fromValue String?  @db.Text
+  toValue   String?  @db.Text
+
+  createdAt DateTime @default(now())
+
+  org  Org  @relation(fields: [orgId], references: [id])
+  deal Deal @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  @@index([dealId, createdAt])
+  @@index([orgId])
 }
 
 // ─── Custom Fields ────────────────────────────────────────────────────────────

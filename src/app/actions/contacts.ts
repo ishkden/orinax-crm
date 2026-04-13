@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { logDealEvent } from "./deal-history";
 
 export interface ContactDetail {
   id: string;
@@ -356,11 +357,20 @@ export async function linkContactToDeal(dealId: string, contactId: string): Prom
       data: { contactId },
     });
   }
+
+  const contactName = `${contact.firstName} ${contact.lastName}`.trim();
+  await logDealEvent(dealId, "contact_added", "Контакт", null, contactName);
 }
 
 export async function unlinkContactFromDeal(dealId: string, contactId: string): Promise<void> {
   const orgId = await getOrgId();
   if (!orgId) throw new Error("Unauthorized");
+
+  const contact = await prisma.contact.findFirst({
+    where: { id: contactId, orgId },
+    select: { firstName: true, lastName: true },
+  });
+  const contactName = contact ? `${contact.firstName} ${contact.lastName}`.trim() : contactId;
 
   await prisma.dealContact.deleteMany({ where: { dealId, contactId, orgId } });
 
@@ -380,4 +390,6 @@ export async function unlinkContactFromDeal(dealId: string, contactId: string): 
       data: { contactId: next?.contactId ?? null },
     });
   }
+
+  await logDealEvent(dealId, "contact_removed", "Контакт", contactName, null);
 }

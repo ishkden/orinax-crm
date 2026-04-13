@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { logDealEvent } from "./deal-history";
 
 // ─── Public types ─────────────────────────────────────────────────────────────
 
@@ -275,7 +276,10 @@ export async function cloneSectionToPipeline(
 
 export async function saveDealCustomFieldValues(
   dealId: string,
-  values: Record<string, unknown>
+  values: Record<string, unknown>,
+  changedCode?: string,
+  fieldLabel?: string,
+  oldValue?: unknown,
 ): Promise<void> {
   const orgId = await getOrgId();
   await prisma.deal.update({
@@ -283,6 +287,18 @@ export async function saveDealCustomFieldValues(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     data: { customFieldValues: values as any },
   });
+  if (changedCode && fieldLabel !== undefined) {
+    const fmt = (v: unknown): string | null => {
+      if (v == null || v === "") return null;
+      if (typeof v === "object") return JSON.stringify(v);
+      return String(v);
+    };
+    const newVal = fmt(values[changedCode]);
+    const oldVal = fmt(oldValue);
+    if (oldVal !== newVal) {
+      await logDealEvent(dealId, "field_changed", fieldLabel ?? changedCode, oldVal, newVal);
+    }
+  }
 }
 
 export async function saveContactCustomFieldValues(

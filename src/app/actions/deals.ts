@@ -5,6 +5,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import type { Deal, CreateDealInput } from "@/components/crm/deals/types";
 import { DealStage, Priority } from "@prisma/client";
+import { logDealEvent } from "./deal-history";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -55,13 +56,16 @@ export async function getOrgMembers(): Promise<OrgMember[]> {
 
 export async function updateDealAssignee(
   dealId: string,
-  assignedId: string | null
+  assignedId: string | null,
+  fromName?: string | null,
+  toName?: string | null,
 ): Promise<void> {
   const orgId = await getOrgId();
   await prisma.deal.update({
     where: { id: dealId, orgId },
     data: { assignedId },
   });
+  await logDealEvent(dealId, "assignee_changed", "Ответственный", fromName ?? null, toName ?? null);
 }
 
 // ─── Public serializable types ────────────────────────────────────────────────
@@ -294,18 +298,23 @@ export async function getDealsPage(
 
 export async function updateDealValue(
   dealId: string,
-  value: number
+  value: number,
+  fromValue?: number,
 ): Promise<void> {
   const orgId = await getOrgId();
   await prisma.deal.update({
     where: { id: dealId, orgId },
     data: { value },
   });
+  const fmt = (v: number) => new Intl.NumberFormat("ru-RU", { style: "currency", currency: "RUB", maximumFractionDigits: 0 }).format(v);
+  await logDealEvent(dealId, "value_changed", "Сумма", fromValue != null ? fmt(fromValue) : null, fmt(value));
 }
 
 export async function updateDealStage(
   dealId: string,
-  newStage: string
+  newStage: string,
+  fromStageName?: string | null,
+  toStageName?: string | null,
 ): Promise<void> {
   const orgId = await getOrgId();
   const isEnumStage = ["LEAD", "QUALIFIED", "PROPOSAL", "NEGOTIATION", "CLOSED_WON", "CLOSED_LOST"].includes(newStage);
@@ -315,18 +324,22 @@ export async function updateDealStage(
       ? { stage: newStage as DealStage }
       : { stageId: newStage },
   });
+  await logDealEvent(dealId, "stage_changed", "Стадия", fromStageName ?? null, toStageName ?? null);
 }
 
 export async function updateDealPipeline(
   dealId: string,
   pipelineId: string,
-  stageId: string
+  stageId: string,
+  fromPipelineName?: string | null,
+  toPipelineName?: string | null,
 ): Promise<void> {
   const orgId = await getOrgId();
   await prisma.deal.update({
     where: { id: dealId, orgId },
     data: { pipelineId, stageId },
   });
+  await logDealEvent(dealId, "pipeline_changed", "Воронка", fromPipelineName ?? null, toPipelineName ?? null);
 }
 
 
@@ -363,6 +376,7 @@ export async function createDeal(input: CreateDealInput): Promise<Deal> {
     },
     include: DEAL_INCLUDE,
   });
+  await logDealEvent(deal.id, "deal_created", null, null, deal.title);
   return mapDeal(deal);
 }
 

@@ -27,7 +27,7 @@ import {
   FileText, ChevronDown, Plus, FolderOpen,
   Type, List, Clock, MapPin, Link2, Paperclip,
   DollarSign, ToggleLeft, Hash, CalendarRange, ChevronRight,
-  Trash2, Search, Layers, Settings, UserCircle, GripVertical,
+  Trash2, Search, Layers, Settings, UserCircle, GripVertical, History,
 } from "lucide-react";
 import Link from "next/link";
 import { formatCurrency, formatDate, contrastTextOnHex } from "@/lib/utils";
@@ -52,6 +52,7 @@ import ContactDetailDrawer from "@/components/crm/contacts/ContactDetailDrawer";
 import ActivityFeed from "./ActivityFeed";
 import TaskList from "./TaskList";
 import ChatPanel from "./ChatPanel";
+import DealHistoryTab from "./DealHistoryTab";
 import { CRM_RIGHT_BAR_W } from "@/components/crm/crmChrome";
 import { useSidebar } from "@/components/layout/SidebarContext";
 
@@ -66,13 +67,14 @@ interface DealRightDrawerProps {
   onFieldUpdated?: (field: CustomFieldDef) => void;
 }
 
-type TabId = "general" | "tasks" | "chat" | "docs";
+type TabId = "general" | "tasks" | "chat" | "docs" | "history";
 
 const TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
   { id: "general",  label: "Общие",     icon: <AlignLeft size={14} /> },
   { id: "tasks",    label: "Задачи",    icon: <CheckSquare size={14} /> },
   { id: "chat",     label: "Чат",       icon: <MessageSquare size={14} /> },
   { id: "docs",     label: "Документы", icon: <FileText size={14} /> },
+  { id: "history",  label: "История",   icon: <History size={14} /> },
 ];
 
 // ─── Field type definitions ────────────────────────────────────────────────────
@@ -1110,7 +1112,7 @@ function DealValueBlock({
     if (!isNaN(num) && num !== value) {
       setSaving(true);
       try {
-        await updateDealValue(dealId, num);
+        await updateDealValue(dealId, num, value);
         onUpdate(num);
       } catch {}
       setSaving(false);
@@ -1236,7 +1238,11 @@ function AssigneeBlock({
   async function handleSelect(m: OrgMember | null) {
     setSaving(true);
     try {
-      await updateDealAssignee(dealId, m?.id ?? null);
+      const fromName = currentMember
+        ? [currentMember.name, currentMember.lastName].filter(Boolean).join(" ")
+        : (assigneeName ?? null);
+      const toName = m ? [m.name, m.lastName].filter(Boolean).join(" ") : null;
+      await updateDealAssignee(dealId, m?.id ?? null, fromName || null, toName);
     } catch {}
     const fullName = m ? [m.name, m.lastName].filter(Boolean).join(" ") : null;
     onUpdate(m?.id ?? null, fullName);
@@ -1839,14 +1845,16 @@ export default function DealRightDrawer({
 
   const handleFieldSave = useCallback(async (code: string, value: unknown) => {
     if (!deal) return;
+    const field = customFields.find(f => f.code === code);
+    const oldValue = deal.customFieldValues[code];
     const updatedValues = { ...deal.customFieldValues, [code]: value };
     startTransition(async () => {
       try {
-        await saveDealCustomFieldValues(deal.id, updatedValues);
+        await saveDealCustomFieldValues(deal.id, updatedValues, code, field?.name ?? code, oldValue);
         if (onDealUpdate) onDealUpdate({ ...deal, customFieldValues: updatedValues });
       } catch (e) { console.error("Failed to save custom field value", e); }
     });
-  }, [deal, onDealUpdate]);
+  }, [deal, customFields, onDealUpdate]);
 
   const handleFieldRemove = useCallback(async (fieldId: string) => {
     const field = customFields.find(f => f.id === fieldId);
@@ -1874,9 +1882,10 @@ export default function DealRightDrawer({
   async function handlePipelineSelect(pipeline: Pipeline) {
     if (!deal || pipeline.id === currentPipelineId) return;
     const firstStage = pipeline.stages[0];
+    const currentPipeline = pipelines.find(p => p.id === currentPipelineId);
     setStageChanging(true);
     try {
-      await updateDealPipeline(deal.id, pipeline.id, firstStage?.id ?? "");
+      await updateDealPipeline(deal.id, pipeline.id, firstStage?.id ?? "", currentPipeline?.label ?? null, pipeline.label);
       setCurrentPipelineId(pipeline.id);
       setCurrentStageId(firstStage?.id ?? null);
       if (onDealUpdate) onDealUpdate({ ...deal, pipelineId: pipeline.id, stageId: firstStage?.id ?? null, stage: firstStage?.id ?? deal.stage });
@@ -1888,7 +1897,10 @@ export default function DealRightDrawer({
     if (!deal || stage.id === currentStageId) return;
     setStageChanging(true);
     try {
-      await updateDealStage(deal.id, stage.id);
+      const currentStageLabel = currentStageId
+        ? (pipelines.flatMap(p => p.stages).find(s => s.id === currentStageId)?.label ?? null)
+        : null;
+      await updateDealStage(deal.id, stage.id, currentStageLabel, stage.label);
       setCurrentStageId(stage.id);
       if (onDealUpdate) onDealUpdate({ ...deal, stageId: stage.id, stage: stage.id });
     } catch (e) { console.error("Failed to update stage", e); }
@@ -2212,6 +2224,14 @@ export default function DealRightDrawer({
                     className="flex flex-col items-center justify-center min-h-[400px] text-gray-400 gap-3">
                     <FileText size={40} strokeWidth={1.25} className="opacity-30" />
                     <p className="text-sm">Документы — в разработке</p>
+                  </motion.div>
+                )}
+                {activeTab === "history" && deal && (
+                  <motion.div key="history"
+                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                    transition={{ duration: 0.14, ease: "easeOut" }}
+                    className="py-2 px-1">
+                    <DealHistoryTab dealId={deal.id} />
                   </motion.div>
                 )}
               </AnimatePresence>

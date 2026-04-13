@@ -1036,7 +1036,9 @@ function StageKanban({ stages, currentStageId, onStageChange, loading }: {
             title={stage.label}
             className="relative border-r border-white/40 last:border-r-0 overflow-hidden"
             style={{
-              flexGrow: emphasize ? 5 : isHovered ? 3 : 1,
+              // Make the current stage slightly wider so its label fits,
+              // but avoid the huge "two wide columns" effect.
+              flexGrow: emphasize ? 2 : 1,
               flexShrink: 1,
               flexBasis: 0,
               minWidth: 0,
@@ -1046,7 +1048,7 @@ function StageKanban({ stages, currentStageId, onStageChange, loading }: {
               cursor: loading ? "not-allowed" : "pointer",
               padding: "7px 6px",
               transition:
-                "flex-grow 0.18s ease, background-color 0.18s ease, opacity 0.18s ease",
+                "background-color 0.18s ease, opacity 0.18s ease",
             }}
           >
             <span

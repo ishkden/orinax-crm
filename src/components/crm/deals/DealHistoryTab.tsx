@@ -273,7 +273,7 @@ export default function DealHistoryTab({ dealId }: { dealId: string }) {
   return (
     <div>
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 px-4">
         <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">
           {total} {total === 1 ? "событие" : total < 5 ? "события" : "событий"}
         </p>
@@ -285,10 +285,10 @@ export default function DealHistoryTab({ dealId }: { dealId: string }) {
       </div>
 
       {/* Timeline */}
-      <div className="relative">
+      <div className="relative px-4">
         {/* Vertical connector line */}
         {items.length > 1 && (
-          <div className="absolute left-4 top-8 bottom-8 w-px bg-gray-100" />
+          <div className="absolute left-8 top-8 bottom-8 w-px bg-gray-100" />
         )}
 
         <div className="space-y-0">
@@ -300,7 +300,7 @@ export default function DealHistoryTab({ dealId }: { dealId: string }) {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between mt-2 pt-4 border-t border-gray-100">
+        <div className="flex items-center justify-between mt-2 pt-4 border-t border-gray-100 px-4">
           <button
             onClick={() => goToPage(page - 1)}
             disabled={page <= 1}

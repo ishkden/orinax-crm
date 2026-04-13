@@ -156,12 +156,12 @@ body {
   scrollbar-color: #D1D5DB transparent;
 }
 
-/* Close button spin acceleration easter egg */
+/* Close button spin easter egg */
 @keyframes spin-accel {
   0%   { transform: rotate(0deg); }
-  100% { transform: rotate(1080deg); }
+  100% { transform: rotate(360deg); }
 }
 
 .spin-accel {
-  animation: spin-accel 1.2s cubic-bezier(0.4, 0, 1, 1) forwards;
+  animation: spin-accel 0.4s linear infinite;
 }

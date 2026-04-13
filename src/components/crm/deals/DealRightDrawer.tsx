@@ -1118,10 +1118,10 @@ function DealValueBlock({
   }
 
   return (
-    <div className="rounded-xl border border-gray-100 bg-gray-50/60 overflow-hidden">
+    <div className="rounded-xl border border-gray-100 bg-gray-50/60 overflow-hidden group">
       <div className="flex items-stretch">
         {dragHandle && (
-          <div className="flex items-center px-2 border-r border-gray-100/60">
+          <div className="flex items-center px-1.5 border-r border-gray-100/40 group-hover:border-gray-200 transition-colors">
             {dragHandle}
           </div>
         )}
@@ -1255,10 +1255,10 @@ function AssigneeBlock({
 
   return (
     <div ref={ref} className="relative">
-      <div className="rounded-xl border border-gray-100 bg-gray-50/60 overflow-hidden">
+      <div className="rounded-xl border border-gray-100 bg-gray-50/60 overflow-hidden group">
       <div className="flex items-stretch">
         {dragHandle && (
-          <div className="flex items-center px-2 border-r border-gray-100/60">
+          <div className="flex items-center px-1.5 border-r border-gray-100/40 group-hover:border-gray-200 transition-colors">
             {dragHandle}
           </div>
         )}
@@ -1357,11 +1357,11 @@ function SortableItem({ id, children }: { id: string; children: (dragHandle: Rea
       {...attributes}
       {...listeners}
       data-drag-handle="true"
-      className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 shrink-0 touch-none select-none"
+      className="cursor-grab active:cursor-grabbing text-gray-200 hover:text-gray-400 shrink-0 touch-none select-none transition-colors"
       onPointerDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
     >
-      <GripVertical size={14} />
+      <GripVertical size={11} />
     </span>
   );
   return (
@@ -1510,13 +1510,17 @@ function DetailsLeft({
 
   const blockComponents: Record<string, (handle: React.ReactNode) => React.ReactNode> = {
     contact: (handle) => (
-      <div className="rounded-xl border border-gray-100 bg-gray-50/60 overflow-hidden">
-        {handle && (
-          <div className="flex items-center gap-1 px-3 pt-2 pb-0">
-            {handle}
+      <div className="rounded-xl border border-gray-100 bg-gray-50/60 overflow-hidden group">
+        <div className="flex items-stretch">
+          {handle && (
+            <div className="flex items-center px-1.5 border-r border-gray-100/40 group-hover:border-gray-200 transition-colors">
+              {handle}
+            </div>
+          )}
+          <div className="flex-1 min-w-0">
+            <ContactInfoBlock deal={deal} onOpenContact={onOpenContact} onCreateContact={onCreateContact} />
           </div>
-        )}
-        <ContactInfoBlock deal={deal} onOpenContact={onOpenContact} onCreateContact={onCreateContact} />
+        </div>
       </div>
     ),
     value: (handle) => (

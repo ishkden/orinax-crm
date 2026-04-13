@@ -9,7 +9,7 @@ import {
   FileText, ChevronDown, Plus, FolderOpen,
   Type, List, Clock, MapPin, Link2, Paperclip,
   DollarSign, ToggleLeft, Hash, CalendarRange, ChevronRight,
-  Trash2, Search, Layers, Settings,
+  Trash2, Search, Layers, Settings, UserCircle,
 } from "lucide-react";
 import Link from "next/link";
 import { formatCurrency, formatDate, contrastTextOnHex } from "@/lib/utils";
@@ -22,7 +22,7 @@ import {
   getAllSectionsWithFields,
   cloneSectionToPipeline,
 } from "@/app/actions/custom-fields";
-import { updateDealStage, updateDealPipeline, deleteDeal } from "@/app/actions/deals";
+import { updateDealStage, updateDealPipeline, deleteDeal, getOrgMembers, updateDealAssignee, type OrgMember } from "@/app/actions/deals";
 import ContactInfoBlock from "./ContactInfoBlock";
 import CreateContactModal from "@/components/crm/contacts/CreateContactModal";
 import type { CreateContactFormData } from "@/components/crm/contacts/CreateContactModal";
@@ -1047,6 +1047,129 @@ function StageKanban({ stages, currentStageId, onStageChange, loading }: {
   );
 }
 
+
+// ─── Assignee Block ───────────────────────────────────────────────────────────
+
+function AssigneeBlock({
+  dealId,
+  assignedId,
+  assigneeName,
+  onUpdate,
+}: {
+  dealId: string;
+  assignedId: string | null;
+  assigneeName: string | null;
+  onUpdate: (userId: string | null, name: string | null) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [members, setMembers] = useState<OrgMember[]>([]);
+  const [loaded, setLoaded] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handle(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handle);
+    return () => document.removeEventListener("mousedown", handle);
+  }, []);
+
+  function handleOpen() {
+    if (!loaded) {
+      getOrgMembers().then((m) => { setMembers(m); setLoaded(true); }).catch(() => setLoaded(true));
+    }
+    setOpen((v) => !v);
+  }
+
+  async function handleSelect(m: OrgMember | null) {
+    setSaving(true);
+    try {
+      // dealId passed from parent via handleSelect prop
+    } catch {}
+    onUpdate(m?.id ?? null, m?.name ?? null);
+    setSaving(false);
+    setOpen(false);
+  }
+
+  const initials = assigneeName
+    ? assigneeName.split(" ").slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("")
+    : null;
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={handleOpen}
+        disabled={saving}
+        className="flex items-center gap-3 w-full px-4 py-2.5 hover:bg-gray-50 transition-colors disabled:opacity-50 text-left"
+      >
+        <UserCircle size={15} strokeWidth={1.75} className="text-gray-400 shrink-0" />
+        <div className="flex-1 min-w-0">
+          <p className="text-[11px] font-medium text-gray-400 uppercase tracking-wide leading-none mb-0.5">
+            Ответственный
+          </p>
+          {assigneeName ? (
+            <div className="flex items-center gap-1.5">
+              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-brand-100 text-brand-700 text-[10px] font-bold shrink-0">
+                {initials}
+              </span>
+              <span className="text-sm font-semibold text-gray-900 truncate">{assigneeName}</span>
+            </div>
+          ) : (
+            <p className="text-sm text-gray-400 italic">Не назначен</p>
+          )}
+        </div>
+        <ChevronDown size={14} className={"text-gray-400 shrink-0 transition-transform " + (open ? "rotate-180" : "")} />
+      </button>
+
+      {open && (
+        <div className="absolute left-0 right-0 top-full z-[110] bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden">
+          <div className="px-3 py-2 border-b border-gray-100">
+            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Выбрать ответственного</p>
+          </div>
+          <div className="max-h-56 overflow-y-auto py-1">
+            {!loaded && (
+              <p className="px-3 py-3 text-sm text-gray-400 text-center italic">Загрузка…</p>
+            )}
+            {loaded && members.length === 0 && (
+              <p className="px-3 py-3 text-sm text-gray-400 text-center italic">Нет сотрудников</p>
+            )}
+            {loaded && assignedId && (
+              <button
+                type="button"
+                onClick={() => handleSelect(null)}
+                className="w-full text-left px-3 py-2 text-xs text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors"
+              >
+                Снять ответственного
+              </button>
+            )}
+            {loaded && members.map((m) => {
+              const active = m.id === assignedId;
+              const ini = m.name.split(" ").slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("");
+              return (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() => handleSelect(active ? null : m)}
+                  className={"w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-left transition-colors " +
+                    (active ? "bg-brand-50 text-brand-700 font-medium" : "text-gray-700 hover:bg-gray-50")}
+                >
+                  <span className={"inline-flex items-center justify-center w-7 h-7 rounded-full text-[11px] font-bold shrink-0 " +
+                    (active ? "bg-brand-500 text-white" : "bg-gray-100 text-gray-600")}>
+                    {active ? <Check size={13} /> : ini}
+                  </span>
+                  <span className="truncate">{m.name}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Details Left ─────────────────────────────────────────────────────────────
 
 function DetailsLeft({
@@ -1064,6 +1187,9 @@ function DetailsLeft({
   onCreateSection,
   onChooseSection,
   onCreateContact,
+  currentAssignedId,
+  currentAssigneeName,
+  onAssigneeUpdate,
 }: {
   deal: Deal;
   customFields: CustomFieldDef[];
@@ -1079,6 +1205,9 @@ function DetailsLeft({
   onCreateSection: () => void;
   onChooseSection: () => void;
   onCreateContact?: () => void;
+  currentAssignedId: string | null;
+  currentAssigneeName: string | null;
+  onAssigneeUpdate: (id: string | null, name: string | null) => void;
 }) {
   // Filter fields for the current pipeline (pipeline-specific + legacy global fields)
   const pipelineFields = customFields.filter(
@@ -1115,6 +1244,13 @@ function DetailsLeft({
           </div>
         </div>
       </div>
+        <AssigneeBlock
+          dealId={deal.id}
+          assignedId={currentAssignedId}
+          assigneeName={currentAssigneeName}
+          onUpdate={onAssigneeUpdate}
+        />
+
 
       {deal.description && (
         <div>
@@ -1220,7 +1356,9 @@ export default function DealRightDrawer({
   const [currentPipelineId, setCurrentPipelineId] = useState<string | null>(null);
   const [currentStageId, setCurrentStageId] = useState<string | null>(null);
   const [stageChanging, setStageChanging] = useState(false);
-  const [pipelineSelectorOpen, setPipelineSelectorOpen] = useState(false);
+  const [currentAssignedId, setCurrentAssignedId] = useState<string | null>(null);
+  const [currentAssigneeName, setCurrentAssigneeName] = useState<string | null>(null);
+    const [pipelineSelectorOpen, setPipelineSelectorOpen] = useState(false);
   const [dealSettingsOpen, setDealSettingsOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleteConfirmLoading, setDeleteConfirmLoading] = useState(false);
@@ -1290,6 +1428,8 @@ export default function DealRightDrawer({
     if (deal) {
       setCurrentPipelineId(deal.pipelineId);
       setCurrentStageId(deal.stageId ?? deal.stage);
+      setCurrentAssignedId(deal.assignedId ?? null);
+      setCurrentAssigneeName(deal.assignee ?? null);
     }
   }, [deal?.id]);
 
@@ -1644,6 +1784,13 @@ export default function DealRightDrawer({
                         onFieldAssign={handleFieldAssign}
                         onOpenContact={openContactDrawer}
                         onAddField={(sec) => setAddFieldSection(sec)}
+                        currentAssignedId={currentAssignedId}
+                        currentAssigneeName={currentAssigneeName}
+                        onAssigneeUpdate={(id, name) => {
+                          setCurrentAssignedId(id);
+                          setCurrentAssigneeName(name);
+                          if (onDealUpdate) onDealUpdate({ ...deal, assignedId: id, assignee: name });
+                        }}
                         onSelectField={(sec) => setSelectFieldSection(sec)}
                         onCreateSection={() => setCreateSectionOpen(true)}
                         onChooseSection={() => setChooseSectionOpen(true)}

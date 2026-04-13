@@ -19,6 +19,8 @@ import {
   getDealsPage,
   reorderStages,
   createStage,
+  getOrgMembers,
+  type OrgMember,
 } from "@/app/actions/deals";
 import { updateStageSettings } from "@/app/actions/pipeline-settings";
 
@@ -86,7 +88,8 @@ export default function DealsClient({
   });
   const [viewMode, setViewMode] = useState<ViewMode>("kanban");
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterAssignee, setFilterAssignee] = useState<string | null>(null);
+  const [filterAssigneeId, setFilterAssigneeId] = useState<string | null>(null);
+  const [orgMembers, setOrgMembers] = useState<OrgMember[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalStage, setModalStage] = useState<string | null>(null);
   const [stageOrderMap, setStageOrderMap] = useState<Record<string, string[]>>({});
@@ -167,17 +170,7 @@ export default function DealsClient({
     return { ...p, stages };
   }, [pipelines, activePipelineId, stageOrderMap]);
 
-  const assignees = useMemo(() => {
-    const seen = new Set<string>();
-    const result: string[] = [];
-    for (const d of deals) {
-      if (d.assignee && !seen.has(d.assignee)) {
-        seen.add(d.assignee);
-        result.push(d.assignee);
-      }
-    }
-    return result;
-  }, [deals]);
+  // assignees list now comes from orgMembers state (loaded via getOrgMembers)
 
   const filteredDeals = useMemo(() => {
     let result = deals;
@@ -190,11 +183,11 @@ export default function DealsClient({
           d.contactName.toLowerCase().includes(q)
       );
     }
-    if (filterAssignee) {
-      result = result.filter((d) => d.assignee === filterAssignee);
+    if (filterAssigneeId) {
+      result = result.filter((d) => d.assignedId === filterAssigneeId);
     }
     return result;
-  }, [deals, searchQuery, filterAssignee]);
+  }, [deals, searchQuery, filterAssigneeId]);
 
   const handleLoadMore = useCallback(async (stageId: string) => {
     const p = stagePagination[stageId];
@@ -377,9 +370,9 @@ export default function DealsClient({
             onSearchChange={setSearchQuery}
             viewMode={viewMode}
             onViewModeChange={setViewMode}
-            filterAssignee={filterAssignee}
-            onFilterAssignee={setFilterAssignee}
-            assignees={assignees}
+            filterAssigneeId={filterAssigneeId}
+            onFilterAssigneeId={setFilterAssigneeId}
+            orgMembers={orgMembers}
           />
         </div>
 

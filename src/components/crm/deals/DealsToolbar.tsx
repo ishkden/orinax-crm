@@ -1,10 +1,9 @@
 "use client";
 
-import { useRef, useEffect } from "react";
-import { Search, LayoutGrid, List, X, ChevronDown } from "lucide-react";
+import { useRef, useEffect, useState } from "react";
+import { Search, LayoutGrid, List, X, ChevronDown, UserCircle, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
-import type { Deal } from "./types";
+import type { OrgMember } from "@/app/actions/deals";
 
 export type ViewMode = "kanban" | "list";
 
@@ -13,9 +12,9 @@ interface DealsToolbarProps {
   onSearchChange: (q: string) => void;
   viewMode: ViewMode;
   onViewModeChange: (mode: ViewMode) => void;
-  filterAssignee: string | null;
-  onFilterAssignee: (a: string | null) => void;
-  assignees: string[];
+  filterAssigneeId: string | null;
+  onFilterAssigneeId: (id: string | null) => void;
+  orgMembers: OrgMember[];
 }
 
 export default function DealsToolbar({
@@ -23,98 +22,137 @@ export default function DealsToolbar({
   onSearchChange,
   viewMode,
   onViewModeChange,
-  filterAssignee,
-  onFilterAssignee,
-  assignees,
+  filterAssigneeId,
+  onFilterAssigneeId,
+  orgMembers,
 }: DealsToolbarProps) {
-  const [assigneeOpen, setAssigneeOpen] = useState(false);
-  const assigneeRef = useRef<HTMLDivElement>(null);
+  const [panelOpen, setPanelOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (assigneeRef.current && !assigneeRef.current.contains(e.target as Node)) {
-        setAssigneeOpen(false);
+    function handle(e: MouseEvent) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
+        setPanelOpen(false);
       }
     }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
+    document.addEventListener("mousedown", handle);
+    return () => document.removeEventListener("mousedown", handle);
   }, []);
+
+  const activeAssignee = orgMembers.find((m) => m.id === filterAssigneeId) ?? null;
+  const hasFilters = !!filterAssigneeId || !!searchQuery;
 
   return (
     <div className="flex shrink-0 items-center gap-3 px-6 py-3">
-      {/* Search input — always visible, fills available space */}
-      <div className="relative flex-1">
-        <Search
-          size={15}
-          className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-        />
-        <input
-          value={searchQuery}
-          onChange={(e) => onSearchChange(e.target.value)}
-          placeholder="Поиск по названию, компании, контакту…"
-          className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-8 text-sm text-gray-900 placeholder-gray-400 transition focus:border-brand-400 focus:outline-none focus:ring-1 focus:ring-brand-400"
-        />
-        {searchQuery && (
-          <button
-            type="button"
-            onClick={() => onSearchChange("")}
-            className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-gray-300 hover:text-gray-500"
-          >
-            <X size={14} />
-          </button>
-        )}
-      </div>
-
-      {/* Assignee filter */}
-      {assignees.length > 0 && (
-        <div ref={assigneeRef} className="relative shrink-0">
-          <button
-            type="button"
-            onClick={() => setAssigneeOpen((v) => !v)}
+      {/* Search + filter panel */}
+      <div ref={wrapRef} className="relative flex-1">
+        {/* Search input */}
+        <div className="relative">
+          <Search
+            size={15}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+          />
+          <input
+            value={searchQuery}
+            onChange={(e) => onSearchChange(e.target.value)}
+            onFocus={() => setPanelOpen(true)}
+            placeholder="Поиск по названию, компании, контакту…"
             className={cn(
-              "inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors",
-              filterAssignee
-                ? "border-brand-300 bg-brand-50/40 text-brand-700"
-                : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
+              "w-full rounded-lg border bg-white py-2 pl-9 pr-8 text-sm text-gray-900 placeholder-gray-400 transition focus:outline-none focus:ring-1",
+              panelOpen || hasFilters
+                ? "border-brand-400 ring-1 ring-brand-400 rounded-b-none border-b-transparent"
+                : "border-gray-200 focus:border-brand-400 focus:ring-brand-400"
             )}
-          >
-            {filterAssignee ? (
-              <span className="max-w-[120px] truncate">{filterAssignee}</span>
-            ) : (
-              <span>Ответственный</span>
-            )}
-            <ChevronDown size={14} className={cn("text-gray-400 transition-transform", assigneeOpen && "rotate-180")} />
-          </button>
-
-          {assigneeOpen && (
-            <div className="absolute top-full right-0 mt-2 min-w-[180px] bg-white rounded-xl border border-gray-200 shadow-xl z-50 overflow-hidden py-1">
-              <button
-                type="button"
-                onClick={() => { onFilterAssignee(null); setAssigneeOpen(false); }}
-                className={cn(
-                  "w-full px-3 py-2 text-left text-sm transition-colors",
-                  !filterAssignee ? "text-brand-700 font-medium bg-brand-50/50" : "text-gray-700 hover:bg-gray-50"
-                )}
-              >
-                Все
-              </button>
-              {assignees.map((a) => (
-                <button
-                  key={a}
-                  type="button"
-                  onClick={() => { onFilterAssignee(a); setAssigneeOpen(false); }}
-                  className={cn(
-                    "w-full px-3 py-2 text-left text-sm truncate transition-colors",
-                    filterAssignee === a ? "text-brand-700 font-medium bg-brand-50/50" : "text-gray-700 hover:bg-gray-50"
-                  )}
-                >
-                  {a}
-                </button>
-              ))}
-            </div>
+          />
+          {(searchQuery || filterAssigneeId) && (
+            <button
+              type="button"
+              onClick={() => { onSearchChange(""); onFilterAssigneeId(null); setPanelOpen(false); }}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-gray-300 hover:text-gray-500"
+            >
+              <X size={14} />
+            </button>
           )}
         </div>
-      )}
+
+        {/* Drop-down filter panel */}
+        {panelOpen && (
+          <div className="absolute left-0 right-0 top-full z-50 bg-white border border-brand-400 border-t-gray-100 rounded-b-xl shadow-xl overflow-hidden">
+            {/* Active filter chips */}
+            {activeAssignee && (
+              <div className="px-4 pt-3 pb-1 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => onFilterAssigneeId(null)}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-brand-50 border border-brand-200 text-xs font-medium text-brand-700 hover:bg-brand-100 transition-colors"
+                >
+                  <UserCircle size={12} />
+                  {activeAssignee.name}
+                  <X size={11} className="opacity-60" />
+                </button>
+              </div>
+            )}
+
+            {/* Assignee filter section */}
+            <div className="px-4 py-3">
+              <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                Ответственный
+              </p>
+              <div className="grid grid-cols-2 gap-1 max-h-52 overflow-y-auto">
+                {orgMembers.length === 0 && (
+                  <p className="col-span-2 text-xs text-gray-400 italic py-2">Нет сотрудников</p>
+                )}
+                {orgMembers.map((m) => {
+                  const active = filterAssigneeId === m.id;
+                  const initials = m.name
+                    .split(" ")
+                    .slice(0, 2)
+                    .map((w) => w[0]?.toUpperCase() ?? "")
+                    .join("");
+                  return (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => {
+                        onFilterAssigneeId(active ? null : m.id);
+                      }}
+                      className={cn(
+                        "flex items-center gap-2 px-2.5 py-2 rounded-lg text-sm text-left transition-colors",
+                        active
+                          ? "bg-brand-50 text-brand-700 font-medium ring-1 ring-brand-200"
+                          : "text-gray-700 hover:bg-gray-50"
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "inline-flex items-center justify-center w-7 h-7 rounded-full text-[11px] font-bold shrink-0",
+                          active ? "bg-brand-500 text-white" : "bg-gray-100 text-gray-600"
+                        )}
+                      >
+                        {active ? <Check size={13} /> : initials}
+                      </span>
+                      <span className="truncate">{m.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Footer */}
+            {hasFilters && (
+              <div className="px-4 py-2 border-t border-gray-100 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => { onSearchChange(""); onFilterAssigneeId(null); setPanelOpen(false); }}
+                  className="text-xs text-gray-500 hover:text-gray-700 transition-colors"
+                >
+                  Сбросить все фильтры
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* View mode toggle */}
       <div className="flex shrink-0 items-center rounded-lg bg-gray-100 p-0.5">

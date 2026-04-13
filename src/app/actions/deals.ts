@@ -26,6 +26,35 @@ async function getOrgId(): Promise<string> {
   return orgId;
 }
 
+
+// ─── Org Members ──────────────────────────────────────────────────────────────
+
+export type OrgMember = { id: string; name: string };
+
+export async function getOrgMembers(): Promise<OrgMember[]> {
+  const orgId = await getOrgId();
+  const members = await prisma.orgMember.findMany({
+    where: { orgId },
+    include: { user: { select: { id: true, name: true, email: true } } },
+    orderBy: { joinedAt: "asc" },
+  });
+  return members.map((m) => ({
+    id: m.user.id,
+    name: m.user.name ?? m.user.email ?? "Сотрудник",
+  }));
+}
+
+export async function updateDealAssignee(
+  dealId: string,
+  assignedId: string | null
+): Promise<void> {
+  const orgId = await getOrgId();
+  await prisma.deal.update({
+    where: { id: dealId, orgId },
+    data: { assignedId },
+  });
+}
+
 // ─── Public serializable types ────────────────────────────────────────────────
 
 export type DbStage = {

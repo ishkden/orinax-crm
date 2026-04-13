@@ -9,6 +9,7 @@ import {
   useSensor,
   useSensors,
   type DragEndEvent,
+  type DraggableAttributes,
 } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -16,6 +17,7 @@ import {
   verticalListSortingStrategy,
   arrayMove,
 } from "@dnd-kit/sortable";
+import type { SyntheticListenerMap } from "@dnd-kit/core/dist/hooks/utilities";
 import { CSS } from "@dnd-kit/utilities";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -1118,14 +1120,9 @@ function DealValueBlock({
   }
 
   return (
-    <div className="rounded-xl border border-gray-100 bg-gray-50/60 overflow-hidden group">
-      <div className="flex items-stretch">
-        {dragHandle && (
-          <div className="flex items-center px-1.5 border-r border-gray-100/40 group-hover:border-gray-200 transition-colors">
-            {dragHandle}
-          </div>
-        )}
-        <div className="flex-1 px-4 py-2.5 min-w-0">
+    <div className="rounded-xl border border-gray-100 bg-gray-50/60 overflow-hidden">
+      {dragHandle}
+      <div className="px-4 py-2.5">
           <p className="text-[11px] font-medium text-gray-400 uppercase tracking-wide leading-none mb-1">
             Сумма сделки
           </p>
@@ -1163,7 +1160,6 @@ function DealValueBlock({
               <Pencil size={12} className="ml-auto self-center text-gray-300 group-hover:text-brand-500 transition-colors opacity-0 group-hover:opacity-100" />
             </button>
           )}
-        </div>
       </div>
     </div>
   );
@@ -1255,18 +1251,13 @@ function AssigneeBlock({
 
   return (
     <div ref={ref} className="relative">
-      <div className="rounded-xl border border-gray-100 bg-gray-50/60 overflow-hidden group">
-      <div className="flex items-stretch">
-        {dragHandle && (
-          <div className="flex items-center px-1.5 border-r border-gray-100/40 group-hover:border-gray-200 transition-colors">
-            {dragHandle}
-          </div>
-        )}
+      <div className="rounded-xl border border-gray-100 bg-gray-50/60 overflow-hidden">
+        {dragHandle}
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
           disabled={saving}
-          className="flex flex-1 items-center gap-3 px-4 py-2.5 hover:bg-gray-100/60 transition-colors disabled:opacity-50 text-left min-w-0"
+          className="flex w-full items-center gap-3 px-4 py-2.5 hover:bg-gray-100/60 transition-colors disabled:opacity-50 text-left min-w-0"
         >
           <div className="shrink-0">
             <MemberAvatar member={currentMember} size={32} />
@@ -1288,7 +1279,6 @@ function AssigneeBlock({
           </div>
           <ChevronDown size={14} className={"text-gray-400 shrink-0 transition-transform " + (open ? "rotate-180" : "")} />
         </button>
-      </div>
       </div>
 
       {open && (
@@ -1344,6 +1334,26 @@ function AssigneeBlock({
 
 // ─── Sortable wrappers ───────────────────────────────────────────────────────
 
+function DotHandle({ attributes, listeners }: { attributes: DraggableAttributes; listeners: SyntheticListenerMap | undefined }) {
+  return (
+    <span
+      {...attributes}
+      {...(listeners ?? {})}
+      data-drag-handle="true"
+      className="absolute top-1.5 left-1.5 z-10 opacity-0 group-hover:opacity-100 cursor-grab active:cursor-grabbing touch-none select-none transition-opacity"
+      onPointerDown={(e) => e.stopPropagation()}
+      onClick={(e) => e.stopPropagation()}
+      title="Переместить"
+    >
+      <span className="grid grid-cols-2 gap-[2.5px]">
+        {[0,1,2,3,4,5].map((i) => (
+          <span key={i} className="w-[3px] h-[3px] rounded-[1px] bg-gray-300 group-hover:bg-gray-400 transition-colors block" />
+        ))}
+      </span>
+    </span>
+  );
+}
+
 function SortableItem({ id, children }: { id: string; children: (dragHandle: React.ReactNode) => React.ReactNode }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
   const style = {
@@ -1352,20 +1362,9 @@ function SortableItem({ id, children }: { id: string; children: (dragHandle: Rea
     opacity: isDragging ? 0.5 : 1,
     zIndex: isDragging ? 1 : undefined,
   };
-  const handle = (
-    <span
-      {...attributes}
-      {...listeners}
-      data-drag-handle="true"
-      className="cursor-grab active:cursor-grabbing text-gray-200 hover:text-gray-400 shrink-0 touch-none select-none transition-colors"
-      onPointerDown={(e) => e.stopPropagation()}
-      onClick={(e) => e.stopPropagation()}
-    >
-      <GripVertical size={11} />
-    </span>
-  );
+  const handle = <DotHandle attributes={attributes} listeners={listeners} />;
   return (
-    <div ref={setNodeRef} style={style}>
+    <div ref={setNodeRef} style={style} className="group relative">
       {children(handle)}
     </div>
   );
@@ -1510,17 +1509,9 @@ function DetailsLeft({
 
   const blockComponents: Record<string, (handle: React.ReactNode) => React.ReactNode> = {
     contact: (handle) => (
-      <div className="rounded-xl border border-gray-100 bg-gray-50/60 overflow-hidden group">
-        <div className="flex items-stretch">
-          {handle && (
-            <div className="flex items-center px-1.5 border-r border-gray-100/40 group-hover:border-gray-200 transition-colors">
-              {handle}
-            </div>
-          )}
-          <div className="flex-1 min-w-0">
-            <ContactInfoBlock deal={deal} onOpenContact={onOpenContact} onCreateContact={onCreateContact} />
-          </div>
-        </div>
+      <div className="rounded-xl border border-gray-100 bg-gray-50/60 overflow-hidden">
+        {handle}
+        <ContactInfoBlock deal={deal} onOpenContact={onOpenContact} onCreateContact={onCreateContact} />
       </div>
     ),
     value: (handle) => (
@@ -1579,7 +1570,6 @@ function DetailsLeft({
                       <div className="rounded-xl border border-gray-100 overflow-hidden">
                         <div className="flex items-center justify-between px-3 py-2 bg-gray-50 border-b border-gray-100">
                           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
-                            {handle}
                             <FolderOpen size={11} className="text-gray-400" />
                             {sectionName}
                             {isPending && <span className="text-[9px] text-gray-300 font-normal normal-case tracking-normal ml-1">пустой</span>}

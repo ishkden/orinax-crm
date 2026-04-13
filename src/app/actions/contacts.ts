@@ -250,20 +250,22 @@ export interface ContactSearchResult {
 
 export async function searchContacts(query: string): Promise<ContactSearchResult[]> {
   const orgId = await getOrgId();
-  if (!orgId || !query.trim()) return [];
+  if (!orgId) return [];
 
-  const q = query.trim().toLowerCase();
+  const q = query.trim();
 
   const contacts = await prisma.contact.findMany({
     where: {
       orgId,
       isDeleted: false,
-      OR: [
-        { firstName: { contains: q, mode: "insensitive" } },
-        { lastName: { contains: q, mode: "insensitive" } },
-        { phone: { contains: q, mode: "insensitive" } },
-        { email: { contains: q, mode: "insensitive" } },
-      ],
+      ...(q ? {
+        OR: [
+          { firstName: { contains: q, mode: "insensitive" } },
+          { lastName: { contains: q, mode: "insensitive" } },
+          { phone: { contains: q, mode: "insensitive" } },
+          { email: { contains: q, mode: "insensitive" } },
+        ],
+      } : {}),
     },
     select: {
       id: true,
@@ -274,7 +276,7 @@ export async function searchContacts(query: string): Promise<ContactSearchResult
       email: true,
       company: true,
     },
-    take: 20,
+    take: 50,
     orderBy: { createdAt: "desc" },
   });
 

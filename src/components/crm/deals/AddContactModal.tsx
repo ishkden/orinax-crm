@@ -41,15 +41,15 @@ export default function AddContactModal({ dealId, onClose, onLinked }: AddContac
 
   const doSearch = useCallback((q: string) => {
     if (searchTimeout.current) clearTimeout(searchTimeout.current);
-    if (!q.trim()) { setResults([]); setSearching(false); return; }
     setSearching(true);
+    const delay = q.trim() ? 280 : 0;
     searchTimeout.current = setTimeout(async () => {
       try {
         const res = await searchContacts(q);
         setResults(res);
       } catch {}
       setSearching(false);
-    }, 280);
+    }, delay);
   }, []);
 
   useEffect(() => { doSearch(query); }, [query, doSearch]);
@@ -133,25 +133,28 @@ export default function AddContactModal({ dealId, onClose, onLinked }: AddContac
           {/* Search tab */}
           {tab === "search" && (
             <div className="p-4">
-              <div className="relative mb-3">
+              <div className="relative mb-2">
                 <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input
                   ref={inputRef}
                   type="text"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Имя, фамилия или телефон..."
-                  className="w-full pl-9 pr-4 py-2.5 text-sm border border-gray-200 rounded-xl outline-none focus:border-brand-400 focus:ring-1 focus:ring-brand-100 transition-colors"
+                  placeholder="Поиск по имени, фамилии или телефону..."
+                  className="w-full pl-9 pr-9 py-2.5 text-sm border border-gray-200 rounded-xl outline-none focus:border-brand-400 focus:ring-1 focus:ring-brand-100 transition-colors"
                 />
                 {searching && (
                   <Loader2 size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 animate-spin" />
                 )}
               </div>
+              {!searching && results.length > 0 && (
+                <p className="text-[11px] text-gray-400 mb-2 px-1">
+                  {query.trim() ? `Найдено: ${results.length}${results.length === 50 ? "+" : ""}` : `Последние ${results.length} контактов`}
+                </p>
+              )}
 
               <div className="max-h-64 overflow-y-auto space-y-1">
-                {!query.trim() && (
-                  <p className="text-center text-sm text-gray-400 py-6">Введите имя или номер телефона</p>
-                )}
+
                 {query.trim() && !searching && results.length === 0 && (
                   <div className="text-center py-6">
                     <p className="text-sm text-gray-400 mb-2">Контакт не найден</p>

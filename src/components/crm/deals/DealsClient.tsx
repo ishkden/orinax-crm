@@ -79,13 +79,19 @@ export default function DealsClient({
     initialServerStageTotals
   );
 
-  const [activePipelineId, setActivePipelineId] = useState(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("crm_active_pipeline_id");
-      if (saved && pipelines.some((p) => p.id === saved)) return saved;
-    }
-    return pipelines[0]?.id ?? "";
-  });
+  // Avoid SSR→CSR pipeline "flash": on server we don't have localStorage, so we
+  // wait for hydration and then resolve active pipeline id once on the client.
+  const [activePipelineId, setActivePipelineId] = useState<string>("");
+  const [pipelineResolved, setPipelineResolved] = useState(false);
+  useEffect(() => {
+    if (pipelineResolved) return;
+    if (pipelines.length === 0) return;
+    const saved = localStorage.getItem("crm_active_pipeline_id");
+    const resolved = saved && pipelines.some((p) => p.id === saved) ? saved : pipelines[0]!.id;
+    setActivePipelineId(resolved);
+    setPipelineResolved(true);
+  }, [pipelines, pipelineResolved]);
+
   const [viewMode, setViewMode] = useState<ViewMode>("kanban");
   const [searchQuery, setSearchQuery] = useState("");
   const [filterAssigneeId, setFilterAssigneeId] = useState<string | null>(null);
@@ -152,7 +158,7 @@ export default function DealsClient({
   }, [activePipelineId]);
 
   useEffect(() => {
-    if (pipelines.length > 0) {
+    if (pipelines.length > 0 && activePipelineId) {
       setPipeline({ pipelines, activePipelineId, onPipelineChange: setActivePipelineId });
     }
     return () => setPipeline(null);
@@ -378,22 +384,31 @@ export default function DealsClient({
 
         {viewMode === "kanban" ? (
           <div className="sticky z-10" style={{ top: 0, height: "calc(100dvh - 48px)" }}>
-            <KanbanBoard
-              stages={activeStages}
-              deals={filteredDeals}
-              stagePagination={stagePagination}
-              serverStageTotals={stageTotals}
-              onLoadMore={handleLoadMore}
-              onMoveDeal={handleMoveDeal}
-              onStageCommit={handleStageCommit}
-              onAddDeal={handleAddDeal}
-              onStageUpdate={handleStageUpdate}
-              onStageDelete={handleStageDelete}
-              onStageReorder={handleStageReorder}
-              onAddStageAfter={handleAddStageAfter}
-              onContactClick={setContactDeal}
-              onDealClick={handleDealClick}
-            />
+            {!pipelineResolved ? (
+              <div className="h-full w-full flex items-center justify-center bg-white">
+                <div className="flex items-center gap-2 text-sm text-gray-400">
+                  <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-gray-200 border-t-gray-400" />
+                  Загружаем воронку…
+                </div>
+              </div>
+            ) : (
+              <KanbanBoard
+                stages={activeStages}
+                deals={filteredDeals}
+                stagePagination={stagePagination}
+                serverStageTotals={stageTotals}
+                onLoadMore={handleLoadMore}
+                onMoveDeal={handleMoveDeal}
+                onStageCommit={handleStageCommit}
+                onAddDeal={handleAddDeal}
+                onStageUpdate={handleStageUpdate}
+                onStageDelete={handleStageDelete}
+                onStageReorder={handleStageReorder}
+                onAddStageAfter={handleAddStageAfter}
+                onContactClick={setContactDeal}
+                onDealClick={handleDealClick}
+              />
+            )}
           </div>
         ) : (
           <div className="flex min-w-0 flex-col">

@@ -2086,17 +2086,26 @@ export default function DealRightDrawer({
               </div>
 
               {/* ── Tabs nav — sticky ── */}
-              <div ref={tabsRef} className="sticky top-0 z-10 bg-white border-b border-gray-100 flex items-center px-4 gap-0">
+              <div
+                ref={tabsRef}
+                className="sticky top-0 z-10 bg-white border-b border-gray-100 flex items-center px-4 gap-0"
+              >
+                {/* Close button stays visible while scrolling */}
+                <button
+                  type="button"
+                  onClick={onClose}
+                  aria-label="Закрыть"
+                  className="mr-2 p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors shrink-0"
+                >
+                  <X size={18} />
+                </button>
+
                 {TABS.map(tab => (
                   <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)}
                     className={`flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium border-b-2 transition-colors ${activeTab === tab.id ? "border-brand-600 text-brand-600" : "border-transparent text-gray-500 hover:text-gray-700"}`}>
                     {tab.icon}{tab.label}
                   </button>
                 ))}
-                {/* Close button always visible in sticky bar */}
-                <button type="button" onClick={onClose} className="ml-auto p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors shrink-0">
-                  <X size={18} />
-                </button>
               </div>
 
               {/* ── Tab content ── */}

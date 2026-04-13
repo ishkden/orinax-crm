@@ -286,11 +286,6 @@ export default function DealHistoryTab({ dealId }: { dealId: string }) {
 
       {/* Timeline */}
       <div className="relative px-4">
-        {/* Vertical connector line */}
-        {items.length > 1 && (
-          <div className="absolute left-8 top-8 bottom-8 w-px bg-gray-100" />
-        )}
-
         <div className="space-y-0">
           {items.map((item) => (
             <HistoryItem key={item.id} item={item} />

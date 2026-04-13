@@ -1546,7 +1546,7 @@ export default function DealRightDrawer({
                         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
                           <div className="min-w-0">
                             <h3 className="text-sm font-semibold text-gray-900 truncate">Удалить сделку</h3>
-                            <p className="text-xs text-gray-400 truncate">Это действие можно отменить только через админа</p>
+                            <p className="text-xs text-gray-400 truncate">Это действие отменить невозможно</p>
                           </div>
                           <button
                             type="button"

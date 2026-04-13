@@ -1251,19 +1251,19 @@ function AssigneeBlock({
     <div ref={ref} className="relative">
       <div className="rounded-xl border border-gray-100 bg-gray-50/60 overflow-hidden">
         {dragHandle}
+        <div className="px-4 pt-3 pb-1">
+          <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Ответственный</p>
+        </div>
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
           disabled={saving}
-          className="flex w-full items-center gap-3 px-4 py-2.5 hover:bg-gray-100/60 transition-colors disabled:opacity-50 text-left"
+          className="flex w-full items-center gap-3 px-4 pt-2 pb-3 hover:bg-gray-100/60 transition-colors disabled:opacity-50 text-left"
         >
           <div className="shrink-0">
-            <MemberAvatar member={currentMember} size={32} />
+            <MemberAvatar member={currentMember} size={36} />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-[11px] font-medium text-gray-400 uppercase tracking-wide leading-none mb-0.5">
-              Ответственный
-            </p>
             {fullAssigneeName ? (
               <>
                 <p className="text-sm font-semibold text-gray-900 truncate">{fullAssigneeName}</p>

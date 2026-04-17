@@ -175,7 +175,7 @@ export default function TelephonyCallsPage() {
                     </p>
                     <p className="text-xs text-text-tertiary mt-1">
                       {calls.length === 0
-                        ? "Записи появятся после первого вызова через MCN"
+                        ? "Записи появятся после первого звонка"
                         : "Попробуйте изменить параметры поиска"}
                     </p>
                   </td>

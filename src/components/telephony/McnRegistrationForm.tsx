@@ -162,10 +162,10 @@ export default function McnRegistrationForm({
       if (!res.ok) {
         if (data.code === "NO_PARTNER_TOKEN") {
           setError(
-            "Partner API MCN не настроен на сервере. Обратитесь к администратору ORINAX."
+            "Телефония временно недоступна. Обратитесь к администратору."
           );
         } else {
-          setError(data.error ?? "Не удалось создать аккаунт MCN.");
+          setError(data.error ?? "Не удалось создать аккаунт.");
         }
         return;
       }
@@ -185,7 +185,7 @@ export default function McnRegistrationForm({
         <div className="flex items-start gap-3">
           <CheckCircle2 size={18} className="text-green-600 shrink-0 mt-0.5" />
           <div>
-            <p className="text-sm font-semibold text-green-900">MCN-аккаунт успешно создан</p>
+            <p className="text-sm font-semibold text-green-900">Аккаунт телефонии успешно создан</p>
             <p className="text-sm text-green-700 mt-0.5">
               Лицевой счёт: <b className="font-mono">{success}</b>
             </p>
@@ -207,10 +207,7 @@ export default function McnRegistrationForm({
       <div className="rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 flex items-start gap-2.5">
         <ExternalLink size={13} className="text-blue-500 shrink-0 mt-0.5" />
         <p className="text-xs text-blue-700 leading-relaxed">
-          Создание аккаунта через MCN Partner API. Требует активированного партнёрского договора
-          с MCN Telecom и переменной{" "}
-          <code className="font-mono bg-blue-100 px-1 rounded">MCN_PARTNER_TOKEN</code>{" "}
-          на сервере.
+          Укажите данные организации — аккаунт будет создан и телефония станет доступна сразу после проверки.
         </p>
       </div>
 

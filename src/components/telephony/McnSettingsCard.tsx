@@ -83,7 +83,7 @@ export default function McnSettingsCard() {
   }
 
   async function handleDisconnect() {
-    if (!confirm("Отключить MCN Telecom? Настройки будут деактивированы.")) return;
+    if (!confirm("Отключить телефонию? Настройки будут деактивированы.")) return;
 
     setDisconnectStatus("loading");
     try {
@@ -98,7 +98,7 @@ export default function McnSettingsCard() {
         setDisconnectStatus("idle");
       } else {
         const data = await res.json();
-        alert(data.error ?? "Не удалось отключить MCN.");
+        alert(data.error ?? "Не удалось отключить телефонию.");
         setDisconnectStatus("idle");
       }
     } catch {
@@ -113,7 +113,7 @@ export default function McnSettingsCard() {
     return (
       <div className="bg-white rounded-xl border border-gray-200 p-6 flex items-center gap-3 text-sm text-gray-400">
         <Loader2 size={16} className="animate-spin" />
-        Загрузка настроек MCN…
+        Загрузка настроек…
       </div>
     );
   }
@@ -127,7 +127,7 @@ export default function McnSettingsCard() {
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="font-semibold text-gray-900 text-base">MCN Telecom</h3>
+            <h3 className="font-semibold text-gray-900 text-base">Телефония Orinax</h3>
             {isConnected && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-100">
                 <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
@@ -141,7 +141,7 @@ export default function McnSettingsCard() {
             )}
           </div>
           <p className="text-sm text-gray-500 mt-0.5">
-            Телефония и запись звонков через MCN Telecom API
+            Телефония и запись звонков
           </p>
         </div>
       </div>
@@ -191,7 +191,7 @@ export default function McnSettingsCard() {
             )}
             disabled={saveStatus === "loading"}
           />
-          <p className="text-xs text-gray-400">Из личного кабинета MCN Telecom</p>
+          <p className="text-xs text-gray-400">Идентификатор вашего аккаунта</p>
         </div>
 
         <div className="flex flex-col gap-1">
@@ -202,7 +202,7 @@ export default function McnSettingsCard() {
             type="password"
             value={token}
             onChange={(e) => setToken(e.target.value)}
-            placeholder={isConnected ? "Введите новый токен для замены" : "Bearer-токен из ЛК MCN"}
+            placeholder={isConnected ? "Введите новый токен для замены" : "API-токен"}
             required={!isConnected}
             className={cn(
               "block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-400 shadow-sm transition",

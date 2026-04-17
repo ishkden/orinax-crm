@@ -128,7 +128,7 @@ export default function TelephonyOverviewPage() {
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 flex items-start gap-3">
           <AlertCircle size={18} className="text-amber-600 shrink-0 mt-0.5" />
           <div>
-            <p className="text-sm font-semibold text-amber-900">MCN Telecom не подключён</p>
+            <p className="text-sm font-semibold text-amber-900">Телефония не подключена</p>
             <p className="text-xs text-amber-700 mt-0.5">
               Перейдите в <Link href="/telephony/settings" className="underline font-medium">Настройки</Link> чтобы подключить телефонию.
             </p>
@@ -140,9 +140,9 @@ export default function TelephonyOverviewPage() {
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 flex items-start gap-3">
           <CheckCircle2 size={18} className="text-emerald-600 shrink-0 mt-0.5" />
           <div>
-            <p className="text-sm font-semibold text-emerald-900">MCN Telecom подключён</p>
+            <p className="text-sm font-semibold text-emerald-900">Телефония подключена</p>
             <p className="text-xs text-emerald-700 mt-0.5">
-              Лицевой счёт: <span className="font-mono font-medium">{mcn?.mcnAccountId}</span>
+              Аккаунт: <span className="font-mono font-medium">{mcn?.mcnAccountId}</span>
             </p>
           </div>
         </div>
@@ -157,7 +157,7 @@ export default function TelephonyOverviewPage() {
             <StatCard
               label="Статус"
               value={isConnected ? "Активен" : "Не подключён"}
-              sub={isConnected ? "MCN Telecom" : "Требуется настройка"}
+              sub={isConnected ? "Телефония активна" : "Требуется настройка"}
               icon={Phone}
               color={isConnected ? "emerald" : "amber"}
             />
@@ -169,9 +169,9 @@ export default function TelephonyOverviewPage() {
               color="brand"
             />
             <StatCard
-              label="Баланс MCN"
+              label="Баланс"
               value="—"
-              sub="В личном кабинете MCN"
+              sub="По тарифу"
               icon={Wallet}
               color="blue"
             />
@@ -198,9 +198,9 @@ export default function TelephonyOverviewPage() {
             </div>
             <div>
               <p className="text-sm font-semibold text-text-primary">
-                {isConnected ? "Управление MCN" : "Подключить телефонию"}
+                {isConnected ? "Управление телефонией" : "Подключить телефонию"}
               </p>
-              <p className="text-xs text-text-tertiary">Настройки MCN Telecom</p>
+              <p className="text-xs text-text-tertiary">Настройки и параметры</p>
             </div>
           </div>
         </Link>
@@ -284,7 +284,7 @@ export default function TelephonyOverviewPage() {
           </div>
           <div className="p-5 space-y-3">
             {[
-              { n: "1", title: "Подключите MCN Telecom", desc: "Введите данные аккаунта или создайте новый" },
+              { n: "1", title: "Подключите телефонию", desc: "Введите данные аккаунта или создайте новый" },
               { n: "2", title: "Выберите номер", desc: "Городской или виртуальный DID из каталога" },
               { n: "3", title: "Настройте интеграцию", desc: "Звонки автоматически привяжутся к сделкам и контактам" },
               { n: "4", title: "Звоните!", desc: "Используйте SIP-клиент или встроенный WebRTC-виджет" },

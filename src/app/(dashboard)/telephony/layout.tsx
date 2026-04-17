@@ -25,7 +25,7 @@ export default function TelephonyLayout({ children }: { children: React.ReactNod
             </div>
             <div>
               <h1 className="text-lg font-semibold text-text-primary tracking-tight">Телефония</h1>
-              <p className="text-xs text-text-tertiary">MCN Telecom — SIP / Виртуальная АТС</p>
+              <p className="text-xs text-text-tertiary">SIP / Виртуальная АТС</p>
             </div>
           </div>
         </div>

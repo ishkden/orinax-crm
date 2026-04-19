@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
   });
 
   if (!token?.email) {
-    return NextResponse.redirect(new URL("https://my.orinax.ai/login?callbackUrl=https://crm.orinax.ai/api/auth/admin-sso"));
+    return NextResponse.redirect(new URL("https://analytics.orinax.ai/login?callbackUrl=https://crm.orinax.ai/api/auth/admin-sso"));
   }
 
   const adminEmail = process.env.ADMIN_EMAIL;

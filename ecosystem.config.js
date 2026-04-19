@@ -1,3 +1,13 @@
+// PM2 config for orinax-crm.
+//
+// Secrets (NEXTAUTH_SECRET, SSO_SECRET_KEY, MIGRATION_API_KEY, DATABASE_URL,
+// REDIS_URL, …) live in /root/orinax-crm/.env. They are intentionally NOT
+// hard-coded here so the repo stays secret-free and the single source of
+// truth is the .env file, which must match analytics (crm-app).
+//
+// SSO is shared across *.orinax.ai — NEXTAUTH_SECRET and COOKIE_DOMAIN in
+// .env MUST be identical to /root/crm-app/.env, otherwise sessions won't
+// carry between analytics.orinax.ai, crm.orinax.ai and connector.orinax.ai.
 module.exports = {
   apps: [
     {
@@ -8,12 +18,7 @@ module.exports = {
         NODE_ENV: "production",
         PORT: 3001,
         HOSTNAME: "0.0.0.0",
-        NEXTAUTH_URL: "https://crm.orinax.ai",
-        NEXTAUTH_SECRET: "orinax-crm-secret-key-change-in-prod-32chars!!",
         NEXT_PUBLIC_APP_URL: "https://crm.orinax.ai",
-        SSO_SECRET_KEY: "12ddf4a89615ec874b5fb8860a5b3f70e7c7539e793d5f69e72f049af2c2525a",
-        ANALYTICS_API_URL: "https://my.orinax.ai",
-        MIGRATION_API_KEY: "9b6c52d01911593fd53745044522289206eb33633d1b32b4",
       },
       node_args: "--max-old-space-size=512",
       exec_mode: "fork",
@@ -26,12 +31,7 @@ module.exports = {
       name: "crm-webhook-worker",
       script: "crm-worker.js",
       cwd: "/root/orinax-crm",
-      env: {
-        NODE_ENV: "production",
-        DATABASE_URL: "postgresql://orinax_crm_user:OrinaxCRM2024!@localhost:5432/orinax_crm",
-        REDIS_URL: "redis://:OrinaxRedis2024!@localhost:6379",
-        MAX_DEFAULT_ORG_ID: "cmn4xvxih00002yx3ox63sv4q",
-      },
+      // DATABASE_URL / REDIS_URL / MAX_DEFAULT_ORG_ID come from .env.
       exec_mode: "fork",
       instances: 1,
       autorestart: true,

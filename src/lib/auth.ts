@@ -13,12 +13,14 @@ function slugify(value: string): string {
     .slice(0, 60);
 }
 
-// CRM reads the shared NextAuth cookie issued by my.orinax.ai.
-// NEXTAUTH_SECRET must be identical on both services.
-// No local login — signIn always redirects to my.orinax.ai.
+// CRM reads the shared NextAuth cookie issued by analytics (crm-app).
+// NEXTAUTH_SECRET and COOKIE_DOMAIN MUST be identical on every service
+// under *.orinax.ai (analytics, crm, connector) — otherwise the JWT will
+// not decode and users appear logged-out.
+// No local login — signIn always redirects to analytics.orinax.ai.
 export const authOptions: NextAuthOptions = {
   session: { strategy: "jwt", maxAge: 8 * 60 * 60 },
-  pages: { signIn: "https://my.orinax.ai/login" },
+  pages: { signIn: "https://analytics.orinax.ai/login" },
   cookies: {
     sessionToken: {
       name: `${cookiePrefix}next-auth.session-token`,
@@ -54,7 +56,7 @@ export const authOptions: NextAuthOptions = {
   providers: [],
   callbacks: {
     async jwt({ token }) {
-      // Pass through — token already contains all fields from my.orinax.ai JWT.
+      // Pass through — token already contains all fields from the analytics (crm-app) JWT.
       return token;
     },
     async session({ session, token }) {

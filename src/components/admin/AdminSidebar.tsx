@@ -27,7 +27,7 @@ export default function AdminSidebar() {
 
 
   function handleLogout() {
-    window.location.href = "https://my.orinax.ai/api/auth/logout?callbackUrl=https://my.orinax.ai/login";
+    window.location.href = "https://analytics.orinax.ai/api/auth/logout?callbackUrl=https://analytics.orinax.ai/login";
   }
 
   return (

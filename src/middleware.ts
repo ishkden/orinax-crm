@@ -25,7 +25,7 @@ export async function middleware(req: NextRequest) {
       `https://crm.orinax.ai${pathname}`
     );
     return NextResponse.redirect(
-      `https://my.orinax.ai/login?callbackUrl=${callbackUrl}`
+      `https://analytics.orinax.ai/login?callbackUrl=${callbackUrl}`
     );
   }
 
